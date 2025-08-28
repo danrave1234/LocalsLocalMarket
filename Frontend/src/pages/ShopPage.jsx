@@ -2,13 +2,14 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 import SEOHead from '../components/SEOHead.jsx'
+import SocialSharing from '../components/SocialSharing.jsx'
+import RelatedShops from '../components/RelatedShops.jsx'
 import { fetchShopById } from '../api/shops.js'
 import { fetchProducts } from '../api/products.js'
 import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
 import { extractShopIdFromSlug } from '../utils/slugUtils.js'
 import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
-import { loadLeaflet, isLeafletLoaded } from '../utils/leafletLoader.js'
 
 export default function ShopPage() {
   const { id: slug } = useParams()
@@ -62,59 +63,55 @@ export default function ShopPage() {
     if (!shop || !shop.lat || !shop.lng) return
 
     const initializeMap = async () => {
-      try {
-        // Load Leaflet using shared loader
-        const L = await loadLeaflet()
+      // Load Leaflet CSS
+      if (!document.querySelector('link[href*="leaflet.css"]')) {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+        link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY='
+        link.crossOrigin = ''
+        document.head.appendChild(link)
+      }
 
-        // Initialize map
-        if (mapRef.current && !mapInstanceRef.current) {
-          // Check if container already has a map
-          if (mapRef.current._leaflet_id) {
-            return
-          }
+      // Load Leaflet JS
+      if (typeof window.L === 'undefined') {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+          script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo='
+          script.crossOrigin = ''
+          script.onload = resolve
+          script.onerror = reject
+          document.head.appendChild(script)
+        })
+      }
 
-          // Ensure container has proper dimensions
-          if (mapRef.current.offsetWidth === 0 || mapRef.current.offsetHeight === 0) {
-            console.log('Map container has no dimensions, retrying...')
-            setTimeout(initializeMap, 100)
-            return
-          }
+      // Wait a bit for the script to be fully loaded
+      await new Promise(resolve => setTimeout(resolve, 100))
 
-          try {
-            mapInstanceRef.current = L.map('shop-map', {
-              zoomControl: false,
-              attributionControl: false,
-              dragging: false,
-              touchZoom: false,
-              scrollWheelZoom: false,
-              doubleClickZoom: false,
-              boxZoom: false,
-              keyboard: false
-            }).setView([shop.lat, shop.lng], 15)
-            
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-              attribution: '© OpenStreetMap contributors'
-            }).addTo(mapInstanceRef.current)
-
-            // Add shop marker
-            L.marker([shop.lat, shop.lng])
-              .addTo(mapInstanceRef.current)
-              .bindPopup(shop.name)
-            
-            // Force map to resize and fit properly
-            setTimeout(() => {
-              if (mapInstanceRef.current) {
-                mapInstanceRef.current.invalidateSize()
-              }
-            }, 200)
-            
-            setMapLoaded(true)
-          } catch (error) {
-            console.error('Failed to initialize map:', error)
-          }
+      // Initialize map
+      if (mapRef.current && !mapInstanceRef.current && window.L) {
+        // Check if container already has a map
+        if (mapRef.current._leaflet_id) {
+          return
         }
-      } catch (error) {
-        console.error('Error in map initialization:', error)
+
+        try {
+          mapInstanceRef.current = window.L.map('shop-map').setView([shop.lat, shop.lng], 15)
+          
+          window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+          }).addTo(mapInstanceRef.current)
+
+          // Add shop marker
+          window.L.marker([shop.lat, shop.lng])
+            .addTo(mapInstanceRef.current)
+            .bindPopup(shop.name)
+          
+          setMapLoaded(true)
+        } catch (error) {
+          console.error('Failed to initialize map:', error)
+        }
       }
     }
 
@@ -133,18 +130,6 @@ export default function ShopPage() {
       setMapLoaded(false)
     }
   }, [shop])
-
-  // Handle map resize when component updates
-  useEffect(() => {
-    if (mapInstanceRef.current && mapLoaded) {
-      const handleResize = () => {
-        mapInstanceRef.current.invalidateSize()
-      }
-      
-      window.addEventListener('resize', handleResize)
-      return () => window.removeEventListener('resize', handleResize)
-    }
-  }, [mapLoaded])
 
   const handleAddProduct = async (e) => {
     e.preventDefault()
@@ -366,37 +351,36 @@ export default function ShopPage() {
           </div>
           
                      {/* Shop Location Map - Small square on the right */}
-                       {shop.lat && shop.lng && (
-              <div style={{ flexShrink: 0 }}>
-                <div 
-                  ref={mapRef}
-                  id="shop-map"
-                  style={{ 
-                    width: '250px',
-                    height: '180px', 
-                    borderRadius: '8px',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    display: mapLoaded ? 'block' : 'flex',
-                    alignItems: mapLoaded ? 'stretch' : 'center',
-                    justifyContent: mapLoaded ? 'stretch' : 'center',
-                    fontSize: '0.75rem',
-                    color: 'var(--muted)',
-                    overflow: 'hidden',
-                    position: 'relative',
-                    minWidth: '250px',
-                    minHeight: '180px'
-                  }}
-                >
-                  {!mapLoaded && (
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📍</div>
-                      <div>Loading map...</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+           {shop.lat && shop.lng && (
+             <div style={{ flexShrink: 0 }}>
+               <div 
+                 ref={mapRef}
+                 id="shop-map"
+                 style={{ 
+                   width: '200px',
+                   height: '150px', 
+                   borderRadius: '8px',
+                   background: 'var(--surface)',
+                   border: '1px solid var(--border)',
+                   position: 'relative',
+                   zIndex: 1,
+                   overflow: 'hidden',
+                   display: mapLoaded ? 'block' : 'flex',
+                   alignItems: mapLoaded ? 'stretch' : 'center',
+                   justifyContent: mapLoaded ? 'stretch' : 'center',
+                   fontSize: '0.75rem',
+                   color: 'var(--muted)'
+                 }}
+               >
+                 {!mapLoaded && (
+                   <div style={{ textAlign: 'center' }}>
+                     <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📍</div>
+                     <div>Loading map...</div>
+                   </div>
+                 )}
+               </div>
+             </div>
+           )}
           
           {isOwner && (
             <button 
@@ -518,7 +502,22 @@ export default function ShopPage() {
          </div>
        </section>
 
-       
+       {/* Social Sharing */}
+       <section style={{ marginTop: '2rem', padding: '2rem 0', borderTop: '1px solid var(--border)' }}>
+         <h3 style={{ marginBottom: '1rem' }}>Share This Shop</h3>
+         <p className="muted" style={{ marginBottom: '1rem' }}>
+           Help others discover {shop.name}
+         </p>
+         <SocialSharing 
+           title={`${shop.name} - Local Shop`}
+           description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products and support local businesses.`}
+           url={`https://localslocalmarket.com/shops/${shop.id}`}
+           image={shop.coverPath}
+         />
+       </section>
+
+       {/* Related Shops */}
+       <RelatedShops currentShop={shop} />
 
        {/* Add Product Modal */}
       <Modal 

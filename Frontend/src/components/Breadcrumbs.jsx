@@ -32,15 +32,15 @@ const Breadcrumbs = () => {
     <nav aria-label="Breadcrumb" style={{ 
       marginBottom: '0.5rem',
       position: 'sticky',
-      top: '0',
+      top: '70px',
       left: '0',
       right: '0',
-      zIndex: 100,
-      backgroundColor: 'var(--background)',
+      zIndex: 19,
+      backgroundColor: 'rgba(10, 11, 15, 0.8)',
       padding: '0.5rem 1rem',
       borderBottom: '1px solid var(--border)',
-      backdropFilter: 'blur(8px)',
-      WebkitBackdropFilter: 'blur(8px)'
+      backdropFilter: 'blur(20px)',
+      WebkitBackdropFilter: 'blur(20px)'
     }}>
              <ol style={{
          display: 'flex',

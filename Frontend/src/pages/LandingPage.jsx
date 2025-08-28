@@ -133,7 +133,7 @@ export default function LandingPage() {
 
 
 
-  // Initialize map when Leaflet is loaded, container is ready, and coords are available
+  // Initialize map when Leaflet is loaded and container is ready
   useEffect(() => {
     if (!isLeafletLoaded() || !mapContainerReady) {
       return
@@ -143,7 +143,6 @@ export default function LandingPage() {
       try {
         console.log('Initializing map...')
         const L = window.L
-        console.log('Leaflet version:', L.version)
 
         // Remove existing map
         if (mapInstance) {
@@ -155,17 +154,14 @@ export default function LandingPage() {
         }
 
         // Ensure container has proper dimensions
-        if (mapRef.current.offsetWidth === 0 || mapRef.current.offsetHeight === 0) {
-          console.log('Container has no dimensions, retrying...')
-          setTimeout(initializeMap, 100)
+        if (!mapRef.current || mapRef.current.offsetWidth === 0 || mapRef.current.offsetHeight === 0) {
+          console.log('Container not ready, retrying...')
+          setTimeout(initializeMap, 200)
           return
         }
 
-        console.log('Container dimensions:', mapRef.current.offsetWidth, 'x', mapRef.current.offsetHeight)
-
         // Create map
         const center = coords ? [coords.lat, coords.lng] : [10.3157, 123.8854] // Cebu City
-        console.log('Map center:', center)
         
         const map = L.map(mapRef.current, {
           zoomControl: true,
@@ -178,62 +174,39 @@ export default function LandingPage() {
           keyboard: true
         }).setView(center, 13)
 
-        console.log('Map created successfully')
-
         // Add OpenStreetMap tiles
-        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
           maxZoom: 19,
           minZoom: 1
         }).addTo(map)
 
-        console.log('Tile layer added')
-
         // Add click handler to pin location
         map.on('click', (e) => {
           const { lat, lng } = e.latlng
-          console.log('Map clicked at:', lat, lng)
           setPinnedLocation({ lat, lng })
         })
 
-        // Add error handler for tile loading
-        tileLayer.on('tileerror', (e) => {
-          console.error('Tile loading error:', e)
-        })
-
         setMapInstance(map)
-        console.log('Map instance set')
 
-        // Force map to invalidate size after a short delay
+        // Force map to invalidate size
         setTimeout(() => {
           if (map) {
-            console.log('Invalidating map size')
             map.invalidateSize()
-            map.setView(center, 13) // Force a view update
-            
-            // Force a second refresh to ensure tiles load properly
-            setTimeout(() => {
-              if (map) {
-                console.log('Second map refresh')
-                map.invalidateSize()
-                map.setView(center, 13)
-              }
-            }, 1000)
           }
-        }, 500)
+        }, 100)
 
       } catch (err) {
         console.error('Error initializing map:', err)
       }
     }
 
-    // Use a small delay to ensure DOM is ready
-    const timer = setTimeout(initializeMap, 100)
+    // Use a delay to ensure DOM is ready
+    const timer = setTimeout(initializeMap, 200)
     
     return () => {
       clearTimeout(timer)
       if (mapInstance) {
-        console.log('Cleaning up map instance')
         try {
           mapInstance.remove()
         } catch (error) {
@@ -242,7 +215,7 @@ export default function LandingPage() {
         setMapInstance(null)
       }
     }
-  }, [coords, mapContainerReady]) // Reinitialize when coords or container readiness changes
+  }, [mapContainerReady]) // Only reinitialize when container readiness changes
 
   // Update markers when shops or pinned location changes
   useEffect(() => {
@@ -716,7 +689,10 @@ export default function LandingPage() {
           className="map-sticky-container"
           style={{ 
             height: isMapExpanded ? 'calc(100vh - 90px)' : 'calc(42vh - 2rem)', // Adjust for header height (70px + 20px padding)
-            minHeight: isMapExpanded ? '600px' : '300px'
+            minHeight: isMapExpanded ? '600px' : '300px',
+            position: 'sticky',
+            top: 'calc(70px + 1rem)',
+            zIndex: 10
           }}
         >
           <div style={{ 
@@ -735,7 +711,7 @@ export default function LandingPage() {
                 height: '100%', 
                 borderRadius: '12px',
                 border: '1px solid var(--border)',
-                overflow: 'visible',
+                overflow: 'hidden',
                 position: 'relative',
                 zIndex: 1,
                 minWidth: '300px',

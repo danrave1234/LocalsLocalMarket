@@ -12,7 +12,7 @@ export default function Header() {
   // Show loading state while checking authentication
   if (isLoading) {
     return (
-      <header style={{ position: 'sticky', top: 0, zIndex: 20, backdropFilter: 'saturate(120%) blur(8px)' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 20, backdropFilter: 'blur(20px)', backgroundColor: 'rgba(10, 11, 15, 0.8)' }}>
         <div className="container header-row">
           <div className="header-left">
             <Link to="/" style={{ textDecoration: 'none', color: 'inherit', fontWeight: 800, fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -37,13 +37,12 @@ export default function Header() {
             <span className="muted">Loading...</span>
           </nav>
         </div>
-        <div style={{ borderTop: '1px solid var(--border)' }} />
       </header>
     )
   }
 
   return (
-    <header style={{ position: 'sticky', top: 0, zIndex: 20, backdropFilter: 'saturate(120%) blur(8px)' }}>
+    <header style={{ position: 'sticky', top: 0, zIndex: 20, backdropFilter: 'blur(20px)', backgroundColor: 'rgba(10, 11, 15, 0.8)' }}>
       <div className="container header-row">
         <div className="header-left">
           <Link to="/" style={{ textDecoration: 'none', color: 'inherit', fontWeight: 800, fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -110,7 +109,6 @@ export default function Header() {
           )}
         </nav>
       </div>
-      <div style={{ borderTop: '1px solid var(--border)' }} />
     </header>
   )
 }

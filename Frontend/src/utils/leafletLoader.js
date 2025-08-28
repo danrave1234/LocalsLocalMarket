@@ -1,66 +1,96 @@
 let leafletPromise = null
 
-export const loadLeaflet = async () => {
-  if (leafletPromise) {
-    return leafletPromise
-  }
-
-  leafletPromise = new Promise(async (resolve, reject) => {
-    try {
-      // Load Leaflet CSS
-      if (!document.querySelector('link[href*="leaflet.css"]')) {
-        await new Promise((resolveCSS) => {
-          const link = document.createElement('link')
-          link.rel = 'stylesheet'
-          link.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css'
-          link.crossOrigin = ''
-          link.onload = resolveCSS
-          link.onerror = () => {
-            // Fallback to unpkg if cdnjs fails
-            const fallbackLink = document.createElement('link')
-            fallbackLink.rel = 'stylesheet'
-            fallbackLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-            fallbackLink.crossOrigin = ''
-            fallbackLink.onload = resolveCSS
-            fallbackLink.onerror = reject
-            document.head.appendChild(fallbackLink)
-          }
-          document.head.appendChild(link)
-        })
+function loadLinkWithFallbacks(urls) {
+  return new Promise((resolve, reject) => {
+    const tryNext = (index) => {
+      if (index >= urls.length) {
+        reject(new Error('Failed to load Leaflet CSS from all CDNs'))
+        return
       }
-
-      // Load Leaflet JS
-      if (typeof window.L === 'undefined') {
-        await new Promise((resolveJS, rejectJS) => {
-          const script = document.createElement('script')
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js'
-          script.crossOrigin = ''
-          script.onload = resolveJS
-          script.onerror = () => {
-            // Fallback to unpkg if cdnjs fails
-            const fallbackScript = document.createElement('script')
-            fallbackScript.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-            fallbackScript.crossOrigin = ''
-            fallbackScript.onload = resolveJS
-            fallbackScript.onerror = rejectJS
-            document.head.appendChild(fallbackScript)
-          }
-          document.head.appendChild(script)
-        })
+      const href = urls[index]
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = href
+      link.crossOrigin = 'anonymous'
+      link.dataset.leafletCss = 'true'
+      link.onload = resolve
+      link.onerror = () => {
+        console.warn(`[leafletLoader] CSS failed: ${href}. Trying next CDN...`)
+        tryNext(index + 1)
       }
-
-      // Wait for script to be fully loaded
-      await new Promise(resolve => setTimeout(resolve, 200))
-      
-      resolve(window.L)
-    } catch (error) {
-      reject(error)
+      document.head.appendChild(link)
     }
+    tryNext(0)
   })
+}
+
+function loadScriptWithFallbacks(urls) {
+  return new Promise((resolve, reject) => {
+    const tryNext = (index) => {
+      if (index >= urls.length) {
+        reject(new Error('Failed to load Leaflet JS from all CDNs'))
+        return
+      }
+      const src = urls[index]
+      const script = document.createElement('script')
+      script.src = src
+      script.crossOrigin = 'anonymous'
+      script.async = true
+      script.defer = true
+      script.dataset.leafletJs = 'true'
+      script.onload = resolve
+      script.onerror = () => {
+        console.warn(`[leafletLoader] JS failed: ${src}. Trying next CDN...`)
+        tryNext(index + 1)
+      }
+      document.head.appendChild(script)
+    }
+    tryNext(0)
+  })
+}
+
+export const loadLeaflet = async () => {
+  if (leafletPromise) return leafletPromise
+
+  const cssCDNs = [
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+    'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css'
+  ]
+  const jsCDNs = [
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+    'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js'
+  ]
+
+  leafletPromise = (async () => {
+    try {
+      // Load CSS once
+      if (!document.querySelector('link[data-leaflet-css]')) {
+        await loadLinkWithFallbacks(cssCDNs)
+      }
+
+      // Load JS once
+      if (typeof window.L === 'undefined' && !document.querySelector('script[data-leaflet-js]')) {
+        await loadScriptWithFallbacks(jsCDNs)
+      }
+
+      // Wait until window.L is available (with timeout)
+      const start = Date.now()
+      while (typeof window.L === 'undefined') {
+        if (Date.now() - start > 5000) {
+          throw new Error('Leaflet did not initialize within timeout')
+        }
+        await new Promise(r => setTimeout(r, 50))
+      }
+      return window.L
+    } catch (e) {
+      console.error('[leafletLoader] Failed to load Leaflet:', e)
+      throw e
+    }
+  })()
 
   return leafletPromise
 }
 
-export const isLeafletLoaded = () => {
-  return typeof window.L !== 'undefined'
-}
+export const isLeafletLoaded = () => typeof window.L !== 'undefined'
