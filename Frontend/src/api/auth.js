@@ -1,0 +1,96 @@
+import { API_BASE } from './client.js'
+
+export async function loginRequest({ email, password }) {
+  const response = await fetch(`${API_BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Login failed')
+  }
+  return response.json()
+}
+
+export async function registerRequest({ name, email, password }) {
+  const response = await fetch(`${API_BASE}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, password })
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Registration failed')
+  }
+  return response.json()
+}
+
+export async function getProfileRequest(token) {
+  const response = await fetch(`${API_BASE}/users/profile`, {
+    method: 'GET',
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to fetch profile')
+  }
+  return response.json()
+}
+
+export async function updateProfileRequest({ name }, token) {
+  console.log('=== UPDATE PROFILE REQUEST DEBUG ===')
+  console.log('API_BASE:', API_BASE)
+  console.log('Full URL:', `${API_BASE}/users/profile`)
+  console.log('Making update profile request with token:', token ? token.substring(0, 20) + '...' : 'NO TOKEN')
+  console.log('Request data:', { name })
+  
+  const response = await fetch(`${API_BASE}/users/profile`, {
+    method: 'PUT',
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ name })
+  })
+  
+  console.log('Response status:', response.status)
+  console.log('Response headers:', Object.fromEntries(response.headers.entries()))
+  
+  if (!response.ok) {
+    const error = await response.json()
+    console.error('Error response:', error)
+    throw new Error(error.error || 'Failed to update profile')
+  }
+  return response.json()
+}
+
+export async function changePasswordRequest({ currentPassword, newPassword }, token) {
+  console.log('=== CHANGE PASSWORD REQUEST DEBUG ===')
+  console.log('API_BASE:', API_BASE)
+  console.log('Full URL:', `${API_BASE}/users/change-password`)
+  console.log('Making change password request with token:', token ? token.substring(0, 20) + '...' : 'NO TOKEN')
+  
+  const response = await fetch(`${API_BASE}/users/change-password`, {
+    method: 'PUT',
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ currentPassword, newPassword })
+  })
+  
+  console.log('Response status:', response.status)
+  
+  if (!response.ok) {
+    const error = await response.json()
+    console.error('Error response:', error)
+    throw new Error(error.error || 'Failed to change password')
+  }
+  return response.json()
+}
+
+

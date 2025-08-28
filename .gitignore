@@ -1,0 +1,64 @@
+# Root Gitignore for LocalsLocalMarket (Backend + Frontend)
+
+# ---------------------
+# OS/Junk
+# ---------------------
+.DS_Store
+Thumbs.db
+*.log
+logs/
+
+# Local databases or AI cache
+llm.db
+
+# ---------------------
+# IDE/editor
+# ---------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# ---------------------
+# Environment/secrets
+# ---------------------
+.env
+.env.*
+Backend/.env
+Frontend/.env
+Frontend/.env.*
+
+# ---------------------
+# Uploads and generated media
+# ---------------------
+uploads/
+Backend/uploads/
+
+# ---------------------
+# Java / Maven (Backend)
+# ---------------------
+Backend/target/
+**/target/
+# Maven/Gradle local caches (should not be in project anyway)
+.mvn/timing.properties
+# If you want to keep the Maven wrapper jar in VCS, do NOT ignore it.
+# .mvn/wrapper/maven-wrapper.jar
+
+# ---------------------
+# Node / Frontend (Vite/React)
+# ---------------------
+Frontend/node_modules/
+Frontend/dist/
+Frontend/.vite/
+Frontend/coverage/
+# Optional: tool caches
+Frontend/.cache/
+
+# ---------------------
+# Misc
+# ---------------------
+*.swp
+*.swo
+*.tmp
+*.bak

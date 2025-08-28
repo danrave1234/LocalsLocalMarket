@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://localslocalmarket.com/sitemap.xml
+
+# Disallow admin and private areas
+Disallow: /dashboard/
+Disallow: /profile/
+Disallow: /settings/
+Disallow: /api/
+
+# Allow important pages
+Allow: /
+Allow: /shops/
+Allow: /login
+Allow: /register
+Allow: /donate
+
+# Crawl delay to be respectful to the server
+Crawl-delay: 1

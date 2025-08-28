@@ -1,0 +1,27 @@
+{
+  "name": "LocalsLocalMarket - Connect with Local Businesses",
+  "short_name": "LocalsLocalMarket",
+  "description": "Discover and connect with local businesses in your community. Find products, services, and support local entrepreneurs.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["business", "shopping", "local"],
+  "lang": "en",
+  "dir": "ltr"
+}
