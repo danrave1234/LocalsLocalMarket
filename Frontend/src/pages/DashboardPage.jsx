@@ -5,6 +5,39 @@ import LocationMap from '../components/LocationMap.jsx'
 import { createShopRequest, getUserShopsRequest, deleteShopRequest, updateShopRequest, fetchCategories } from '../api/shops.js'
 import { generateShopUrl } from '../utils/slugUtils.js'
 import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
+import { apiRequest } from '../api/client.js'
+
+// Utility function to format image paths
+const formatImagePath = (path) => {
+  if (!path) return null
+  // If path already starts with http/https, return as is
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+  // If path starts with /uploads, it's already correct
+  if (path.startsWith('/uploads/')) {
+    return path
+  }
+  // Otherwise, assume it's a relative path and add /uploads/
+  return `/uploads/${path}`
+}
+
+// Add cache busting to image URLs
+const getImageUrl = (path) => {
+  const formattedPath = formatImagePath(path)
+  if (!formattedPath) return null
+  
+  // Get the backend URL - use the same base as API requests
+  const backendUrl = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'
+  const baseUrl = backendUrl.replace('/api', '') // Remove /api to get just the base URL
+  
+  // Construct full URL to backend server
+  const fullUrl = `${baseUrl}${formattedPath}`
+  
+  // Add timestamp to prevent caching issues
+  const separator = fullUrl.includes('?') ? '&' : '?'
+  return `${fullUrl}${separator}t=${Date.now()}`
+}
 
 export default function DashboardPage() {
     const { user, token } = useAuth()
@@ -15,6 +48,7 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [categories, setCategories] = useState([])
+    const [uploading, setUploading] = useState(false)
 
     // Shop form state
     const [shopForm, setShopForm] = useState({
@@ -29,7 +63,9 @@ export default function DashboardPage() {
         instagram: '',
         twitter: '',
         lat: 10.3157, // Default to Cebu City
-        lng: 123.8854
+        lng: 123.8854,
+        logoPath: '',
+        coverPath: ''
     })
 
     // Location selection state
@@ -46,6 +82,39 @@ export default function DashboardPage() {
             setCategories(data.categories || [])
         } catch (error) {
             console.error('Failed to fetch categories:', error)
+        }
+    }
+
+    const onUpload = async (file) => {
+        if (!file) {
+            throw new Error('No file selected')
+        }
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            throw new Error('Please select an image file')
+        }
+        
+        // Validate file size (max 2MB to match backend)
+        if (file.size > 2 * 1024 * 1024) {
+            throw new Error('File size must be less than 2MB')
+        }
+        
+        setUploading(true)
+        setError('')
+        
+        try {
+            const fd = new FormData()
+            fd.append('file', file, file.name) // Include filename
+            
+            const res = await apiRequest('/uploads/image', { method: 'POST', body: fd, token })
+            console.log('Upload successful, path:', res.path)
+            return res.path
+        } catch (error) {
+            console.error('Upload error:', error)
+            throw new Error(`Upload failed: ${error.message}`)
+        } finally {
+            setUploading(false)
         }
     }
 
@@ -100,7 +169,9 @@ export default function DashboardPage() {
         }
 
         try {
+            console.log('Saving shop with form data:', shopForm)
             await updateShopRequest(editingShop.id, shopForm, token)
+            console.log('Shop updated successfully')
             // Refresh the shops list
             await fetchUserShops()
             setShowEditShop(false)
@@ -126,7 +197,9 @@ export default function DashboardPage() {
             instagram: shop.instagram || '',
             twitter: shop.twitter || '',
             lat: shop.lat || 10.3157,
-            lng: shop.lng || 123.8854
+            lng: shop.lng || 123.8854,
+            logoPath: shop.logoPath || '',
+            coverPath: shop.coverPath || ''
         })
         setSelectedLocation({
             lat: shop.lat,
@@ -149,7 +222,9 @@ export default function DashboardPage() {
             instagram: '',
             twitter: '',
             lat: 10.3157,
-            lng: 123.8854
+            lng: 123.8854,
+            logoPath: '',
+            coverPath: ''
         })
         setSelectedLocation(null)
     }
@@ -170,63 +245,69 @@ export default function DashboardPage() {
 
     if (loading) {
         return (
-            <main className="container" style={{ padding: '2rem', textAlign: 'center' }}>
-                <div className="muted">Loading dashboard...</div>
+            <main className="container dashboard-container">
+                <div className="dashboard-loading">
+                    <div className="loading-spinner-large"></div>
+                    <p className="muted">Loading your dashboard...</p>
+                </div>
             </main>
         )
     }
 
     return (
-        <main className="container" style={{ padding: '2rem' }}>
-            <div style={{ marginBottom: '2rem' }}>
-                <h1 style={{ margin: 0, marginBottom: '0.5rem' }}>Seller Dashboard</h1>
-                <p className="muted">Manage your shops and products</p>
+        <main className="container dashboard-container">
+            {/* Dashboard Header */}
+            <div className="dashboard-header">
+                <div className="dashboard-header-content">
+                    <div>
+                        <h1 className="dashboard-title">Seller Dashboard</h1>
+                        <p className="dashboard-subtitle">Manage your shops and grow your business</p>
+                    </div>
+                    <div className="dashboard-stats">
+                        <div className="stat-card">
+                            <div className="stat-number">{shops.length}</div>
+                            <div className="stat-label">Active Shops</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {error && (
-                <div style={{ 
-                    backgroundColor: 'var(--error-bg)', 
-                    color: 'var(--error)', 
-                    padding: '0.75rem', 
-                    borderRadius: '8px', 
-                    marginBottom: '1rem',
-                    fontSize: '0.9rem'
-                }}>
+                <div className="error-banner">
+                    <svg className="error-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                        <path d="M15 9L9 15M9 9L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
                     {error}
                 </div>
             )}
 
             {/* Quick Actions */}
-            <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-                gap: '1rem', 
-                marginBottom: '2rem' 
-            }}>
+            <div className="quick-actions">
                 <button 
-                    className="btn btn-primary" 
+                    className="create-shop-btn" 
                     onClick={() => setShowCreateShop(true)}
-                    style={{ padding: '1rem', textAlign: 'center' }}
                 >
-                    <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>🏪</div>
-                    Create New Shop
+                    <svg className="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    <span>Create New Shop</span>
                 </button>
             </div>
 
             {/* Shops Section */}
-            <section style={{ marginBottom: '2rem' }}>
-                <h2 style={{ marginBottom: '1rem' }}>Your Shops</h2>
+            <section className="shops-section">
+                <div className="section-header">
+                    <h2 className="section-title">Your Shops</h2>
+                    <p className="section-subtitle">Manage and monitor your business locations</p>
+                </div>
+                
                 {shops.length === 0 ? (
-                    <div className="card" style={{ 
-                        textAlign: 'center', 
-                        padding: '2rem',
-                        backgroundColor: 'var(--card-2)',
-                        border: '2px dashed var(--border)'
-                    }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏪</div>
-                        <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No shops yet</h3>
-                        <p className="muted" style={{ marginBottom: '1rem' }}>
-                            Create your first shop to start selling products
+                    <div className="empty-state">
+                        <div className="empty-state-icon">🏪</div>
+                        <h3 className="empty-state-title">No shops yet</h3>
+                        <p className="empty-state-description">
+                            Create your first shop to start selling products and reaching customers
                         </p>
                         <button 
                             className="btn btn-primary" 
@@ -236,33 +317,190 @@ export default function DashboardPage() {
                         </button>
                     </div>
                 ) : (
-                    <div style={{ display: 'grid', gap: '1rem' }}>
+                    <div className="shops-grid">
                         {shops.map(shop => (
-                            <div key={shop.id} className="card" style={{ padding: '1rem' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <h3 style={{ margin: 0, marginBottom: '0.25rem' }}>{shop.name}</h3>
-                                        {shop.addressLine && (
-                                            <p className="muted" style={{ margin: 0, marginBottom: '0.5rem' }}>
+                            <div key={shop.id} className="card" style={{ 
+                                padding: 0, 
+                                overflow: "hidden",
+                                borderRadius: "16px",
+                                transition: "all 0.3s ease",
+                                cursor: "pointer"
+                            }}
+                            onMouseEnter={(e) => e.target.style.transform = "translateY(-2px)"}
+                            onMouseLeave={(e) => e.target.style.transform = "translateY(0)"}
+                            >
+                                {/* Shop Image */}
+                                <div style={{ 
+                                    height: "120px", 
+                                    background: !shop.coverPath 
+                                        ? "linear-gradient(135deg, var(--surface) 0%, var(--card) 100%)"
+                                        : "transparent",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    color: "var(--muted)",
+                                    fontSize: "0.875rem",
+                                    position: "relative",
+                                    overflow: "hidden"
+                                }}>
+                                    {shop.coverPath ? (
+                                        <img 
+                                            src={getImageUrl(shop.coverPath)} 
+                                            alt={`${shop.name} shop view`}
+                                            style={{
+                                                width: "100%",
+                                                height: "100%",
+                                                objectFit: "cover",
+                                                objectPosition: "center"
+                                            }}
+                                            onError={(e) => {
+                                                console.error('Shop view image failed to load:', e.target.src)
+                                                e.target.style.display = 'none'
+                                            }}
+                                        />
+                                    ) : (
+                                        <div style={{ 
+                                            display: "flex", 
+                                            flexDirection: "column", 
+                                            alignItems: "center", 
+                                            gap: "0.5rem" 
+                                        }}>
+                                            <div style={{ fontSize: "1.5rem" }}>🏪</div>
+                                            <span>Shop View</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Shop Details */}
+                                <div style={{ padding: "0.75rem", position: "relative" }}>
+                                    {/* Shop Logo Overlay */}
+                                    {shop.logoPath && (
+                                        <div style={{
+                                            position: "absolute",
+                                            top: "-30px",
+                                            left: "20px",
+                                            width: "60px",
+                                            height: "60px",
+                                            borderRadius: "50%",
+                                            border: "3px solid var(--card)",
+                                            overflow: "hidden",
+                                            backgroundColor: "var(--card)",
+                                            boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                                            zIndex: 10
+                                        }}>
+                                            <img 
+                                                src={getImageUrl(shop.logoPath)} 
+                                                alt={`${shop.name} logo`} 
+                                                style={{
+                                                    width: "100%",
+                                                    height: "100%",
+                                                    objectFit: "cover"
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                    
+                                    {/* Shop Name */}
+                                    <h3
+                                        style={{
+                                            margin: 0,
+                                            marginBottom: "0.375rem",
+                                            fontSize: "0.95rem",
+                                            fontWeight: 600,
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                            marginLeft: shop.logoPath ? "80px" : "0"
+                                        }}
+                                    >
+                                        {shop.name}
+                                    </h3>
+                                    
+                                    {/* Category */}
+                                    {shop.category && (
+                                        <div style={{ marginBottom: "0.375rem" }}>
+                                            <span className="pill" style={{ fontSize: "0.7rem", padding: "0.2rem 0.4rem" }}>
+                                                {shop.category}
+                                            </span>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Location */}
+                                    {shop.addressLine && (
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: "0.5rem",
+                                                fontSize: "0.75rem",
+                                                color: "var(--muted)",
+                                                marginBottom: "0.375rem",
+                                            }}
+                                        >
+                                            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M12 21s-7-6-7-11a7 7 0 1 1 14 0c0 5-7 11-7 11Z" />
+                                                <circle cx="12" cy="10" r="2" />
+                                            </svg>
+                                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                                 {shop.addressLine}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Description */}
+                                    {shop.description && (
+                                        <p style={{
+                                            fontSize: "0.75rem",
+                                            color: "var(--muted)",
+                                            margin: "0 0 0.5rem 0",
+                                            lineHeight: 1.4,
+                                            display: "-webkit-box",
+                                            WebkitLineClamp: 2,
+                                            WebkitBoxOrient: "vertical",
+                                            overflow: "hidden"
+                                        }}>
+                                            {shop.description}
+                                        </p>
+                                    )}
+
+                                    {/* Action Buttons */}
+                                    <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.75rem" }}>
                                         <a 
                                             href={generateShopUrl(shop.name, shop.id)}
-                                            className="btn"
-                                            style={{ textDecoration: 'none' }}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                flex: 1,
+                                                textDecoration: "none",
+                                                color: "inherit"
+                                            }}
                                         >
-                                            View Shop
+                                            <button
+                                                className="btn btn-primary"
+                                                style={{
+                                                    width: "100%",
+                                                    padding: "0.4rem",
+                                                    borderRadius: "6px",
+                                                    fontSize: "0.75rem",
+                                                    fontWeight: 500,
+                                                }}
+                                            >
+                                                View Shop
+                                            </button>
                                         </a>
                                         <button 
                                             className="btn"
                                             onClick={() => openEditShop(shop)}
-                                            style={{ 
-                                                backgroundColor: 'var(--surface)', 
-                                                color: 'var(--text)',
-                                                border: '1px solid var(--border)'
+                                            style={{
+                                                padding: "0.4rem 0.75rem",
+                                                borderRadius: "6px",
+                                                fontSize: "0.75rem",
+                                                fontWeight: 500,
+                                                background: "var(--surface)",
+                                                border: "1px solid var(--border)",
+                                                color: "var(--text)",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease"
                                             }}
                                         >
                                             Edit
@@ -270,10 +508,16 @@ export default function DashboardPage() {
                                         <button 
                                             className="btn"
                                             onClick={() => handleDeleteShop(shop.id)}
-                                            style={{ 
-                                                backgroundColor: 'var(--error-bg)', 
-                                                color: 'var(--error)',
-                                                border: '1px solid var(--error)'
+                                            style={{
+                                                padding: "0.4rem 0.75rem",
+                                                borderRadius: "6px",
+                                                fontSize: "0.75rem",
+                                                fontWeight: 500,
+                                                background: "var(--surface)",
+                                                border: "1px solid var(--border)",
+                                                color: "#ef4444",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease"
                                             }}
                                         >
                                             Delete
@@ -282,11 +526,11 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                         ))}
-                                         </div>
+                    </div>
                  )}
                  
                  {/* Bottom ad after shops */}
-                 <div style={{ marginTop: '2rem', padding: '1rem 0', borderTop: '1px solid var(--border)' }}>
+                <div className="dashboard-ad">
                      <ResponsiveAd />
                  </div>
              </section>
@@ -520,12 +764,210 @@ export default function DashboardPage() {
                     resetForm()
                 }}
                 title="Edit Shop"
-                size="large"
+                size="xxlarge"
             >
-                <form onSubmit={handleEditShop} style={{ display: 'grid', gap: '1.5rem' }}>
+                <form onSubmit={handleEditShop} className="create-shop-form">
+                    <div className="form-grid">
+                        {/* Left Column - Form Inputs */}
+                        <div className="form-inputs">
+                            {/* Shop Images Upload - Top of form */}
+                            <div className="form-group">
+                                <label className="form-label">
+                                    Shop Images
+                                </label>
+                                {uploading && (
+                                    <div style={{ 
+                                        padding: '0.5rem', 
+                                        backgroundColor: 'var(--primary-bg)', 
+                                        borderRadius: '8px',
+                                        fontSize: '0.875rem',
+                                        color: 'var(--primary)',
+                                        marginBottom: '0.5rem'
+                                    }}>
+                                        📤 Uploading image...
+                                    </div>
+                                )}
+                                <div style={{ 
+                                    display: 'flex', 
+                                    gap: '2rem', 
+                                    alignItems: 'flex-start',
+                                    justifyContent: 'space-between',
+                                    flexWrap: 'wrap'
+                                }}>
+                                    {/* Debug info */}
+                                    {process.env.NODE_ENV === 'development' && (
+                                        <div style={{ 
+                                            position: 'absolute', 
+                                            top: '-30px', 
+                                            left: '0', 
+                                            fontSize: '0.7rem', 
+                                            color: 'var(--muted)',
+                                            backgroundColor: 'var(--card)',
+                                            padding: '2px 6px',
+                                            borderRadius: '4px',
+                                            border: '1px solid var(--muted)'
+                                        }}>
+                                            Logo: {shopForm.logoPath || 'none'} | Shop View: {shopForm.coverPath || 'none'}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Shop Logo */}
+                                    <div style={{ 
+                                        flex: '1 1 200px',
+                                        minWidth: '200px',
+                                        maxWidth: '250px'
+                                    }}>
+                                        <div style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: '0.5rem' }}>
+                                            Shop Logo
+                                        </div>
+                                        <div className="image-upload-container">
+                                            <div className="image-preview">
+                                                {shopForm.logoPath ? (
+                                                    <>
+                                                        <img src={shopForm.logoPath} alt="Shop logo" />
+                                                        <div className="image-preview-overlay">
+                                                            <div className="image-preview-overlay-content">
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        document.getElementById('logoUpload').click();
+                                                                    }}
+                                                                >
+                                                                    Change
+                                                                </button>
+                                                                <button 
+                                                                    type="button"
+                                                                    className="remove-btn"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setShopForm({...shopForm, logoPath: ''});
+                                                                    }}
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="image-upload-placeholder">
+                                                        <div className="upload-icon">📷</div>
+                                                        <div>Upload Logo</div>
+                                                        <div style={{fontSize: '0.7rem', opacity: 0.8}}>200x200px</div>
+                                                    </div>
+                                                )}
+                                                <input 
+                                                    id="logoUpload"
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    className="image-upload-input"
+                                                    disabled={uploading}
+                                                                                                onChange={async (e)=>{ 
+                                                const f = e.target.files?.[0]; 
+                                                if(!f || uploading) return; 
+                                                
+                                                try {
+                                                    const path = await onUpload(f); 
+                                                    console.log('Setting logo path:', path);
+                                                    setShopForm(prev => {
+                                                        const updated = {...prev, logoPath: path};
+                                                        console.log('Updated shopForm:', updated);
+                                                        return updated;
+                                                    });
+                                                    setError(''); // Clear any previous errors
+                                                } catch (error) {
+                                                    setError(error.message);
+                                                }
+                                                
+                                                // Reset the input value to allow re-uploading the same file
+                                                e.target.value = '';
+                                            }}  
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Shop View */}
+                                    <div style={{ 
+                                        flex: '1 1 200px',
+                                        minWidth: '200px',
+                                        maxWidth: '250px'
+                                    }}>
+                                        <div style={{ fontSize: '0.875rem', color: 'var(--muted)', marginBottom: '0.5rem' }}>
+                                            Shop View
+                                        </div>
+                                        <div className="image-upload-container">
+                                            <div className="image-preview cover-preview">
+                                                {shopForm.coverPath ? (
+                                                    <>
+                                                        <img src={getImageUrl(shopForm.coverPath)} alt="Shop view" />
+                                                        <div className="image-preview-overlay">
+                                                            <div className="image-preview-overlay-content">
+                                                                <button 
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        document.getElementById('coverUpload').click();
+                                                                    }}
+                                                                >
+                                                                    Change
+                                                                </button>
+                                                                <button 
+                                                                    type="button"
+                                                                    className="remove-btn"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setShopForm({...shopForm, coverPath: ''});
+                                                                    }}
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <div className="image-upload-placeholder">
+                                                        <div className="upload-icon">🏪</div>
+                                                        <div>Upload Shop View</div>
+                                                        <div style={{fontSize: '0.7rem', opacity: 0.8}}>Show what your shop looks like from outside</div>
+                                                    </div>
+                                                )}
+                                                <input 
+                                                    id="coverUpload"
+                                                    type="file" 
+                                                    accept="image/*" 
+                                                    className="image-upload-input"
+                                                    disabled={uploading}
+                                                                                                onChange={async (e)=>{ 
+                                                const f = e.target.files?.[0]; 
+                                                if(!f || uploading) return; 
+                                                
+                                                try {
+                                                    const path = await onUpload(f); 
+                                                    console.log('Setting cover path:', path);
+                                                    setShopForm(prev => {
+                                                        const updated = {...prev, coverPath: path};
+                                                        console.log('Updated shopForm:', updated);
+                                                        return updated;
+                                                    });
+                                                    setError(''); // Clear any previous errors
+                                                } catch (error) {
+                                                    setError(error.message);
+                                                }
+                                                
+                                                // Reset the input value to allow re-uploading the same file
+                                                e.target.value = '';
+                                            }}  
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                     {/* Shop Name */}
-                    <div>
-                        <label htmlFor="editShopName" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                            <div className="form-group">
+                                <label htmlFor="editShopName" className="form-label">
                             Shop Name *
                         </label>
                         <input
@@ -540,8 +982,8 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Category */}
-                    <div>
-                        <label htmlFor="editShopCategory" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                            <div className="form-group">
+                                <label htmlFor="editShopCategory" className="form-label">
                             Shop Category *
                         </label>
                         <select
@@ -561,8 +1003,8 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Description */}
-                    <div>
-                        <label htmlFor="editShopDescription" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                            <div className="form-group">
+                                <label htmlFor="editShopDescription" className="form-label">
                             Shop Description
                         </label>
                         <textarea
@@ -576,21 +1018,9 @@ export default function DashboardPage() {
                         />
                     </div>
 
-                    {/* Location Map */}
-                    <div>
-                        <label className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Shop Location *
-                        </label>
-                        <LocationMap 
-                            onLocationSelect={handleLocationSelect}
-                            initialLat={shopForm.lat}
-                            initialLng={shopForm.lng}
-                        />
-                    </div>
-
                     {/* Address */}
-                    <div>
-                        <label htmlFor="editShopAddress" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                            <div className="form-group">
+                                <label htmlFor="editShopAddress" className="form-label">
                             Address *
                         </label>
                         <input
@@ -609,9 +1039,9 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Contact Information */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div>
-                            <label htmlFor="editShopPhone" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label htmlFor="editShopPhone" className="form-label">
                                 Phone Number
                             </label>
                             <input
@@ -620,12 +1050,12 @@ export default function DashboardPage() {
                                 className="input"
                                 value={shopForm.phone}
                                 onChange={(e) => setShopForm({...shopForm, phone: e.target.value})}
-                                placeholder="Enter phone number"
+                                        placeholder="+63 912 345 6789"
                             />
                         </div>
-                        <div>
-                            <label htmlFor="editShopEmail" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                                Email
+                                <div className="form-group">
+                                    <label htmlFor="editShopEmail" className="form-label">
+                                        Email Address
                             </label>
                             <input
                                 type="email"
@@ -638,8 +1068,9 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div>
-                        <label htmlFor="editShopWebsite" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                            {/* Website */}
+                            <div className="form-group">
+                                <label htmlFor="editShopWebsite" className="form-label">
                             Website
                         </label>
                         <input
@@ -648,18 +1079,14 @@ export default function DashboardPage() {
                             className="input"
                             value={shopForm.website}
                             onChange={(e) => setShopForm({...shopForm, website: e.target.value})}
-                            placeholder="https://example.com"
+                                    placeholder="https://your-shop-website.com"
                         />
                     </div>
 
-                    {/* Social Media Links */}
-                    <div>
-                        <label className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Social Media Links (Optional)
-                        </label>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div>
-                                <label htmlFor="editShopFacebook" className="muted" style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>
+                            {/* Social Media */}
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label htmlFor="editShopFacebook" className="form-label">
                                     Facebook
                                 </label>
                                 <input
@@ -671,8 +1098,8 @@ export default function DashboardPage() {
                                     placeholder="https://facebook.com/yourpage"
                                 />
                             </div>
-                            <div>
-                                <label htmlFor="editShopInstagram" className="muted" style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>
+                                <div className="form-group">
+                                    <label htmlFor="editShopInstagram" className="form-label">
                                     Instagram
                                 </label>
                                 <input
@@ -685,9 +1112,10 @@ export default function DashboardPage() {
                                 />
                             </div>
                         </div>
-                        <div style={{ marginTop: '1rem' }}>
-                            <label htmlFor="editShopTwitter" className="muted" style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>
-                                Twitter/X
+
+                            <div className="form-group">
+                                <label htmlFor="editShopTwitter" className="form-label">
+                                    Twitter
                             </label>
                             <input
                                 type="url"
@@ -700,6 +1128,17 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
+                        {/* Right Column - Map */}
+                        <div className="form-map">
+                            <label className="form-label">
+                                Shop Location *
+                            </label>
+                            <LocationMap 
+                                onLocationSelect={handleLocationSelect}
+                                initialLat={shopForm.lat}
+                                initialLng={shopForm.lng}
+                            />
+
                     {/* Location Status */}
                     {selectedLocation && (
                         <div style={{ 
@@ -707,7 +1146,8 @@ export default function DashboardPage() {
                             backgroundColor: 'var(--primary-bg)', 
                             borderRadius: '8px',
                             border: '1px solid var(--primary)',
-                            fontSize: '0.875rem'
+                                    fontSize: '0.875rem',
+                                    marginTop: '0.75rem'
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                                 <span style={{ color: 'var(--primary)' }}>📍</span>
@@ -716,14 +1156,23 @@ export default function DashboardPage() {
                             <div style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>
                                 Coordinates: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
                             </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Error Display */}
+                    {error && (
+                        <div className="form-error">
+                            {error}
                         </div>
                     )}
 
                     {/* Form Actions */}
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                    <div className="form-actions">
                         <button 
                             type="button" 
-                            className="btn" 
+                            className="btn cancel-btn" 
                             onClick={() => {
                                 setShowEditShop(false)
                                 setEditingShop(null)
@@ -734,7 +1183,7 @@ export default function DashboardPage() {
                         </button>
                         <button 
                             type="submit" 
-                            className="btn btn-primary"
+                            className="btn btn-primary submit-btn"
                             disabled={!selectedLocation}
                         >
                             Update Shop

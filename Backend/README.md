@@ -158,3 +158,38 @@ Tuning via environment:
 Notes:
 - Authenticated, user-specific endpoints (e.g., /api/shops/my-shops) are not cached to avoid leaking private data.
 - Static uploads under /uploads/** already use long-lived HTTP caching.
+
+
+## Deploying to Google Cloud
+
+### Option A: Cloud Run (Container)
+Prereqs: gcloud CLI, a GCP project, Artifact/Container Registry enabled.
+
+1) Build & push image via Cloud Build:
+   - gcloud builds submit --tag gcr.io/PROJECT_ID/llm-backend:latest .
+
+2) Deploy to Cloud Run:
+   - gcloud run deploy llm-backend \
+       --image gcr.io/PROJECT_ID/llm-backend:latest \
+       --region REGION \
+       --platform managed \
+       --allow-unauthenticated \
+       --memory 512Mi \
+       --set-env-vars "LLM_JWT_SECRET=change-me,LLM_UPLOADS_DIR=/tmp/uploads,LLM_JPA_DDL=update"
+
+3) (Optional) Use Postgres instead of SQLite by setting:
+   - --set-env-vars "LLM_DB_URL=jdbc:postgresql://HOST:PORT/DB?sslmode=require,LLM_DB_DRIVER=org.postgresql.Driver,LLM_DB_DIALECT=org.hibernate.dialect.PostgreSQLDialect,LLM_DB_USER=USER,LLM_DB_PASS=PASS"
+
+Notes:
+- Cloud Run container filesystem is mostly read-only; only /tmp is writable. Use LLM_UPLOADS_DIR=/tmp/uploads or switch to GCS/S3 for durable storage.
+- Health check endpoint: GET /api/health
+- The app binds to $PORT automatically (server.port=${PORT:8080}).
+
+### Option B: App Engine Standard (Java 21)
+1) Review app.yaml (provided). It sets runtime: java21 and LLM_UPLOADS_DIR=/tmp/uploads.
+2) Deploy:
+   - gcloud app deploy --project PROJECT_ID --quiet
+3) (Optional) Set DB env vars in app.yaml for Postgres (Neon/Cloud SQL/etc.).
+
+### Option C: App Engine Flexible (alternative)
+Use Dockerfile with app.yaml (env: flex) if you prefer Flex; Cloud Run is recommended for simplicity and cost.

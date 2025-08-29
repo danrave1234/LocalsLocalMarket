@@ -10,6 +10,7 @@ import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
 import { extractShopIdFromSlug } from '../utils/slugUtils.js'
 import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
+import { API_BASE } from '../api/client.js'
 import './ShopPage.css'
 
 export default function ShopPage() {
@@ -29,6 +30,49 @@ export default function ShopPage() {
     price: '',
     category: ''
   })
+
+  // Utility function to format image paths
+  const formatImagePath = (path) => {
+    if (!path) return null
+    // If path already starts with http/https, return as is
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path
+    }
+    // If path starts with /uploads, it's already correct
+    if (path.startsWith('/uploads/')) {
+      return path
+    }
+    // Otherwise, assume it's a relative path and add /uploads/
+    return `/uploads/${path}`
+  }
+
+  // Add cache busting to image URLs
+  const getImageUrl = (path) => {
+    const formattedPath = formatImagePath(path)
+    if (!formattedPath) return null
+    
+    // Get the backend URL - use the same base as API requests
+    const backendUrl = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'
+    const baseUrl = backendUrl.replace('/api', '') // Remove /api to get just the base URL
+    
+    // Construct full URL to backend server
+    const fullUrl = `${baseUrl}${formattedPath}`
+    
+    // Add timestamp to prevent caching issues
+    const separator = fullUrl.includes('?') ? '&' : '?'
+    return `${fullUrl}${separator}t=${Date.now()}`
+  }
+
+  // Debug logging for image paths
+  useEffect(() => {
+    if (shop && process.env.NODE_ENV === 'development') {
+      console.log('Shop data:', shop)
+      console.log('Original logoPath:', shop.logoPath)
+      console.log('Formatted logoPath:', formatImagePath(shop.logoPath))
+      console.log('Original shopViewPath:', shop.coverPath)
+      console.log('Formatted shopViewPath:', formatImagePath(shop.coverPath))
+    }
+  }, [shop])
 
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
@@ -223,8 +267,8 @@ export default function ShopPage() {
             "latitude": shop.lat,
             "longitude": shop.lng
           } : undefined,
-          "image": shop.coverPath,
-          "logo": shop.logoPath,
+                  "image": getImageUrl(shop.coverPath), // Shop view image
+        "logo": getImageUrl(shop.logoPath),
           "sameAs": [
             shop.facebook,
             shop.instagram,
@@ -234,33 +278,279 @@ export default function ShopPage() {
         }}
       />
       <main className="container shop-page-container">
-        {/* Shop Cover Photo */}
-       {shop.coverPath && (
-         <section className="shop-cover-section">
-           <div className="shop-cover-image" style={{
-             background: `url(${shop.coverPath})`
-           }} />
-         </section>
-       )}
 
-      {/* Shop Header */}
-      <section className="card shop-header">
-        <div className="shop-header-content">
-          <div className="shop-info-section">
-            <Avatar src={shop.logoPath} alt={shop.name} size={80} fallback="🏪" />
-            <div className="shop-details">
-              <h2 className="shop-name">{shop.name}</h2>
-              {shop.addressLine && (
-                <p className="muted shop-address">
-                  {shop.addressLine}
-                </p>
+
+      {/* Shop Content - Two Column Layout */}
+      <div className="shop-content-layout">
+        {/* Left Column - Shop Info and Products */}
+        <div className="shop-left-column">
+          {/* Shop Header */}
+          <section className="card shop-header">
+            <div className="shop-header-content">
+              <div className="shop-info-section">
+
+                <Avatar src={getImageUrl(shop.logoPath)} alt={shop.name} size={200} fallback="🏪" />
+                <div className="shop-details">
+                  <div className="shop-name-section">
+                    <h1 className="shop-name">{shop.name}</h1>
+                    {shop.description && (
+                      <p className="shop-tagline">
+                        {shop.description}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {shop.addressLine && (
+                    <div className="shop-location-section">
+                      <div className="location-header">
+                        <span className="location-icon">📍</span>
+                        <span className="location-label">Location</span>
+                      </div>
+                      <div className="location-content">
+                        <div className="location-and-shop-view">
+                          <p className="shop-address">
+                            {shop.addressLine}
+                          </p>
+                          {shop.coverPath && (
+                            <div className="shop-view-image">
+                              <img 
+                                src={getImageUrl(shop.coverPath)} 
+                                alt={`${shop.name} shop view`}
+                                style={{
+                                  objectFit: 'cover',
+                                  borderRadius: '8px',
+                                  marginTop: '8px'
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+                {/* Social Sharing Section */}
+                <div className="social-sharing-section">
+                    <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>Share This Shop</h3>
+                    <p className="muted" style={{ marginBottom: '0.75rem', fontSize: '0.875rem' }}>
+                        Help others discover {shop.name}
+                    </p>
+                    <SocialSharing
+                        title={`${shop.name} - Local Shop`}
+                        description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products and support local businesses.`}
+                        url={`https://localslocalmarket.com/shops/${shop.id}`}
+                        image={getImageUrl(shop.coverPath)} // Shop view image
+                    />
+                </div>
+              {isOwner && (
+                <div style={{display:'flex', gap:8}}>
+                  <button 
+                    className="btn"
+                    onClick={() => window.location.href = `/shops/${slug}/edit`}
+                  >
+                    Edit Shop
+                  </button>
+                  <button 
+                    className="btn btn-primary add-product-btn"
+                    onClick={() => setShowAddProduct(true)}
+                  >
+                    Add Product
+                  </button>
+                  {process.env.NODE_ENV === 'development' && (
+                    <button 
+                      className="btn"
+                      onClick={() => window.location.reload()}
+                      style={{fontSize: '0.8rem', padding: '4px 8px'}}
+                    >
+                      Refresh
+                    </button>
+                  )}
+                </div>
               )}
             </div>
-          </div>
-          
-          {/* Shop Location Map - Responsive */}
+
+            {/* Shop Contact Details and Social Sharing */}
+            <div className="shop-contact-sharing-section">
+              {/* Contact Details */}
+              {(shop.phone || shop.website || shop.email || shop.facebook || shop.instagram || shop.twitter) && (
+                <div className="shop-contact-details">
+                  {shop.phone && (
+                    <div className="contact-item">
+                      <span className="contact-icon">📞</span>
+                      <a 
+                        href={`tel:${shop.phone}`}
+                        className="contact-link"
+                      >
+                        {shop.phone}
+                      </a>
+                    </div>
+                  )}
+                  {shop.email && (
+                    <div className="contact-item">
+                      <span className="contact-icon">✉️</span>
+                      <a 
+                        href={`mailto:${shop.email}`}
+                        className="contact-link"
+                      >
+                        {shop.email}
+                      </a>
+                    </div>
+                  )}
+                  {shop.website && (
+                    <div className="contact-item">
+                      <span className="contact-icon">🌐</span>
+                      <a 
+                        href={shop.website} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="contact-link"
+                      >
+                        {shop.website}
+                      </a>
+                    </div>
+                  )}
+                  {shop.facebook && (
+                    <div className="contact-item">
+                      <span className="contact-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                      </span>
+                      <a 
+                        href={shop.facebook} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="contact-link"
+                      >
+                        Facebook
+                      </a>
+                    </div>
+                  )}
+                  {shop.instagram && (
+                    <div className="contact-item">
+                      <span className="contact-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                        </svg>
+                      </span>
+                      <a 
+                        href={shop.instagram} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="contact-link"
+                      >
+                        Instagram
+                      </a>
+                    </div>
+                  )}
+                  {shop.twitter && (
+                    <div className="contact-item">
+                      <span className="contact-icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                      </span>
+                      <a 
+                        href={shop.twitter} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="contact-link"
+                      >
+                        X
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Products Section */}
+          <section className="products-section">
+            <div className="products-header">
+              <div>
+                <h3 style={{ margin: 0 }}>Products</h3>
+                <p className="muted" style={{ marginTop: 4 }}>
+                  {(!Array.isArray(products) || products.length === 0) ? 'No products yet' : `${products.length} product${products.length !== 1 ? 's' : ''} available`}
+                </p>
+              </div>
+              {isOwner && Array.isArray(products) && products.length > 0 && (
+                <button 
+                  className="btn add-another-product-btn"
+                  onClick={() => setShowAddProduct(true)}
+                >
+                  Add Another Product
+                </button>
+              )}
+            </div>
+
+            {(!Array.isArray(products) || products.length === 0) ? (
+              <div className="card no-products-card">
+                <div className="no-products-icon">📦</div>
+                <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No products yet</h3>
+                <p className="muted" style={{ marginBottom: '1rem' }}>
+                  {isOwner ? 'Start selling by adding your first product' : 'This shop hasn\'t added any products yet'}
+                </p>
+                {isOwner && (
+                  <button 
+                    className="btn btn-primary add-first-product-btn"
+                    onClick={() => setShowAddProduct(true)}
+                  >
+                    Add Your First Product
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="products-grid">
+                {Array.isArray(products) && products.map((product) => (
+                  <article key={product.id} className="card product-card">
+                    <div className="product-image-placeholder">
+                      {product.imagePathsJson ? 'Product Image' : 'No Image'}
+                    </div>
+                    <div className="product-content">
+                      <div className="product-title">{product.title}</div>
+                      <div className="product-price">
+                        ₱{Number(product.price).toFixed(2)}
+                      </div>
+                      {product.description && (
+                        <p className="product-description">
+                          {product.description.length > 60 
+                            ? product.description.substring(0, 60) + '...' 
+                            : product.description
+                          }
+                        </p>
+                      )}
+                      <div className="product-actions">
+                        <button className="btn view-product-btn">View</button>
+                        {isOwner && (
+                          <button 
+                            className="btn delete-product-btn"
+                            onClick={() => handleDeleteProduct(product.id)}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+             
+            {/* Bottom ad after products */}
+            <div className="bottom-ad">
+              <ResponsiveAd />
+            </div>
+          </section>
+        </div>
+
+        {/* Right Column - Map Only */}
+        <div className="shop-right-column">
+          {/* Shop Location Map */}
           {shop.lat && shop.lng && (
-            <div className="shop-map-container">
+            <section className="card shop-map-section">
+              <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Location</h3>
               <div 
                 ref={mapRef}
                 id="shop-map"
@@ -273,107 +563,10 @@ export default function ShopPage() {
                   </div>
                 )}
               </div>
-            </div>
-          )}
-          
-          {isOwner && (
-            <div style={{display:'flex', gap:8}}>
-              <button 
-                className="btn"
-                onClick={() => window.location.href = `/shops/${slug}/edit`}
-              >
-                Edit Shop
-              </button>
-              <button 
-                className="btn btn-primary add-product-btn"
-                onClick={() => setShowAddProduct(true)}
-              >
-                Add Product
-              </button>
-            </div>
+            </section>
           )}
         </div>
-
-        {/* Shop Contact Details - Responsive */}
-        {(shop.phone || shop.website || shop.email || shop.facebook || shop.instagram || shop.twitter) && (
-          <div className="shop-contact-details">
-            {shop.phone && (
-              <div className="contact-item">
-                <span className="contact-icon">📞</span>
-                <a 
-                  href={`tel:${shop.phone}`}
-                  className="contact-link"
-                >
-                  {shop.phone}
-                </a>
-              </div>
-            )}
-            {shop.email && (
-              <div className="contact-item">
-                <span className="contact-icon">✉️</span>
-                <a 
-                  href={`mailto:${shop.email}`}
-                  className="contact-link"
-                >
-                  {shop.email}
-                </a>
-              </div>
-            )}
-            {shop.website && (
-              <div className="contact-item">
-                <span className="contact-icon">🌐</span>
-                <a 
-                  href={shop.website} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="contact-link"
-                >
-                  {shop.website}
-                </a>
-              </div>
-            )}
-            {shop.facebook && (
-              <div className="contact-item">
-                <span className="contact-icon">📘</span>
-                <a 
-                  href={shop.facebook} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="contact-link"
-                >
-                  Facebook
-                </a>
-              </div>
-            )}
-            {shop.instagram && (
-              <div className="contact-item">
-                <span className="contact-icon">📷</span>
-                <a 
-                  href={shop.instagram} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="contact-link"
-                >
-                  Instagram
-                </a>
-              </div>
-            )}
-            {shop.twitter && (
-              <div className="contact-item">
-                <span className="contact-icon">🐦</span>
-                <a 
-                  href={shop.twitter} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="contact-link"
-                >
-                  Twitter
-                </a>
-              </div>
-            )}
-          </div>
-        )}
-      </section>
+      </div>
 
       {/* Advertisements Carousel */}
       {shop.adsEnabled && shop.adsImagePathsJson && (()=>{ let imgs=[]; try{ imgs = JSON.parse(shop.adsImagePathsJson)||[] } catch { imgs=[] }
@@ -388,98 +581,6 @@ export default function ShopPage() {
             </div>
           </section>
         ) : null })()}
-
-      {/* Products Section */}
-      <section className="products-section">
-        <div className="products-header">
-          <div>
-            <h3 style={{ margin: 0 }}>Products</h3>
-            <p className="muted" style={{ marginTop: 4 }}>
-              {(!Array.isArray(products) || products.length === 0) ? 'No products yet' : `${products.length} product${products.length !== 1 ? 's' : ''} available`}
-            </p>
-          </div>
-          {isOwner && Array.isArray(products) && products.length > 0 && (
-            <button 
-              className="btn add-another-product-btn"
-              onClick={() => setShowAddProduct(true)}
-            >
-              Add Another Product
-            </button>
-          )}
-        </div>
-
-        {(!Array.isArray(products) || products.length === 0) ? (
-          <div className="card no-products-card">
-            <div className="no-products-icon">📦</div>
-            <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No products yet</h3>
-            <p className="muted" style={{ marginBottom: '1rem' }}>
-              {isOwner ? 'Start selling by adding your first product' : 'This shop hasn\'t added any products yet'}
-            </p>
-            {isOwner && (
-              <button 
-                className="btn btn-primary add-first-product-btn"
-                onClick={() => setShowAddProduct(true)}
-              >
-                Add Your First Product
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="products-grid">
-            {Array.isArray(products) && products.map((product) => (
-              <article key={product.id} className="card product-card">
-                <div className="product-image-placeholder">
-                  {product.imagePathsJson ? 'Product Image' : 'No Image'}
-                </div>
-                <div className="product-content">
-                  <div className="product-title">{product.title}</div>
-                  <div className="product-price">
-                    ₱{Number(product.price).toFixed(2)}
-                  </div>
-                  {product.description && (
-                    <p className="product-description">
-                      {product.description.length > 60 
-                        ? product.description.substring(0, 60) + '...' 
-                        : product.description
-                      }
-                    </p>
-                  )}
-                  <div className="product-actions">
-                    <button className="btn view-product-btn">View</button>
-                    {isOwner && (
-                      <button 
-                        className="btn delete-product-btn"
-                        onClick={() => handleDeleteProduct(product.id)}
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-         
-        {/* Bottom ad after products */}
-        <div className="bottom-ad">
-          <ResponsiveAd />
-        </div>
-      </section>
-
-      {/* Social Sharing */}
-      <section className="social-sharing-section">
-        <h3 style={{ marginBottom: '1rem' }}>Share This Shop</h3>
-        <p className="muted" style={{ marginBottom: '1rem' }}>
-          Help others discover {shop.name}
-        </p>
-        <SocialSharing 
-          title={`${shop.name} - Local Shop`}
-          description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products and support local businesses.`}
-          url={`https://localslocalmarket.com/shops/${shop.id}`}
-          image={shop.coverPath}
-        />
-      </section>
 
       {/* Related Shops */}
       <RelatedShops currentShop={shop} />

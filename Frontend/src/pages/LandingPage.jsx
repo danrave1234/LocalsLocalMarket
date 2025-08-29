@@ -63,6 +63,38 @@ function haversineDistanceKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(c))
 }
 
+// Utility function to format image paths
+const formatImagePath = (path) => {
+  if (!path) return null
+  // If path already starts with http/https, return as is
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path
+  }
+  // If path starts with /uploads, it's already correct
+  if (path.startsWith('/uploads/')) {
+    return path
+  }
+  // Otherwise, assume it's a relative path and add /uploads/
+  return `/uploads/${path}`
+}
+
+// Add cache busting to image URLs
+const getImageUrl = (path) => {
+  const formattedPath = formatImagePath(path)
+  if (!formattedPath) return null
+  
+  // Get the backend URL - use the same base as API requests
+  const backendUrl = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'
+  const baseUrl = backendUrl.replace('/api', '') // Remove /api to get just the base URL
+  
+  // Construct full URL to backend server
+  const fullUrl = `${baseUrl}${formattedPath}`
+  
+  // Add timestamp to prevent caching issues
+  const separator = fullUrl.includes('?') ? '&' : '?'
+  return `${fullUrl}${separator}t=${Date.now()}`
+}
+
 // Helper function to extract shops from paginated response
 function extractShopsFromResponse(response) {
   if (Array.isArray(response)) {
@@ -114,6 +146,11 @@ export default function LandingPage() {
     }
 
     loadShops()
+    
+    // Clear pinned location when search query changes
+    if (pinnedLocation) {
+      setPinnedLocation(null)
+    }
   }, [query])
 
   const sortedShops = useMemo(() => {
@@ -184,6 +221,7 @@ export default function LandingPage() {
         // Add click handler to pin location
         map.on('click', (e) => {
           const { lat, lng } = e.latlng
+          // Clear any existing pinned location and set the new one
           setPinnedLocation({ lat, lng })
         })
 
@@ -261,9 +299,11 @@ export default function LandingPage() {
         iconAnchor: [12, 12]
       })
 
-      L.marker([coords.lat, coords.lng], { icon: userIcon })
+      const userMarker = L.marker([coords.lat, coords.lng], { icon: userIcon })
         .addTo(mapInstance)
         .bindPopup('Your Location')
+      
+      newMarkers.push(userMarker)
     }
 
     // Add pinned location marker
@@ -292,9 +332,11 @@ export default function LandingPage() {
         iconAnchor: [14, 14]
       })
 
-      L.marker([pinnedLocation.lat, pinnedLocation.lng], { icon: pinnedIcon })
+      const pinnedMarker = L.marker([pinnedLocation.lat, pinnedLocation.lng], { icon: pinnedIcon })
         .addTo(mapInstance)
         .bindPopup('Pinned Location')
+      
+      newMarkers.push(pinnedMarker)
     }
 
     // Add shop markers
@@ -305,23 +347,37 @@ export default function LandingPage() {
             className: 'shop-marker',
             html: `
               <div style="
-                width: 32px;
-                height: 32px;
-                background: #6366f1;
-                border: 2px solid white;
+                width: 40px;
+                height: 40px;
+                background: ${shop.logoPath ? 'white' : '#6366f1'};
+                border: 3px solid white;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                overflow: hidden;
                 color: white;
-                font-size: 16px;
+                font-size: 18px;
               ">
-                🏪
+                ${shop.logoPath ? 
+                  `<img 
+                    src="${getImageUrl(shop.logoPath)}" 
+                    alt="${shop.name}" 
+                    style="
+                      width: 100%;
+                      height: 100%;
+                      object-fit: cover;
+                      border-radius: 50%;
+                    "
+                    onerror="this.style.display='none'; this.parentElement.innerHTML='🏪'; this.parentElement.style.background='#6366f1';"
+                  />` : 
+                  '🏪'
+                }
               </div>
             `,
-            iconSize: [32, 32],
-            iconAnchor: [16, 16]
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
           })
 
           const marker = L.marker([shop.lat, shop.lng], { icon: shopIcon })
@@ -472,7 +528,7 @@ export default function LandingPage() {
 
       {/* Search Bar */}
       <section style={{ marginBottom: "2rem" }}>
-        <SearchOptimization />
+        <SearchOptimization onClearFilters={clearPinnedLocation} />
       </section>
 
       {/* Main Content - Shops List and Map Side by Side */}
@@ -547,23 +603,46 @@ export default function LandingPage() {
                 gap: "1rem",
               }}>
                 {sortedShops.map((shop) => (
-                  <div key={shop.id} className="card" style={{ padding: 0, overflow: "hidden" }}>
+                  <div key={shop.id} className="card" style={{ 
+                    padding: 0, 
+                    overflow: "hidden",
+                    borderRadius: "16px",
+                    transition: "all 0.3s ease",
+                    cursor: "pointer"
+                  }}
+                  onMouseEnter={(e) => e.target.style.transform = "translateY(-2px)"}
+                  onMouseLeave={(e) => e.target.style.transform = "translateY(0)"}
+                  >
                     {/* Shop Image */}
                     <div style={{ 
-                      height: "100px", 
-                      background: shop.coverPath 
-                        ? `url(${shop.coverPath})` 
-                        : "linear-gradient(135deg, var(--surface) 0%, var(--card) 100%)",
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
+                      height: "120px", 
+                      background: !shop.coverPath 
+                        ? "linear-gradient(135deg, var(--surface) 0%, var(--card) 100%)"
+                        : "transparent",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       color: "var(--muted)",
                       fontSize: "0.875rem",
-                      position: "relative"
+                      position: "relative",
+                      overflow: "hidden"
                     }}>
-                      {!shop.coverPath && (
+                      {shop.coverPath ? (
+                        <img 
+                          src={getImageUrl(shop.coverPath)} 
+                          alt={`${shop.name} shop view`}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            objectPosition: "center"
+                          }}
+                          onError={(e) => {
+                            console.error('Shop view image failed to load:', e.target.src)
+                            e.target.style.display = 'none'
+                          }}
+                        />
+                      ) : (
                         <div style={{ 
                           display: "flex", 
                           flexDirection: "column", 
@@ -571,13 +650,40 @@ export default function LandingPage() {
                           gap: "0.5rem" 
                         }}>
                           <div style={{ fontSize: "1.5rem" }}>🏪</div>
-                          <span>Shop Image</span>
+                          <span>Shop View</span>
                         </div>
                       )}
                     </div>
 
                     {/* Shop Details */}
-                    <div style={{ padding: "0.75rem" }}>
+                    <div style={{ padding: "0.75rem", position: "relative" }}>
+                      {/* Shop Logo Overlay */}
+                      {shop.logoPath && (
+                        <div style={{
+                          position: "absolute",
+                          top: "-30px",
+                          left: "20px",
+                          width: "60px",
+                          height: "60px",
+                          borderRadius: "50%",
+                          border: "3px solid var(--card)",
+                          overflow: "hidden",
+                          backgroundColor: "var(--card)",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                          zIndex: 10
+                        }}>
+                          <img 
+                            src={getImageUrl(shop.logoPath)} 
+                            alt={`${shop.name} logo`} 
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover"
+                            }}
+                          />
+                        </div>
+                      )}
+                      
                       {/* Shop Name */}
                       <h3
                         style={{
@@ -588,6 +694,7 @@ export default function LandingPage() {
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
+                          marginLeft: shop.logoPath ? "80px" : "0"
                         }}
                       >
                         {shop.name}

@@ -2,14 +2,21 @@
 export const API_BASE = import.meta.env.VITE_API_BASE || '/api'
 
 export async function apiRequest(path, { method = 'GET', body, token, headers } = {}) {
+  const isFormData = body instanceof FormData;
+  const requestHeaders = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...headers,
+  };
+  
+  // Only set Content-Type for non-FormData requests
+  if (!isFormData) {
+    requestHeaders['Content-Type'] = 'application/json';
+  }
+  
   const res = await fetch(`${API_BASE}${path}`, {
     method,
-    headers: {
-      'Content-Type': body instanceof FormData ? undefined : 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers,
-    },
-    body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+    headers: requestHeaders,
+    body: isFormData ? body : body ? JSON.stringify(body) : undefined,
     credentials: 'include',
   })
   if (!res.ok) {

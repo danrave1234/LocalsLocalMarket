@@ -23,14 +23,20 @@ export default function Avatar({ src, alt, size = 36, fallback = "🏪", name })
           }}
           onError={(e) => {
             // If image fails to load, hide it and show fallback
+            console.error('Image failed to load:', e.target.src)
             e.target.style.display = 'none'
             e.target.nextSibling.style.display = 'flex'
+          }}
+          onLoad={(e) => {
+            console.log('Image loaded successfully:', e.target.src)
+            // Hide the fallback when image loads successfully
+            e.target.nextSibling.style.display = 'none'
           }}
         />
         <div style={{
           width: '100%',
           height: '100%',
-          display: 'none',
+          display: 'flex', // Show fallback initially
           alignItems: 'center',
           justifyContent: 'center',
           background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
@@ -65,5 +71,3 @@ export default function Avatar({ src, alt, size = 36, fallback = "🏪", name })
     </div>
   )
 }
-
-

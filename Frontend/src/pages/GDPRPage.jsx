@@ -2,55 +2,104 @@ import React from 'react';
 
 const GDPRPage = () => {
   return (
-    <div className="gdpr-page">
-      <div className="container mx-auto px-4 py-8">
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">GDPR Compliance</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Your data protection rights under the General Data Protection Regulation (GDPR).
-          </p>
-          <p className="text-sm text-gray-500 mt-4">
-            Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
+    <main className="gdpr-container">
+      {/* Hero Section */}
+      <section className="gdpr-hero">
+        <div className="hero-background">
+          <div className="hero-pattern"></div>
         </div>
+        <div className="hero-content">
+          <div className="hero-header">
+            <div className="hero-logo">
+              <svg className="hero-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M9 12L11 14L15 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span className="hero-title">GDPR Compliance</span>
+            </div>
+            <h1 className="hero-heading">Data Protection Rights</h1>
+            <p className="hero-subtitle">
+              Your data protection rights under the General Data Protection Regulation (GDPR).
+            </p>
+            <div className="hero-meta">
+              <span className="last-updated">
+                Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
 
-        <div className="max-w-4xl mx-auto">
+      {/* GDPR Content */}
+      <section className="gdpr-content">
+        <div className="content-wrapper">
           {/* Introduction */}
-          <div className="bg-white p-8 rounded-lg shadow-md mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">What is GDPR?</h2>
-            <p className="text-gray-700 mb-4">
-              The General Data Protection Regulation (GDPR) is a comprehensive data protection law that 
-              came into effect on May 25, 2018. It applies to all organizations operating within the EU 
-              and those that offer goods or services to individuals in the EU, regardless of where the 
-              organization is based.
-            </p>
-            <p className="text-gray-700">
-              At LocalsLocalMarket, we are committed to protecting your privacy and ensuring compliance 
-              with GDPR requirements. This page explains your rights and how we handle your personal data.
-            </p>
+          <div className="gdpr-section">
+            <div className="section-card">
+              <div className="card-header">
+                <h2 className="card-title">
+                  <svg className="card-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M12 16V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M12 8H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  What is GDPR?
+                </h2>
+              </div>
+              <div className="card-content">
+                <p className="content-text">
+                  The General Data Protection Regulation (GDPR) is a comprehensive data protection law that 
+                  came into effect on May 25, 2018. It applies to all organizations operating within the EU 
+                  and those that offer goods or services to individuals in the EU, regardless of where the 
+                  organization is based.
+                </p>
+                <p className="content-text">
+                  At LocalsLocalMarket, we are committed to protecting your privacy and ensuring compliance 
+                  with GDPR requirements. This page explains your rights and how we handle your personal data.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Your Rights */}
-          <div className="bg-white p-8 rounded-lg shadow-md mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Your GDPR Rights</h2>
-            <p className="text-gray-700 mb-6">
-              Under GDPR, you have the following rights regarding your personal data:
-            </p>
-            
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">1. Right to Access</h3>
-                <p className="text-gray-700 mb-2">
-                  You have the right to request access to your personal data and receive information about:
-                </p>
-                <ul className="list-disc list-inside text-gray-600 text-sm space-y-1">
-                  <li>What personal data we hold about you</li>
-                  <li>How we use your data</li>
-                  <li>Who we share your data with</li>
-                  <li>How long we keep your data</li>
-                </ul>
+          <div className="gdpr-section">
+            <div className="section-card">
+              <div className="card-header">
+                <h2 className="card-title">
+                  <svg className="card-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 12L11 14L15 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                  Your GDPR Rights
+                </h2>
               </div>
+              <div className="card-content">
+                <p className="content-text">
+                  Under GDPR, you have the following rights regarding your personal data:
+                </p>
+            
+                <div className="rights-grid">
+                  <div className="right-card">
+                    <div className="right-header">
+                      <svg className="right-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M14 2V8H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M16 13H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M16 17H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M10 9H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      <h3 className="right-title">1. Right to Access</h3>
+                    </div>
+                    <p className="right-description">
+                      You have the right to request access to your personal data and receive information about:
+                    </p>
+                    <ul className="right-list">
+                      <li>What personal data we hold about you</li>
+                      <li>How we use your data</li>
+                      <li>Who we share your data with</li>
+                      <li>How long we keep your data</li>
+                    </ul>
+                  </div>
 
               <div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">2. Right to Rectification</h3>

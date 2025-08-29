@@ -43,8 +43,14 @@ export default function Modal({ isOpen, onClose, title, children, size = 'medium
   }
 
   const handleContentMouseUp = (e) => {
-    // Prevent the overlay click from firing when releasing mouse inside modal content
-    e.stopPropagation()
+    // Allow mouseup events to bubble up for interactive elements like maps
+    // Only stop propagation for non-interactive elements to prevent modal closing
+    const target = e.target
+    const isInteractive = target.closest('button, input, textarea, select, [role="button"], [tabindex], .leaflet-container, .custom-marker')
+    
+    if (!isInteractive) {
+      e.stopPropagation()
+    }
   }
 
   const handleContentClick = (e) => {

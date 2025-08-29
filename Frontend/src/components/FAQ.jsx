@@ -34,6 +34,18 @@ const FAQ = ({ faqs = [] }) => {
     {
       question: "Is LocalsLocalMarket free to use?",
       answer: "Yes, LocalsLocalMarket is completely free for customers to use. We believe in making local business discovery accessible to everyone."
+    },
+    {
+      question: "How do I contact a local business?",
+      answer: "Each business profile includes contact information such as phone numbers, email addresses, and physical addresses. You can also use our contact forms to reach out directly."
+    },
+    {
+      question: "Can I leave reviews for businesses?",
+      answer: "Yes! After visiting a local business, you can leave reviews and ratings to help other customers make informed decisions and support the business."
+    },
+    {
+      question: "What types of businesses are on the platform?",
+      answer: "We feature a wide variety of local businesses including retail shops, restaurants, service providers, artisans, and more. Our goal is to showcase the diverse local business community."
     }
   ]
 
@@ -53,63 +65,37 @@ const FAQ = ({ faqs = [] }) => {
   }
 
   return (
-    <div style={{ marginTop: '2rem' }}>
+    <div className="faq-container">
       <JsonLd data={structuredData} />
       
-      <h3 style={{ marginBottom: '1rem' }}>Frequently Asked Questions</h3>
-      
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+      <div className="faq-list">
         {allFaqs.map((faq, index) => (
           <div 
             key={index}
-            style={{
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-              overflow: 'hidden'
-            }}
+            className={`faq-item ${openItems.has(index) ? 'faq-item-open' : ''}`}
           >
             <button
               onClick={() => toggleItem(index)}
-              style={{
-                width: '100%',
-                padding: '1rem',
-                background: 'var(--surface)',
-                border: 'none',
-                textAlign: 'left',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                fontSize: '1rem',
-                fontWeight: 500,
-                color: 'var(--text)',
-                transition: 'background-color 0.2s'
-              }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--card)'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--surface)'}
+              className="faq-question"
+              aria-expanded={openItems.has(index)}
             >
-              <span>{faq.question}</span>
-              <span style={{ 
-                fontSize: '1.5rem', 
-                transition: 'transform 0.2s',
-                transform: openItems.has(index) ? 'rotate(45deg)' : 'rotate(0deg)'
-              }}>
-                +
-              </span>
+              <span className="question-text">{faq.question}</span>
+              <svg 
+                className={`faq-icon ${openItems.has(index) ? 'faq-icon-open' : ''}`}
+                viewBox="0 0 24 24" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M12 5V19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </button>
             
-            {openItems.has(index) && (
-              <div style={{
-                padding: '1rem',
-                background: 'var(--card)',
-                borderTop: '1px solid var(--border)',
-                fontSize: '0.9rem',
-                lineHeight: '1.5',
-                color: 'var(--text)'
-              }}>
+            <div className={`faq-answer ${openItems.has(index) ? 'faq-answer-open' : ''}`}>
+              <div className="answer-content">
                 {faq.answer}
               </div>
-            )}
+            </div>
           </div>
         ))}
       </div>

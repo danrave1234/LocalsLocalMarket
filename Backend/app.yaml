@@ -1,0 +1,24 @@
+runtime: java21
+env: standard
+instance_class: F1
+
+# App Engine Standard only allows writing to /tmp at runtime.
+# Set uploads directory accordingly.
+env_variables:
+  LLM_UPLOADS_DIR: /tmp/uploads
+  # Set a strong secret in production
+  LLM_JWT_SECRET: change-me-in-prod-please-very-long
+  # Database configuration (uncomment and fill if using managed Postgres like Cloud SQL or Neon)
+  # LLM_DB_URL: jdbc:postgresql://<host>:<port>/<db>?sslmode=require
+  # LLM_DB_DRIVER: org.postgresql.Driver
+  # LLM_DB_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+  # LLM_DB_USER: <username>
+  # LLM_DB_PASS: <password>
+  # Schema management: update on first deploy, then consider validate
+  LLM_JPA_DDL: update
+
+# Optional automatic scaling settings
+automatic_scaling:
+  max_instances: 2
+  min_instances: 0
+  target_cpu_utilization: 0.65

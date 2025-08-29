@@ -136,14 +136,78 @@ export default function ShopEditPage(){
 
         <div className="form-row">
           <div>
-            <label className="muted form-label">Logo</label>
-            {form.logoPath && <div style={{marginBottom:8}}><img src={form.logoPath} alt="logo" style={{height:64,borderRadius:8}}/></div>}
-            <input type="file" accept="image/*" onChange={async (e)=>{ const f=e.target.files?.[0]; if(!f) return; const path = await onUpload(f); setForm({...form,logoPath:path})}} />
+            <label className="muted form-label">Shop Logo</label>
+            {form.logoPath && (
+              <div style={{marginBottom:8}}>
+                <img src={form.logoPath} alt="Current logo" style={{height:64,borderRadius:8}}/>
+                <div style={{marginTop:4}}>
+                  <button 
+                    type="button" 
+                    className="btn" 
+                    style={{fontSize:'0.8rem', padding:'4px 8px'}}
+                    onClick={() => setForm({...form, logoPath: ''})}
+                  >
+                    Remove Logo
+                  </button>
+                </div>
+              </div>
+            )}
+            <label className="btn" style={{display:'inline-block', marginBottom:8}}>
+              {form.logoPath ? 'Change Logo' : 'Upload Logo'}
+              <input 
+                type="file" 
+                accept="image/*" 
+                style={{display:'none'}} 
+                onChange={async (e)=>{ 
+                  const f=e.target.files?.[0]; 
+                  if(!f) return; 
+                  const path = await onUpload(f); 
+                  setForm({...form,logoPath:path})
+                }} 
+              />
+            </label>
+            {!form.logoPath && (
+              <div className="muted" style={{fontSize:'0.8rem'}}>
+                Upload a square logo image (recommended: 200x200px)
+              </div>
+            )}
           </div>
           <div>
-            <label className="muted form-label">Cover</label>
-            {form.coverPath && <div style={{marginBottom:8}}><img src={form.coverPath} alt="cover" style={{height:64,borderRadius:8}}/></div>}
-            <input type="file" accept="image/*" onChange={async (e)=>{ const f=e.target.files?.[0]; if(!f) return; const path = await onUpload(f); setForm({...form,coverPath:path})}} />
+                            <label className="muted form-label">Shop View</label>
+            {form.coverPath && (
+              <div style={{marginBottom:8}}>
+                                        <img src={form.coverPath} alt="Current shop view" style={{height:64,borderRadius:8, objectFit:'cover', width:'100%'}}/>
+                <div style={{marginTop:4}}>
+                  <button 
+                    type="button" 
+                    className="btn" 
+                    style={{fontSize:'0.8rem', padding:'4px 8px'}}
+                    onClick={() => setForm({...form, coverPath: ''})}
+                  >
+                    Remove Shop View
+                  </button>
+                </div>
+              </div>
+            )}
+            <label className="btn" style={{display:'inline-block', marginBottom:8}}>
+              {form.coverPath ? 'Change Shop View' : 'Upload Shop View'}
+              <input 
+                type="file" 
+                accept="image/*" 
+                style={{display:'none'}} 
+                onChange={async (e)=>{ 
+                  const f=e.target.files?.[0]; 
+                  if(!f) return; 
+                  const path = await onUpload(f); 
+                  setForm({...form,coverPath:path})
+                }} 
+              />
+            </label>
+            {!form.coverPath && (
+              <div className="muted" style={{fontSize:'0.8rem'}}>
+                Upload a shop view image showing the exterior of your shop (recommended: 1200x400px)
+              </div>
+            )}
           </div>
         </div>
 

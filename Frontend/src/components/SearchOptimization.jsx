@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchCategories } from '../api/shops.js'
 
-const SearchOptimization = () => {
+const SearchOptimization = ({ onClearFilters }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchSuggestions, setSearchSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -96,6 +96,9 @@ const SearchOptimization = () => {
   const clearFilters = () => {
     setSearchParams({})
     setActiveFilter(null)
+    if (onClearFilters) {
+      onClearFilters()
+    }
   }
 
   return (
@@ -149,6 +152,9 @@ const SearchOptimization = () => {
                 onClick={() => {
                   setSearchParams({})
                   setShowSuggestions(false)
+                  if (onClearFilters) {
+                    onClearFilters()
+                  }
                 }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
