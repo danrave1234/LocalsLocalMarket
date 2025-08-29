@@ -37,6 +37,8 @@ public class ShopController {
         Shop s = new Shop();
         s.setOwner(owner);
         s.setName(req.name());
+        s.setDescription(req.description());
+        s.setCategory(req.category());
         s.setAddressLine(req.addressLine());
         s.setLat(req.lat());
         s.setLng(req.lng());
@@ -99,6 +101,7 @@ public class ShopController {
 
     @GetMapping
     public Page<Shop> list(@RequestParam("q") Optional<String> q,
+                           @RequestParam("category") Optional<String> category,
                            @RequestParam(value = "page", defaultValue = "0") int page,
                            @RequestParam(value = "size", defaultValue = "20") int size){
         Specification<Shop> spec = Specification.where(null);
@@ -106,7 +109,34 @@ public class ShopController {
             String like = "%" + q.get().toLowerCase() + "%";
             spec = spec.and((root, cq, cb) -> cb.like(cb.lower(root.get("name")), like));
         }
+        if(category.isPresent()){
+            spec = spec.and((root, cq, cb) -> cb.equal(root.get("category"), category.get()));
+        }
         return shops.findAll(spec, PageRequest.of(page, size));
+    }
+
+    @GetMapping("/categories")
+    public ResponseEntity<?> getCategories(){
+        return ResponseEntity.ok(Map.of(
+            "categories", java.util.Arrays.asList(
+                "Vulkanizing",
+                "Motorcycle Parts",
+                "Beauty Products", 
+                "Household Accessories",
+                "Electronics",
+                "Clothing & Fashion",
+                "Food & Beverages",
+                "Automotive Services",
+                "Health & Wellness",
+                "Home & Garden",
+                "Sports & Recreation",
+                "Books & Stationery",
+                "Jewelry & Accessories",
+                "Pet Supplies",
+                "Construction & Hardware",
+                "Other"
+            )
+        ));
     }
 
     @PatchMapping("/{slug}")
@@ -150,6 +180,8 @@ public class ShopController {
                 return ResponseEntity.status(403).body("Forbidden");
             }
             if(req.name() != null) shop.setName(req.name());
+            if(req.description() != null) shop.setDescription(req.description());
+            if(req.category() != null) shop.setCategory(req.category());
             if(req.addressLine() != null) shop.setAddressLine(req.addressLine());
             if(req.lat() != null) shop.setLat(req.lat());
             if(req.lng() != null) shop.setLng(req.lng());

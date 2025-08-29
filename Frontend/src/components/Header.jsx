@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Logo from './Logo.jsx'
+import SearchOptimization from './SearchOptimization.jsx'
 
 export default function Header() {
   const { token, user, logout, isLoading } = useAuth()
@@ -52,13 +53,7 @@ export default function Header() {
         </div>
         
         <div className="header-center">
-          <div className="header-search">
-            <input
-              className="input"
-              placeholder="Search products or shops"
-            />
-            <button className="btn">Search</button>
-          </div>
+          <SearchOptimization />
         </div>
         
         <nav className="header-right" style={{ gap: '0.75rem' }}>

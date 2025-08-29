@@ -26,18 +26,46 @@ export default function Modal({ isOpen, onClose, title, children, size = 'medium
     small: 'max-w-sm',
     medium: 'max-w-md',
     large: 'max-w-lg',
-    xlarge: 'max-w-xl'
+    xlarge: 'max-w-2xl',
+    xxlarge: 'max-w-4xl'
+  }
+
+  const handleOverlayClick = (e) => {
+    // Only close if clicking directly on the overlay, not when dragging
+    if (e.target === e.currentTarget) {
+      onClose()
+    }
+  }
+
+  const handleContentMouseDown = (e) => {
+    // Prevent the overlay click from firing when interacting with modal content
+    e.stopPropagation()
+  }
+
+  const handleContentMouseUp = (e) => {
+    // Prevent the overlay click from firing when releasing mouse inside modal content
+    e.stopPropagation()
+  }
+
+  const handleContentClick = (e) => {
+    // Prevent the overlay click from firing when clicking inside modal content
+    e.stopPropagation()
   }
 
   const modalContent = (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={handleOverlayClick}>
       <div 
         className={`modal-content ${sizeClasses[size]}`} 
-        onClick={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{ width: '100%', maxWidth: sizeClasses[size] === 'max-w-sm' ? '400px' : 
-                                       sizeClasses[size] === 'max-w-md' ? '500px' : 
-                                       sizeClasses[size] === 'max-w-lg' ? '600px' : '700px' }}
+        onMouseDown={handleContentMouseDown}
+        onMouseUp={handleContentMouseUp}
+        onClick={handleContentClick}
+        style={{ 
+          width: '100%', 
+          maxWidth: sizeClasses[size] === 'max-w-sm' ? '380px' : 
+                     sizeClasses[size] === 'max-w-md' ? '570px' : 
+                     sizeClasses[size] === 'max-w-lg' ? '760px' : 
+                     sizeClasses[size] === 'max-w-2xl' ? '1140px' : '1330px' 
+        }}
       >
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>

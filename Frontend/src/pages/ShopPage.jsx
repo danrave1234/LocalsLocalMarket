@@ -10,6 +10,7 @@ import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
 import { extractShopIdFromSlug } from '../utils/slugUtils.js'
 import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
+import './ShopPage.css'
 
 export default function ShopPage() {
   const { id: slug } = useParams()
@@ -168,7 +169,7 @@ export default function ShopPage() {
 
   if (loading) {
     return (
-      <main className="container" style={{ padding: '2rem', textAlign: 'center' }}>
+      <main className="container shop-page-container">
         <div className="muted">Loading shop...</div>
       </main>
     )
@@ -176,7 +177,7 @@ export default function ShopPage() {
 
   if (error) {
     return (
-      <main className="container" style={{ padding: '2rem' }}>
+      <main className="container shop-page-container">
         <div style={{ 
           backgroundColor: 'var(--error-bg)', 
           color: 'var(--error)', 
@@ -192,7 +193,7 @@ export default function ShopPage() {
 
   if (!shop) {
     return (
-      <main className="container" style={{ padding: '2rem', textAlign: 'center' }}>
+      <main className="container shop-page-container">
         <div className="muted">Shop not found</div>
       </main>
     )
@@ -232,184 +233,152 @@ export default function ShopPage() {
           ].filter(Boolean)
         }}
       />
-      <main className="container" style={{ paddingTop: '1rem', paddingBottom: '2rem' }}>
+      <main className="container shop-page-container">
         {/* Shop Cover Photo */}
        {shop.coverPath && (
-         <section style={{ marginBottom: '1.5rem' }}>
-           <div style={{
-             height: '90vh',
-             maxHeight: '600px',
-             minHeight: '400px',
-             background: `url(${shop.coverPath})`,
-             backgroundSize: 'cover',
-             backgroundPosition: 'center',
-             borderRadius: '12px',
-             position: 'relative',
-             width: '100%'
+         <section className="shop-cover-section">
+           <div className="shop-cover-image" style={{
+             background: `url(${shop.coverPath})`
            }} />
          </section>
        )}
 
       {/* Shop Header */}
-      <section className="card" style={{ padding: '1.25rem', marginBottom: '1.5rem' }}>
-                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
-                     <Avatar src={shop.logoPath} alt={shop.name} size={144} fallback="🏪" />
-          <div style={{ flex: 1 }}>
-            <h2 style={{ margin: 0, marginBottom: '0.25rem' }}>{shop.name}</h2>
-            {shop.addressLine && (
-              <p className="muted" style={{ margin: 0, fontSize: '0.875rem' }}>
-                {shop.addressLine}
-              </p>
-            )}
-            
-            {/* Shop Contact Details */}
-            {(shop.phone || shop.website || shop.email || shop.facebook || shop.instagram || shop.twitter) && (
-              <div style={{ 
-                marginTop: '1rem', 
-                paddingTop: '1rem', 
-                borderTop: '1px solid var(--border)',
-                display: 'flex',
-                gap: '1rem',
-                flexWrap: 'wrap'
-              }}>
-                {shop.phone && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>📞</span>
-                    <a 
-                      href={`tel:${shop.phone}`}
-                      style={{ fontSize: '0.875rem', color: 'var(--primary)', textDecoration: 'none' }}
-                    >
-                      {shop.phone}
-                    </a>
-                  </div>
-                )}
-                {shop.email && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>✉️</span>
-                    <a 
-                      href={`mailto:${shop.email}`}
-                      style={{ fontSize: '0.875rem', color: 'var(--primary)', textDecoration: 'none' }}
-                    >
-                      {shop.email}
-                    </a>
-                  </div>
-                )}
-                {shop.website && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>🌐</span>
-                    <a 
-                      href={shop.website} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ fontSize: '0.875rem', color: 'var(--primary)', textDecoration: 'none' }}
-                    >
-                      {shop.website}
-                    </a>
-                  </div>
-                )}
-                {shop.facebook && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>📘</span>
-                    <a 
-                      href={shop.facebook} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ fontSize: '0.875rem', color: 'var(--primary)', textDecoration: 'none' }}
-                    >
-                      Facebook
-                    </a>
-                  </div>
-                )}
-                {shop.instagram && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>📷</span>
-                    <a 
-                      href={shop.instagram} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ fontSize: '0.875rem', color: 'var(--primary)', textDecoration: 'none' }}
-                    >
-                      Instagram
-                    </a>
-                  </div>
-                )}
-                {shop.twitter && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>🐦</span>
-                    <a 
-                      href={shop.twitter} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ fontSize: '0.875rem', color: 'var(--primary)', textDecoration: 'none' }}
-                    >
-                      Twitter
-                    </a>
+      <section className="card shop-header">
+        <div className="shop-header-content">
+          <div className="shop-info-section">
+            <Avatar src={shop.logoPath} alt={shop.name} size={80} fallback="🏪" />
+            <div className="shop-details">
+              <h2 className="shop-name">{shop.name}</h2>
+              {shop.addressLine && (
+                <p className="muted shop-address">
+                  {shop.addressLine}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          {/* Shop Location Map - Responsive */}
+          {shop.lat && shop.lng && (
+            <div className="shop-map-container">
+              <div 
+                ref={mapRef}
+                id="shop-map"
+                className={`shop-map ${mapLoaded ? 'loaded' : ''}`}
+              >
+                {!mapLoaded && (
+                  <div className="map-loading">
+                    <div className="map-loading-icon">📍</div>
+                    <div>Loading map...</div>
                   </div>
                 )}
               </div>
-            )}
-          </div>
-          
-                     {/* Shop Location Map - Small square on the right */}
-           {shop.lat && shop.lng && (
-             <div style={{ flexShrink: 0 }}>
-               <div 
-                 ref={mapRef}
-                 id="shop-map"
-                 style={{ 
-                   width: '200px',
-                   height: '150px', 
-                   borderRadius: '8px',
-                   background: 'var(--surface)',
-                   border: '1px solid var(--border)',
-                   position: 'relative',
-                   zIndex: 1,
-                   overflow: 'hidden',
-                   display: mapLoaded ? 'block' : 'flex',
-                   alignItems: mapLoaded ? 'stretch' : 'center',
-                   justifyContent: mapLoaded ? 'stretch' : 'center',
-                   fontSize: '0.75rem',
-                   color: 'var(--muted)'
-                 }}
-               >
-                 {!mapLoaded && (
-                   <div style={{ textAlign: 'center' }}>
-                     <div style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>📍</div>
-                     <div>Loading map...</div>
-                   </div>
-                 )}
-               </div>
-             </div>
-           )}
+            </div>
+          )}
           
           {isOwner && (
             <button 
-              className="btn btn-primary"
+              className="btn btn-primary add-product-btn"
               onClick={() => setShowAddProduct(true)}
             >
               Add Product
             </button>
           )}
         </div>
+
+        {/* Shop Contact Details - Responsive */}
+        {(shop.phone || shop.website || shop.email || shop.facebook || shop.instagram || shop.twitter) && (
+          <div className="shop-contact-details">
+            {shop.phone && (
+              <div className="contact-item">
+                <span className="contact-icon">📞</span>
+                <a 
+                  href={`tel:${shop.phone}`}
+                  className="contact-link"
+                >
+                  {shop.phone}
+                </a>
+              </div>
+            )}
+            {shop.email && (
+              <div className="contact-item">
+                <span className="contact-icon">✉️</span>
+                <a 
+                  href={`mailto:${shop.email}`}
+                  className="contact-link"
+                >
+                  {shop.email}
+                </a>
+              </div>
+            )}
+            {shop.website && (
+              <div className="contact-item">
+                <span className="contact-icon">🌐</span>
+                <a 
+                  href={shop.website} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="contact-link"
+                >
+                  {shop.website}
+                </a>
+              </div>
+            )}
+            {shop.facebook && (
+              <div className="contact-item">
+                <span className="contact-icon">📘</span>
+                <a 
+                  href={shop.facebook} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="contact-link"
+                >
+                  Facebook
+                </a>
+              </div>
+            )}
+            {shop.instagram && (
+              <div className="contact-item">
+                <span className="contact-icon">📷</span>
+                <a 
+                  href={shop.instagram} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="contact-link"
+                >
+                  Instagram
+                </a>
+              </div>
+            )}
+            {shop.twitter && (
+              <div className="contact-item">
+                <span className="contact-icon">🐦</span>
+                <a 
+                  href={shop.twitter} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="contact-link"
+                >
+                  Twitter
+                </a>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Products Section */}
-      <section>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          marginBottom: '1rem' 
-        }}>
+      <section className="products-section">
+        <div className="products-header">
           <div>
             <h3 style={{ margin: 0 }}>Products</h3>
-                       <p className="muted" style={{ marginTop: 4 }}>
-             {(!Array.isArray(products) || products.length === 0) ? 'No products yet' : `${products.length} product${products.length !== 1 ? 's' : ''} available`}
-           </p>
+            <p className="muted" style={{ marginTop: 4 }}>
+              {(!Array.isArray(products) || products.length === 0) ? 'No products yet' : `${products.length} product${products.length !== 1 ? 's' : ''} available`}
+            </p>
           </div>
-                     {isOwner && Array.isArray(products) && products.length > 0 && (
+          {isOwner && Array.isArray(products) && products.length > 0 && (
             <button 
-              className="btn"
+              className="btn add-another-product-btn"
               onClick={() => setShowAddProduct(true)}
             >
               Add Another Product
@@ -417,21 +386,16 @@ export default function ShopPage() {
           )}
         </div>
 
-                 {(!Array.isArray(products) || products.length === 0) ? (
-          <div className="card" style={{ 
-            textAlign: 'center', 
-            padding: '2rem',
-            backgroundColor: 'var(--card-2)',
-            border: '2px dashed var(--border)'
-          }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
+        {(!Array.isArray(products) || products.length === 0) ? (
+          <div className="card no-products-card">
+            <div className="no-products-icon">📦</div>
             <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No products yet</h3>
             <p className="muted" style={{ marginBottom: '1rem' }}>
               {isOwner ? 'Start selling by adding your first product' : 'This shop hasn\'t added any products yet'}
             </p>
             {isOwner && (
               <button 
-                className="btn btn-primary"
+                className="btn btn-primary add-first-product-btn"
                 onClick={() => setShowAddProduct(true)}
               >
                 Add Your First Product
@@ -439,52 +403,31 @@ export default function ShopPage() {
             )}
           </div>
         ) : (
-                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
-             {Array.isArray(products) && products.map((product) => (
-              <article key={product.id} className="card" style={{ padding: '0.9rem' }}>
-                <div style={{ 
-                  height: 140, 
-                  borderRadius: 12, 
-                  background: 'var(--surface)', 
-                  marginBottom: 10,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--muted)',
-                  fontSize: '0.875rem'
-                }}>
+          <div className="products-grid">
+            {Array.isArray(products) && products.map((product) => (
+              <article key={product.id} className="card product-card">
+                <div className="product-image-placeholder">
                   {product.imagePathsJson ? 'Product Image' : 'No Image'}
                 </div>
-                <div>
-                  <div style={{ fontWeight: 600, marginBottom: 4 }}>{product.title}</div>
-                  <div className="muted" style={{ marginBottom: '0.5rem' }}>
+                <div className="product-content">
+                  <div className="product-title">{product.title}</div>
+                  <div className="product-price">
                     ₱{Number(product.price).toFixed(2)}
                   </div>
                   {product.description && (
-                    <p style={{ 
-                      fontSize: '0.875rem', 
-                      color: 'var(--muted)', 
-                      margin: '0 0 0.5rem 0',
-                      lineHeight: 1.4
-                    }}>
+                    <p className="product-description">
                       {product.description.length > 60 
                         ? product.description.substring(0, 60) + '...' 
                         : product.description
                       }
                     </p>
                   )}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn" style={{ flex: 1 }}>View</button>
+                  <div className="product-actions">
+                    <button className="btn view-product-btn">View</button>
                     {isOwner && (
                       <button 
-                        className="btn"
+                        className="btn delete-product-btn"
                         onClick={() => handleDeleteProduct(product.id)}
-                        style={{ 
-                          backgroundColor: 'var(--error-bg)', 
-                          color: 'var(--error)',
-                          border: '1px solid var(--error)',
-                          padding: '0.5rem 0.75rem'
-                        }}
                       >
                         Delete
                       </button>
@@ -493,42 +436,42 @@ export default function ShopPage() {
                 </div>
               </article>
             ))}
-                     </div>
-         )}
+          </div>
+        )}
          
-         {/* Bottom ad after products */}
-         <div style={{ marginTop: '2rem', padding: '1rem 0', borderTop: '1px solid var(--border)' }}>
-           <ResponsiveAd />
-         </div>
-       </section>
+        {/* Bottom ad after products */}
+        <div className="bottom-ad">
+          <ResponsiveAd />
+        </div>
+      </section>
 
-       {/* Social Sharing */}
-       <section style={{ marginTop: '2rem', padding: '2rem 0', borderTop: '1px solid var(--border)' }}>
-         <h3 style={{ marginBottom: '1rem' }}>Share This Shop</h3>
-         <p className="muted" style={{ marginBottom: '1rem' }}>
-           Help others discover {shop.name}
-         </p>
-         <SocialSharing 
-           title={`${shop.name} - Local Shop`}
-           description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products and support local businesses.`}
-           url={`https://localslocalmarket.com/shops/${shop.id}`}
-           image={shop.coverPath}
-         />
-       </section>
+      {/* Social Sharing */}
+      <section className="social-sharing-section">
+        <h3 style={{ marginBottom: '1rem' }}>Share This Shop</h3>
+        <p className="muted" style={{ marginBottom: '1rem' }}>
+          Help others discover {shop.name}
+        </p>
+        <SocialSharing 
+          title={`${shop.name} - Local Shop`}
+          description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products and support local businesses.`}
+          url={`https://localslocalmarket.com/shops/${shop.id}`}
+          image={shop.coverPath}
+        />
+      </section>
 
-       {/* Related Shops */}
-       <RelatedShops currentShop={shop} />
+      {/* Related Shops */}
+      <RelatedShops currentShop={shop} />
 
-       {/* Add Product Modal */}
+      {/* Add Product Modal */}
       <Modal 
         isOpen={showAddProduct} 
         onClose={() => setShowAddProduct(false)}
         title="Add New Product"
-        size="large"
+        size="xlarge"
       >
-        <form onSubmit={handleAddProduct} style={{ display: 'grid', gap: '1rem' }}>
+        <form onSubmit={handleAddProduct} className="add-product-form">
           <div>
-            <label htmlFor="productTitle" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
+            <label htmlFor="productTitle" className="muted form-label">
               Product Title *
             </label>
             <input
@@ -542,7 +485,7 @@ export default function ShopPage() {
           </div>
 
           <div>
-            <label htmlFor="productDescription" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
+            <label htmlFor="productDescription" className="muted form-label">
               Description
             </label>
             <textarea
@@ -555,9 +498,9 @@ export default function ShopPage() {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div className="form-row">
             <div>
-              <label htmlFor="productPrice" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
+              <label htmlFor="productPrice" className="muted form-label">
                 Price *
               </label>
               <input
@@ -572,7 +515,7 @@ export default function ShopPage() {
               />
             </div>
             <div>
-              <label htmlFor="productCategory" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
+              <label htmlFor="productCategory" className="muted form-label">
                 Category
               </label>
               <input
@@ -586,15 +529,15 @@ export default function ShopPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+          <div className="form-actions">
             <button 
               type="button" 
-              className="btn" 
+              className="btn cancel-btn" 
               onClick={() => setShowAddProduct(false)}
             >
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
+            <button type="submit" className="btn btn-primary submit-btn">
               Add Product
             </button>
           </div>

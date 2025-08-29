@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { fetchCategories } from '../api/shops.js'
 
 const SearchOptimization = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchSuggestions, setSearchSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [categories, setCategories] = useState([])
+  const [isExpanded, setIsExpanded] = useState(false)
+  const [activeFilter, setActiveFilter] = useState(null)
 
   const query = searchParams.get('q') || ''
+  const category = searchParams.get('category') || ''
 
   // Popular search terms for suggestions
   const popularSearches = [
@@ -20,6 +25,18 @@ const SearchOptimization = () => {
     'community businesses'
   ]
 
+  // Popular categories for quick selection
+  const popularCategories = [
+    'Restaurants',
+    'Grocery',
+    'Crafts',
+    'Services',
+    'Electronics',
+    'Clothing',
+    'Health & Beauty',
+    'Home & Garden'
+  ]
+
   useEffect(() => {
     // Update URL for better SEO when search changes
     if (query) {
@@ -29,10 +46,24 @@ const SearchOptimization = () => {
     }
   }, [query])
 
+  useEffect(() => {
+    // Fetch categories
+    const loadCategories = async () => {
+      try {
+        const data = await fetchCategories()
+        setCategories(data.categories || [])
+      } catch (error) {
+        console.error('Failed to fetch categories:', error)
+      }
+    }
+    loadCategories()
+  }, [])
+
   const handleSearch = (searchTerm) => {
     if (searchTerm.trim()) {
       setSearchParams({ q: searchTerm.trim() })
       setShowSuggestions(false)
+      setIsExpanded(false)
     }
   }
 
@@ -46,123 +77,206 @@ const SearchOptimization = () => {
     }
   }
 
+  const handleCategoryChange = (selectedCategory) => {
+    const newParams = new URLSearchParams(searchParams)
+    if (selectedCategory) {
+      newParams.set('category', selectedCategory)
+    } else {
+      newParams.delete('category')
+    }
+    setSearchParams(newParams)
+    setActiveFilter(null)
+  }
+
+  const handleQuickCategorySelect = (cat) => {
+    handleCategoryChange(cat)
+    setIsExpanded(false)
+  }
+
+  const clearFilters = () => {
+    setSearchParams({})
+    setActiveFilter(null)
+  }
+
   return (
-    <div style={{ position: 'relative', maxWidth: '500px' }}>
-      <div style={{ position: 'relative' }}>
-        <input
-          type="text"
-          placeholder="Search local shops, products, or services..."
-          value={query}
-          onChange={(e) => {
-            const newQuery = e.target.value
-            if (newQuery) {
-              setSearchParams({ q: newQuery })
-            } else {
-              setSearchParams({})
-            }
-            setShowSuggestions(true)
-          }}
-          onFocus={() => setShowSuggestions(true)}
-          onKeyPress={handleKeyPress}
-          style={{
-            width: '100%',
-            padding: '0.75rem 1rem',
-            border: '1px solid var(--border)',
-            borderRadius: '8px',
-            backgroundColor: 'var(--surface)',
-            color: 'var(--text)',
-            fontSize: '1rem',
-            outline: 'none',
-            transition: 'border-color 0.2s'
-          }}
-          onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
-          onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
-        />
-        
-        <button
-          onClick={() => handleSearch(query)}
-          style={{
-            position: 'absolute',
-            right: '8px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'var(--primary)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '0.5rem 1rem',
-            cursor: 'pointer',
-            fontSize: '0.875rem'
-          }}
-        >
-          Search
-        </button>
+    <div className="airbnb-search-container">
+      {/* Main Search Bar */}
+      <div className="airbnb-search-bar">
+        <div className="search-input-group">
+          {/* Category Filter */}
+          <div 
+            className={`search-filter ${activeFilter === 'category' ? 'active' : ''}`}
+            onClick={() => {
+              setActiveFilter(activeFilter === 'category' ? null : 'category')
+              setIsExpanded(true)
+            }}
+          >
+            <div className="filter-value">
+              {category || 'Any category'}
+            </div>
+            <svg className="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="6,9 12,15 18,9"></polyline>
+            </svg>
+          </div>
+
+          {/* Search Input */}
+          <div className={`search-input-wrapper ${activeFilter === 'search' ? 'active' : ''}`}>
+            <input
+              type="text"
+              placeholder="Search shops, products, or services..."
+              value={query}
+              onChange={(e) => {
+                const newQuery = e.target.value
+                if (newQuery) {
+                  setSearchParams({ q: newQuery })
+                } else {
+                  setSearchParams({})
+                }
+                setShowSuggestions(true)
+                setActiveFilter('search')
+              }}
+              onFocus={() => {
+                setShowSuggestions(true)
+                setActiveFilter('search')
+                setIsExpanded(true)
+              }}
+              onKeyPress={handleKeyPress}
+              className="search-input"
+            />
+            {query && (
+              <button 
+                className="clear-search"
+                onClick={() => {
+                  setSearchParams({})
+                  setShowSuggestions(false)
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Search Button */}
+          <button
+            onClick={() => handleSearch(query)}
+            className="search-button"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </button>
+        </div>
+
+        {/* Active Filters Display - Only show search query, not category */}
+        {query && (
+          <div className="active-filters">
+            <div className="filter-tag">
+              <span>"{query}"</span>
+              <button onClick={() => setSearchParams({ category })}>×</button>
+            </div>
+            <button onClick={clearFilters} className="clear-all">
+              Clear all
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Search Suggestions */}
-      {showSuggestions && (
-        <div style={{
-          position: 'absolute',
-          top: '100%',
-          left: 0,
-          right: 0,
-          backgroundColor: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: '8px',
-          marginTop: '4px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          zIndex: 1000,
-          maxHeight: '300px',
-          overflowY: 'auto'
-        }}>
-          {/* Popular Searches */}
-          <div style={{ padding: '0.75rem', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: '0.5rem' }}>
-              Popular Searches
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {popularSearches.map((search, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleSuggestionClick(search)}
-                  style={{
-                    background: 'var(--card)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '16px',
-                    padding: '0.25rem 0.75rem',
-                    fontSize: '0.75rem',
-                    cursor: 'pointer',
-                    color: 'var(--text)',
-                    transition: 'background-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--primary)'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--card)'}
+      {/* Expanded Search Panel */}
+      {isExpanded && (
+        <div className="search-panel">
+          {/* Category Selection */}
+          {activeFilter === 'category' && (
+            <div className="panel-section">
+              <h3>Select a category</h3>
+              <div className="category-grid">
+                {popularCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    className={`category-option ${category === cat ? 'selected' : ''}`}
+                    onClick={() => handleQuickCategorySelect(cat)}
+                  >
+                    <div className="category-icon">
+                      {cat === 'Restaurants' && '🍽️'}
+                      {cat === 'Grocery' && '🛒'}
+                      {cat === 'Crafts' && '🎨'}
+                      {cat === 'Services' && '🔧'}
+                      {cat === 'Electronics' && '📱'}
+                      {cat === 'Clothing' && '👕'}
+                      {cat === 'Health & Beauty' && '💄'}
+                      {cat === 'Home & Garden' && '🏡'}
+                    </div>
+                    <span>{cat}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="all-categories">
+                <h4>All categories</h4>
+                <select
+                  value={category}
+                  onChange={(e) => handleQuickCategorySelect(e.target.value)}
+                  className="category-select"
                 >
-                  {search}
-                </button>
-              ))}
+                  <option value="">Any category</option>
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Recent Searches (if implemented) */}
-          <div style={{ padding: '0.75rem' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: '0.5rem' }}>
-              Search Tips
+          {/* Search Suggestions */}
+          {activeFilter === 'search' && showSuggestions && (
+            <div className="panel-section">
+              <h3>Search suggestions</h3>
+              
+              {/* Popular Searches */}
+              <div className="suggestions-section">
+                <h4>Popular searches</h4>
+                <div className="suggestion-tags">
+                  {popularSearches.map((search, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleSuggestionClick(search)}
+                      className="suggestion-tag"
+                    >
+                      {search}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Search Tips */}
+              <div className="suggestions-section">
+                <h4>Search tips</h4>
+                <ul className="search-tips">
+                  <li>Try searching by product type (e.g., "fresh bread")</li>
+                  <li>Search by location (e.g., "downtown shops")</li>
+                  <li>Use category names (e.g., "restaurants", "crafts")</li>
+                  <li>Search for specific services (e.g., "delivery", "pickup")</li>
+                </ul>
+              </div>
             </div>
-            <ul style={{ 
-              margin: 0, 
-              padding: 0, 
-              listStyle: 'none',
-              fontSize: '0.875rem',
-              color: 'var(--text)'
-            }}>
-              <li style={{ marginBottom: '0.25rem' }}>• Try searching by product type (e.g., "fresh bread")</li>
-              <li style={{ marginBottom: '0.25rem' }}>• Search by location (e.g., "downtown shops")</li>
-              <li style={{ marginBottom: '0.25rem' }}>• Use category names (e.g., "restaurants", "crafts")</li>
-              <li>• Search for specific services (e.g., "delivery", "pickup")</li>
-            </ul>
-          </div>
+          )}
         </div>
+      )}
+
+      {/* Overlay to close panel */}
+      {isExpanded && (
+        <div 
+          className="search-overlay"
+          onClick={() => {
+            setIsExpanded(false)
+            setActiveFilter(null)
+            setShowSuggestions(false)
+          }}
+        />
       )}
     </div>
   )

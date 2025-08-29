@@ -26,6 +26,12 @@ public class Shop {
     @Column(nullable = false)
     private String name;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(nullable = false)
+    private String category;
+
     private String addressLine;
 
     @Column(nullable = false)
@@ -58,6 +64,14 @@ public class Shop {
 
     public String getName() {
         return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getCategory() {
+        return category;
     }
 
     public String getAddressLine() {
@@ -111,6 +125,8 @@ public class Shop {
     // Setters for controller usage
     public void setOwner(User owner) { this.owner = owner; }
     public void setName(String name) { this.name = name; }
+    public void setDescription(String description) { this.description = description; }
+    public void setCategory(String category) { this.category = category; }
     public void setAddressLine(String addressLine) { this.addressLine = addressLine; }
     public void setLat(Double lat) { this.lat = lat; }
     public void setLng(Double lng) { this.lng = lng; }

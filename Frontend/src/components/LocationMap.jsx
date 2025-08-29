@@ -427,7 +427,7 @@ export default function LocationMap({ onLocationSelect, initialLat = 10.3157, in
         ref={mapRef} 
         style={{ 
           width: '100%', 
-          height: '300px', 
+          height: '400px', 
           borderRadius: '8px',
           border: '1px solid var(--border)'
         }}

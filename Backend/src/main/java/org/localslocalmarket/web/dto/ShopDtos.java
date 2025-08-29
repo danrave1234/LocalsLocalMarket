@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotNull;
 public class ShopDtos {
     public record CreateShopRequest(
             @NotBlank String name,
+            String description,
+            @NotBlank String category,
             String addressLine,
             @NotNull Double lat,
             @NotNull Double lng,
@@ -22,6 +24,8 @@ public class ShopDtos {
     // All fields optional for PATCH
     public record UpdateShopRequest(
             String name,
+            String description,
+            String category,
             String addressLine,
             Double lat,
             Double lng,

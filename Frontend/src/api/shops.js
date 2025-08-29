@@ -1,8 +1,9 @@
 import { API_BASE } from './client.js'
 
-export async function fetchShops({ q } = {}) {
+export async function fetchShops({ q, category } = {}) {
     const params = new URLSearchParams()
     if (q) params.set('q', q)
+    if (category) params.set('category', category)
     const qs = params.toString()
     
     const response = await fetch(`${API_BASE}/shops${qs ? `?${qs}` : ''}`)
@@ -94,6 +95,16 @@ export async function deleteShopRequest(id, token) {
     if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to delete shop')
+    }
+    return response.json()
+}
+
+export async function fetchCategories() {
+    const response = await fetch(`${API_BASE}/shops/categories`)
+    
+    if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to fetch categories')
     }
     return response.json()
 }

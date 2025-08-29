@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Modal from '../components/Modal.jsx'
 import LocationMap from '../components/LocationMap.jsx'
-import { createShopRequest, getUserShopsRequest, deleteShopRequest, updateShopRequest } from '../api/shops.js'
+import { createShopRequest, getUserShopsRequest, deleteShopRequest, updateShopRequest, fetchCategories } from '../api/shops.js'
 import { generateShopUrl } from '../utils/slugUtils.js'
 import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
 
@@ -14,10 +14,13 @@ export default function DashboardPage() {
     const [editingShop, setEditingShop] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const [categories, setCategories] = useState([])
 
     // Shop form state
     const [shopForm, setShopForm] = useState({
         name: '',
+        description: '',
+        category: '',
         addressLine: '',
         phone: '',
         website: '',
@@ -34,7 +37,17 @@ export default function DashboardPage() {
 
     useEffect(() => {
         fetchUserShops()
+        fetchCategoriesData()
     }, [])
+
+    const fetchCategoriesData = async () => {
+        try {
+            const data = await fetchCategories()
+            setCategories(data.categories || [])
+        } catch (error) {
+            console.error('Failed to fetch categories:', error)
+        }
+    }
 
     const fetchUserShops = async () => {
         try {
@@ -103,6 +116,8 @@ export default function DashboardPage() {
         setEditingShop(shop)
         setShopForm({
             name: shop.name || '',
+            description: shop.description || '',
+            category: shop.category || '',
             addressLine: shop.addressLine || '',
             phone: shop.phone || '',
             website: shop.website || '',
@@ -124,6 +139,8 @@ export default function DashboardPage() {
     const resetForm = () => {
         setShopForm({
             name: '',
+            description: '',
+            category: '',
             addressLine: '',
             phone: '',
             website: '',
@@ -282,173 +299,200 @@ export default function DashboardPage() {
                     resetForm()
                 }}
                 title="Create New Shop"
-                size="large"
+                size="xxlarge"
             >
-                <form onSubmit={handleCreateShop} style={{ display: 'grid', gap: '1.5rem' }}>
-                    {/* Shop Name */}
-                    <div>
-                        <label htmlFor="shopName" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Shop Name *
-                        </label>
-                        <input
-                            type="text"
-                            id="shopName"
-                            className="input"
-                            value={shopForm.name}
-                            onChange={(e) => setShopForm({...shopForm, name: e.target.value})}
-                            required
-                            placeholder="Enter your shop name"
-                        />
-                    </div>
+                <form onSubmit={handleCreateShop} className="create-shop-form">
+                    <div className="form-grid">
+                        {/* Left Column - Form Inputs */}
+                        <div className="form-inputs">
+                            {/* Shop Name */}
+                            <div className="form-group">
+                                <label htmlFor="shopName" className="form-label">
+                                    Shop Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    id="shopName"
+                                    className="input"
+                                    value={shopForm.name}
+                                    onChange={(e) => setShopForm({...shopForm, name: e.target.value})}
+                                    required
+                                    placeholder="Enter your shop name"
+                                />
+                            </div>
 
-                    {/* Location Map */}
-                    <div>
-                        <label className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Shop Location *
-                        </label>
-                        <LocationMap 
-                            onLocationSelect={handleLocationSelect}
-                            initialLat={shopForm.lat}
-                            initialLng={shopForm.lng}
-                        />
-                    </div>
+                            {/* Category */}
+                            <div className="form-group">
+                                <label htmlFor="shopCategory" className="form-label">
+                                    Shop Category *
+                                </label>
+                                <select
+                                    id="shopCategory"
+                                    className="input"
+                                    value={shopForm.category}
+                                    onChange={(e) => setShopForm({...shopForm, category: e.target.value})}
+                                    required
+                                >
+                                    <option value="">Select a category</option>
+                                    {categories.map((category) => (
+                                        <option key={category} value={category}>
+                                            {category}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
-                    {/* Address */}
-                    <div>
-                        <label htmlFor="shopAddress" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Address *
-                        </label>
-                        <input
-                            type="text"
-                            id="shopAddress"
-                            className="input"
-                            value={shopForm.addressLine}
-                            onChange={(e) => setShopForm({...shopForm, addressLine: e.target.value})}
-                            placeholder="Auto-filled from map or enter manually"
-                            required
-                            style={{ 
-                                backgroundColor: selectedLocation?.addressLine ? 'var(--surface)' : 'var(--card-2)',
-                                color: selectedLocation?.addressLine ? 'var(--text)' : 'var(--muted)'
-                            }}
-                        />
-                    </div>
+                            {/* Description */}
+                            <div className="form-group">
+                                <label htmlFor="shopDescription" className="form-label">
+                                    Shop Description
+                                </label>
+                                <textarea
+                                    id="shopDescription"
+                                    className="input"
+                                    value={shopForm.description}
+                                    onChange={(e) => setShopForm({...shopForm, description: e.target.value})}
+                                    placeholder="Describe your shop, what you sell, your specialties..."
+                                    rows={4}
+                                    style={{ resize: 'vertical' }}
+                                />
+                            </div>
 
-                    {/* Contact Information */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                        <div>
-                            <label htmlFor="shopPhone" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                                Phone Number
-                            </label>
-                            <input
-                                type="tel"
-                                id="shopPhone"
-                                className="input"
-                                value={shopForm.phone}
-                                onChange={(e) => setShopForm({...shopForm, phone: e.target.value})}
-                                placeholder="Enter phone number"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="shopEmail" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                                Email
-                            </label>
-                            <input
-                                type="email"
-                                id="shopEmail"
-                                className="input"
-                                value={shopForm.email}
-                                onChange={(e) => setShopForm({...shopForm, email: e.target.value})}
-                                placeholder="shop@example.com"
-                            />
-                        </div>
-                    </div>
+                            {/* Address */}
+                            <div className="form-group">
+                                <label htmlFor="shopAddress" className="form-label">
+                                    Address *
+                                </label>
+                                <input
+                                    type="text"
+                                    id="shopAddress"
+                                    className="input"
+                                    value={shopForm.addressLine}
+                                    onChange={(e) => setShopForm({...shopForm, addressLine: e.target.value})}
+                                    placeholder="Auto-filled from map or enter manually"
+                                    required
+                                    style={{ 
+                                        backgroundColor: selectedLocation?.addressLine ? 'var(--surface)' : 'var(--card-2)',
+                                        color: selectedLocation?.addressLine ? 'var(--text)' : 'var(--muted)'
+                                    }}
+                                />
+                            </div>
 
-                    <div>
-                        <label htmlFor="shopWebsite" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Website
-                        </label>
-                        <input
-                            type="url"
-                            id="shopWebsite"
-                            className="input"
-                            value={shopForm.website}
-                            onChange={(e) => setShopForm({...shopForm, website: e.target.value})}
-                            placeholder="https://example.com"
-                        />
-                    </div>
+                            {/* Contact Information */}
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label htmlFor="shopPhone" className="form-label">
+                                        Phone Number
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        id="shopPhone"
+                                        className="input"
+                                        value={shopForm.phone}
+                                        onChange={(e) => setShopForm({...shopForm, phone: e.target.value})}
+                                        placeholder="+63 912 345 6789"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="shopEmail" className="form-label">
+                                        Email Address
+                                    </label>
+                                    <input
+                                        type="email"
+                                        id="shopEmail"
+                                        className="input"
+                                        value={shopForm.email}
+                                        onChange={(e) => setShopForm({...shopForm, email: e.target.value})}
+                                        placeholder="shop@example.com"
+                                    />
+                                </div>
+                            </div>
 
-                    {/* Social Media Links */}
-                    <div>
-                        <label className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Social Media Links (Optional)
-                        </label>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div>
-                                <label htmlFor="shopFacebook" className="muted" style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>
-                                    Facebook
+                            {/* Website */}
+                            <div className="form-group">
+                                <label htmlFor="shopWebsite" className="form-label">
+                                    Website
                                 </label>
                                 <input
                                     type="url"
-                                    id="shopFacebook"
+                                    id="shopWebsite"
                                     className="input"
-                                    value={shopForm.facebook}
-                                    onChange={(e) => setShopForm({...shopForm, facebook: e.target.value})}
-                                    placeholder="https://facebook.com/yourpage"
+                                    value={shopForm.website}
+                                    onChange={(e) => setShopForm({...shopForm, website: e.target.value})}
+                                    placeholder="https://your-shop-website.com"
                                 />
                             </div>
-                            <div>
-                                <label htmlFor="shopInstagram" className="muted" style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>
-                                    Instagram
+
+                            {/* Social Media */}
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label htmlFor="shopFacebook" className="form-label">
+                                        Facebook
+                                    </label>
+                                    <input
+                                        type="url"
+                                        id="shopFacebook"
+                                        className="input"
+                                        value={shopForm.facebook}
+                                        onChange={(e) => setShopForm({...shopForm, facebook: e.target.value})}
+                                        placeholder="https://facebook.com/yourpage"
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label htmlFor="shopInstagram" className="form-label">
+                                        Instagram
+                                    </label>
+                                    <input
+                                        type="url"
+                                        id="shopInstagram"
+                                        className="input"
+                                        value={shopForm.instagram}
+                                        onChange={(e) => setShopForm({...shopForm, instagram: e.target.value})}
+                                        placeholder="https://instagram.com/yourpage"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="shopTwitter" className="form-label">
+                                    Twitter
                                 </label>
                                 <input
                                     type="url"
-                                    id="shopInstagram"
+                                    id="shopTwitter"
                                     className="input"
-                                    value={shopForm.instagram}
-                                    onChange={(e) => setShopForm({...shopForm, instagram: e.target.value})}
-                                    placeholder="https://instagram.com/yourpage"
+                                    value={shopForm.twitter}
+                                    onChange={(e) => setShopForm({...shopForm, twitter: e.target.value})}
+                                    placeholder="https://twitter.com/yourpage"
                                 />
                             </div>
                         </div>
-                        <div style={{ marginTop: '1rem' }}>
-                            <label htmlFor="shopTwitter" className="muted" style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.875rem' }}>
-                                Twitter/X
+
+                        {/* Right Column - Map */}
+                        <div className="form-map">
+                            <label className="form-label">
+                                Shop Location *
                             </label>
-                            <input
-                                type="url"
-                                id="shopTwitter"
-                                className="input"
-                                value={shopForm.twitter}
-                                onChange={(e) => setShopForm({...shopForm, twitter: e.target.value})}
-                                placeholder="https://twitter.com/yourpage"
+                            <LocationMap 
+                                onLocationSelect={handleLocationSelect}
+                                initialLat={shopForm.lat}
+                                initialLng={shopForm.lng}
                             />
                         </div>
                     </div>
 
-                    {/* Location Status */}
-                    {selectedLocation && (
-                        <div style={{ 
-                            padding: '0.75rem', 
-                            backgroundColor: 'var(--primary-bg)', 
-                            borderRadius: '8px',
-                            border: '1px solid var(--primary)',
-                            fontSize: '0.875rem'
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                <span style={{ color: 'var(--primary)' }}>📍</span>
-                                <span style={{ fontWeight: '500', color: 'var(--primary)' }}>Location Selected</span>
-                            </div>
-                            <div style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>
-                                Coordinates: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
-                            </div>
+                    {/* Error Display */}
+                    {error && (
+                        <div className="form-error">
+                            {error}
                         </div>
                     )}
 
                     {/* Form Actions */}
-                    <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                    <div className="form-actions">
                         <button 
                             type="button" 
-                            className="btn" 
+                            className="btn cancel-btn" 
                             onClick={() => {
                                 setShowCreateShop(false)
                                 resetForm()
@@ -458,7 +502,7 @@ export default function DashboardPage() {
                         </button>
                         <button 
                             type="submit" 
-                            className="btn btn-primary"
+                            className="btn btn-primary submit-btn"
                             disabled={!selectedLocation}
                         >
                             Create Shop
@@ -492,6 +536,43 @@ export default function DashboardPage() {
                             onChange={(e) => setShopForm({...shopForm, name: e.target.value})}
                             required
                             placeholder="Enter your shop name"
+                        />
+                    </div>
+
+                    {/* Category */}
+                    <div>
+                        <label htmlFor="editShopCategory" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                            Shop Category *
+                        </label>
+                        <select
+                            id="editShopCategory"
+                            className="input"
+                            value={shopForm.category}
+                            onChange={(e) => setShopForm({...shopForm, category: e.target.value})}
+                            required
+                        >
+                            <option value="">Select a category</option>
+                            {categories.map((category) => (
+                                <option key={category} value={category}>
+                                    {category}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                        <label htmlFor="editShopDescription" className="muted" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                            Shop Description
+                        </label>
+                        <textarea
+                            id="editShopDescription"
+                            className="input"
+                            value={shopForm.description}
+                            onChange={(e) => setShopForm({...shopForm, description: e.target.value})}
+                            placeholder="Describe your shop, what you sell, your specialties..."
+                            rows={4}
+                            style={{ resize: 'vertical' }}
                         />
                     </div>
 
