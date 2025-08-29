@@ -49,6 +49,12 @@ public class Shop {
     private String instagram;
     private String twitter;
 
+    @Column(length = 4000)
+    private String adsImagePathsJson; // JSON array of ad image paths
+
+    @Column(nullable = false)
+    private Boolean adsEnabled = false;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -118,6 +124,9 @@ public class Shop {
         return twitter;
     }
 
+    public String getAdsImagePathsJson() { return adsImagePathsJson; }
+    public Boolean getAdsEnabled() { return adsEnabled; }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -138,11 +147,16 @@ public class Shop {
     public void setFacebook(String facebook) { this.facebook = facebook; }
     public void setInstagram(String instagram) { this.instagram = instagram; }
     public void setTwitter(String twitter) { this.twitter = twitter; }
+    public void setAdsImagePathsJson(String adsImagePathsJson) { this.adsImagePathsJson = adsImagePathsJson; }
+    public void setAdsEnabled(Boolean adsEnabled) { this.adsEnabled = adsEnabled; }
 
     @PrePersist
     void prePersist(){
         if(createdAt==null){
             createdAt = Instant.now();
+        }
+        if(adsEnabled==null){
+            adsEnabled = false;
         }
     }
 }

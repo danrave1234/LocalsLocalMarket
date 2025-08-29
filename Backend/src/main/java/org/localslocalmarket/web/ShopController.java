@@ -11,6 +11,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 
 import java.util.Map;
 import java.util.Optional;
@@ -27,6 +30,10 @@ public class ShopController {
     }
 
     @PostMapping
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "shops_list", allEntries = true),
+            @CacheEvict(cacheNames = "shops_by_id", allEntries = true)
+    })
     public ResponseEntity<?> create(@RequestBody @Validated ShopDtos.CreateShopRequest req){
         // Use authenticated user from SecurityContext
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
@@ -64,6 +71,7 @@ public class ShopController {
         return ResponseEntity.ok(shops.findByOwner(owner));
     }
 
+    @Cacheable(cacheNames = "shops_by_id", key = "#slug")
     @GetMapping("/{slug}")
     public ResponseEntity<?> get(@PathVariable("slug") String slug){
         // Try to parse as Long first (for backward compatibility with direct IDs)
@@ -99,6 +107,7 @@ public class ShopController {
         }
     }
 
+    @Cacheable(cacheNames = "shops_list", key = "'q=' + #q.orElse('') + '&category=' + #category.orElse('') + '&page=' + #page + '&size=' + #size")
     @GetMapping
     public Page<Shop> list(@RequestParam("q") Optional<String> q,
                            @RequestParam("category") Optional<String> category,
@@ -115,6 +124,7 @@ public class ShopController {
         return shops.findAll(spec, PageRequest.of(page, size));
     }
 
+    @Cacheable(cacheNames = "categories", key = "'categories'")
     @GetMapping("/categories")
     public ResponseEntity<?> getCategories(){
         return ResponseEntity.ok(Map.of(
@@ -140,6 +150,10 @@ public class ShopController {
     }
 
     @PatchMapping("/{slug}")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "shops_by_id", allEntries = true),
+            @CacheEvict(cacheNames = "shops_list", allEntries = true)
+    })
     public ResponseEntity<?> update(@PathVariable("slug") String slug,
                                     @RequestBody ShopDtos.UpdateShopRequest req){
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
@@ -193,12 +207,18 @@ public class ShopController {
             if(req.facebook() != null) shop.setFacebook(req.facebook());
             if(req.instagram() != null) shop.setInstagram(req.instagram());
             if(req.twitter() != null) shop.setTwitter(req.twitter());
+            if(req.adsImagePathsJson() != null) shop.setAdsImagePathsJson(req.adsImagePathsJson());
+            if(req.adsEnabled() != null) shop.setAdsEnabled(req.adsEnabled());
             shops.save(shop);
             return ResponseEntity.ok(shop.getId());
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{slug}")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "shops_by_id", allEntries = true),
+            @CacheEvict(cacheNames = "shops_list", allEntries = true)
+    })
     public ResponseEntity<?> delete(@PathVariable("slug") String slug){
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || auth.getPrincipal() == null || !(auth.getPrincipal() instanceof User)) {

@@ -145,6 +145,18 @@ export default function LocationMap({ onLocationSelect, initialLat = 10.3157, in
       }
       isInitializedRef.current = false
     }
+  }, [])
+
+  // Update marker position if props change without reinitializing the map
+  useEffect(() => {
+    if (mapInstanceRef.current && markerRef.current && typeof initialLat === 'number' && typeof initialLng === 'number') {
+      try {
+        markerRef.current.setLatLng([initialLat, initialLng])
+        mapInstanceRef.current.panTo([initialLat, initialLng])
+      } catch (_) {
+        // ignore
+      }
+    }
   }, [initialLat, initialLng])
 
   const handleLocationChange = async (lat, lng) => {

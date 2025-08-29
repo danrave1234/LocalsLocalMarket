@@ -20,6 +20,8 @@ import PrivacyPage from "./pages/PrivacyPage.jsx"
 import TermsPage from "./pages/TermsPage.jsx"
 import CookiesPage from "./pages/CookiesPage.jsx"
 import GDPRPage from "./pages/GDPRPage.jsx"
+import ShopEditPage from "./pages/ShopEditPage.jsx"
+import HelpPage from "./pages/HelpPage.jsx"
 
 function App() {
   return (
@@ -33,10 +35,16 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/shops/:id" element={<ShopPage />} />
+            <Route path="/shops/:id/edit" element={
+              <ProtectedRoute>
+                <ShopEditPage />
+              </ProtectedRoute>
+            } />
             <Route path="/donate" element={<DonationsPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/support" element={<SupportPage />} />
+            <Route path="/help" element={<HelpPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/cookies" element={<CookiesPage />} />

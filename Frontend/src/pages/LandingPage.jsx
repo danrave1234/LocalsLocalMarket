@@ -807,21 +807,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Social Sharing */}
-      <section style={{ marginTop: '3rem', padding: '2rem 0', borderTop: '1px solid var(--border)' }}>
-        <h3 style={{ marginBottom: '1rem' }}>Share LocalsLocalMarket</h3>
-        <p className="muted" style={{ marginBottom: '1rem' }}>
-          Help others discover local businesses in their community
-        </p>
-        <SocialSharing 
-          title="LocalsLocalMarket - Connect with Local Businesses"
-          description="Discover and connect with local businesses in your community. Find products, services, and support local entrepreneurs."
-        />
-      </section>
-
-      {/* FAQ Section */}
-      <FAQ />
-
       {/* Bottom Ad - Placed at the very bottom of the page */}
       <div style={{ marginTop: '3rem', padding: '2rem 0', borderTop: '1px solid var(--border)' }}>
         <ResponsiveAd />

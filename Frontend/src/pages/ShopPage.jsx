@@ -277,12 +277,20 @@ export default function ShopPage() {
           )}
           
           {isOwner && (
-            <button 
-              className="btn btn-primary add-product-btn"
-              onClick={() => setShowAddProduct(true)}
-            >
-              Add Product
-            </button>
+            <div style={{display:'flex', gap:8}}>
+              <button 
+                className="btn"
+                onClick={() => window.location.href = `/shops/${slug}/edit`}
+              >
+                Edit Shop
+              </button>
+              <button 
+                className="btn btn-primary add-product-btn"
+                onClick={() => setShowAddProduct(true)}
+              >
+                Add Product
+              </button>
+            </div>
           )}
         </div>
 
@@ -366,6 +374,20 @@ export default function ShopPage() {
           </div>
         )}
       </section>
+
+      {/* Advertisements Carousel */}
+      {shop.adsEnabled && shop.adsImagePathsJson && (()=>{ let imgs=[]; try{ imgs = JSON.parse(shop.adsImagePathsJson)||[] } catch { imgs=[] }
+        return imgs.length>0 ? (
+          <section className="card" style={{marginBottom:16}}>
+            <div style={{display:'flex', overflowX:'auto', gap:8}}>
+              {imgs.map((src, idx)=> (
+                <div key={idx} style={{minWidth:260}}>
+                  <img src={src} alt={`Ad ${idx+1}`} style={{width:'100%', height:160, objectFit:'cover', borderRadius:8}} />
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null })()}
 
       {/* Products Section */}
       <section className="products-section">

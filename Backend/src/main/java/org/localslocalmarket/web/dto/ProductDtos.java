@@ -10,6 +10,7 @@ public class ProductDtos {
             @NotBlank String title,
             String description,
             @NotNull @DecimalMin(value = "0.0", inclusive = false) BigDecimal price,
+            Integer stockCount,
             String imagePathsJson,
             String category
     ){}
@@ -19,6 +20,7 @@ public class ProductDtos {
             String title,
             String description,
             @DecimalMin(value = "0.0", inclusive = false) BigDecimal price,
+            Integer stockCount,
             String imagePathsJson,
             String category,
             Boolean isActive

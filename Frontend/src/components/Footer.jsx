@@ -30,9 +30,8 @@ const Footer = () => {
           <h4 className="footer-title">For Businesses</h4>
           <ul className="footer-links">
             <li><a href="/register" className="footer-link">Register Shop</a></li>
-            <li><a href="/pricing" className="footer-link">Pricing</a></li>
             <li><a href="/support" className="footer-link">Support</a></li>
-            <li><a href="/api" className="footer-link">API</a></li>
+            <li><a href="/help" className="footer-link">Help & FAQ</a></li>
           </ul>
         </div>
 
@@ -42,7 +41,6 @@ const Footer = () => {
             <li><a href="/privacy" className="footer-link">Privacy Policy</a></li>
             <li><a href="/terms" className="footer-link">Terms of Service</a></li>
             <li><a href="/cookies" className="footer-link">Cookie Policy</a></li>
-            <li><a href="/gdpr" className="footer-link">GDPR</a></li>
           </ul>
         </div>
 

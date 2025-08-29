@@ -36,6 +36,8 @@ public class ShopDtos {
             String email,
             String facebook,
             String instagram,
-            String twitter
+            String twitter,
+            String adsImagePathsJson,
+            Boolean adsEnabled
     ){}
 }
