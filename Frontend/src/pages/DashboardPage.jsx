@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Modal from '../components/Modal.jsx'
 import LocationMap from '../components/LocationMap.jsx'
@@ -44,7 +44,11 @@ export default function DashboardPage() {
     const [shops, setShops] = useState([])
     const [showCreateShop, setShowCreateShop] = useState(false)
     const [showEditShop, setShowEditShop] = useState(false)
+    const [showManageProducts, setShowManageProducts] = useState(false)
+    const [showAddProduct, setShowAddProduct] = useState(false)
     const [editingShop, setEditingShop] = useState(null)
+    const [managingShop, setManagingShop] = useState(null)
+    const [shopProducts, setShopProducts] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [categories, setCategories] = useState([])
@@ -70,6 +74,19 @@ export default function DashboardPage() {
 
     // Location selection state
     const [selectedLocation, setSelectedLocation] = useState(null)
+
+    // Product form state
+    const [productForm, setProductForm] = useState({
+        title: '',
+        description: '',
+        price: '',
+        category: '',
+        stockCount: '',
+        imagePathsJson: ''
+    })
+      const [productImages, setProductImages] = useState([])
+  const [uploadingImages, setUploadingImages] = useState(false)
+  const [savingStock, setSavingStock] = useState({})
 
     useEffect(() => {
         fetchUserShops()
@@ -241,6 +258,298 @@ export default function DashboardPage() {
             console.error('Failed to delete shop:', error)
             setError('Failed to delete shop: ' + error.message)
         }
+    }
+
+    // Product Management Functions
+    const openManageProducts = async (shop) => {
+        setManagingShop(shop)
+        setShowManageProducts(true)
+        try {
+            // Fetch products for this shop using the API client
+            const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products?shopId=${shop.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            if (!response.ok) {
+                throw new Error('Failed to fetch products')
+            }
+            const data = await response.json()
+            const products = Array.isArray(data) ? data : (data.content || [])
+            setShopProducts(products)
+        } catch (error) {
+            console.error('Failed to fetch products:', error)
+            setShopProducts([])
+        }
+    }
+
+    const handleDeleteProduct = async (productId) => {
+        if (!confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+            return
+        }
+        
+        try {
+            // TODO: Implement product deletion API call
+            console.log('Delete product:', productId)
+            // Refresh products list
+            if (managingShop) {
+                const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products?shopId=${managingShop.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                if (!response.ok) {
+                    throw new Error('Failed to refresh products')
+                }
+                const data = await response.json()
+                const products = Array.isArray(data) ? data : (data.content || [])
+                setShopProducts(products)
+            }
+        } catch (error) {
+            console.error('Failed to delete product:', error)
+            setError('Failed to delete product: ' + error.message)
+        }
+    }
+
+    const handleStockChange = async (productId, change) => {
+        try {
+            const product = shopProducts.find(p => p.id === productId)
+            if (!product) return
+            
+            const newStock = Math.max(0, (product.stockCount || 0) + change)
+            
+            // Update the product in the list immediately for better UX
+            setShopProducts(shopProducts.map(p => 
+                p.id === productId ? { ...p, stockCount: newStock } : p
+            ))
+            
+            // Make API call to update stock
+            const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products/${productId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ stockCount: newStock })
+            })
+            
+            if (!response.ok) {
+                throw new Error('Failed to update stock')
+            }
+        } catch (error) {
+            console.error('Failed to update stock:', error)
+            setError('Failed to update stock: ' + error.message)
+            // Revert the optimistic update by refreshing the products
+            if (managingShop) {
+                const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products?shopId=${managingShop.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                if (response.ok) {
+                    const data = await response.json()
+                    const products = Array.isArray(data) ? data : (data.content || [])
+                    setShopProducts(products)
+                }
+            }
+        }
+    }
+
+    // Debounce timer for stock input
+    const stockDebounceTimers = useRef({})
+
+    const handleStockInputChange = async (productId, value) => {
+        const newStock = Math.max(0, parseInt(value) || 0)
+        
+        // Update the product in the list immediately for better UX
+        setShopProducts(shopProducts.map(p => 
+            p.id === productId ? { ...p, stockCount: newStock } : p
+        ))
+        
+        // Clear existing timer for this product
+        if (stockDebounceTimers.current[productId]) {
+            clearTimeout(stockDebounceTimers.current[productId])
+        }
+        
+            // Set new timer for this product
+    stockDebounceTimers.current[productId] = setTimeout(async () => {
+      try {
+        // Show saving state
+        setSavingStock(prev => ({ ...prev, [productId]: true }))
+        
+        // Make API call to update stock
+        const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products/${productId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ stockCount: newStock })
+        })
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(`Failed to update stock: ${response.status} - ${errorText}`)
+        }
+        
+        // Clear the timer reference and saving state
+        delete stockDebounceTimers.current[productId]
+        setSavingStock(prev => ({ ...prev, [productId]: false }))
+      } catch (error) {
+                console.error('Failed to update stock:', error)
+                setError('Failed to update stock: ' + error.message)
+                // Revert the optimistic update by refreshing the products
+                if (managingShop) {
+                    const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products?shopId=${managingShop.id}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    if (response.ok) {
+                        const data = await response.json()
+                        const products = Array.isArray(data) ? data : (data.content || [])
+                        setShopProducts(products)
+                    }
+                }
+                // Clear the timer reference and saving state
+                delete stockDebounceTimers.current[productId]
+                setSavingStock(prev => ({ ...prev, [productId]: false }))
+            }
+        }, 2000) // 2 second delay
+    }
+
+    const handleAddProduct = async (e) => {
+        e.preventDefault()
+        
+        if (!managingShop) {
+            setError('No shop selected for adding product')
+            return
+        }
+
+        try {
+            const productData = {
+                ...productForm,
+                shopId: managingShop.id,
+                price: parseFloat(productForm.price),
+                stockCount: productForm.stockCount ? parseInt(productForm.stockCount) : 0
+            }
+
+            const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(productData)
+            })
+
+            if (!response.ok) {
+                throw new Error('Failed to create product')
+            }
+
+            const newProduct = await response.json()
+            
+            // Add the new product to the list
+            setShopProducts([...shopProducts, newProduct])
+            
+            // Reset form and close modal
+            setProductForm({
+                title: '',
+                description: '',
+                price: '',
+                category: '',
+                stockCount: '',
+                imagePathsJson: ''
+            })
+            setShowAddProduct(false)
+            
+        } catch (error) {
+            console.error('Failed to create product:', error)
+            setError('Failed to create product: ' + error.message)
+        }
+    }
+
+    const resetProductForm = () => {
+        setProductForm({
+            title: '',
+            description: '',
+            price: '',
+            category: '',
+            stockCount: '',
+            imagePathsJson: ''
+        })
+        setProductImages([])
+    }
+
+    const handleProductImageUpload = async (files) => {
+        if (!files || files.length === 0) return
+        
+        setUploadingImages(true)
+        
+        try {
+            const uploadedPaths = []
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i]
+                
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    throw new Error('Please select only image files')
+                }
+                
+                // Validate file size (max 2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    throw new Error('File size must be less than 2MB')
+                }
+                
+                const formData = new FormData()
+                formData.append('file', file)
+                
+                const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/uploads/image`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                })
+                
+                if (!response.ok) {
+                    throw new Error('Failed to upload image')
+                }
+                
+                const result = await response.json()
+                uploadedPaths.push(result.path)
+            }
+            
+            // Update product images state
+            setProductImages([...productImages, ...uploadedPaths])
+            
+            // Update form with JSON string of image paths
+            const allPaths = [...productImages, ...uploadedPaths]
+            setProductForm({
+                ...productForm,
+                imagePathsJson: JSON.stringify(allPaths)
+            })
+            
+        } catch (error) {
+            console.error('Failed to upload images:', error)
+            setError('Failed to upload images: ' + error.message)
+        } finally {
+            setUploadingImages(false)
+        }
+    }
+
+    const removeProductImage = (index) => {
+        const newImages = productImages.filter((_, i) => i !== index)
+        setProductImages(newImages)
+        setProductForm({
+            ...productForm,
+            imagePathsJson: JSON.stringify(newImages)
+        })
     }
 
     if (loading) {
@@ -488,6 +797,23 @@ export default function DashboardPage() {
                                                 View Shop
                                             </button>
                                         </a>
+                                        <button 
+                                            className="btn btn-secondary"
+                                            onClick={() => openManageProducts(shop)}
+                                            style={{
+                                                padding: "0.4rem 0.75rem",
+                                                borderRadius: "6px",
+                                                fontSize: "0.75rem",
+                                                fontWeight: 500,
+                                                background: "var(--accent)",
+                                                border: "1px solid var(--accent)",
+                                                color: "white",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease"
+                                            }}
+                                        >
+                                            📦 Products
+                                        </button>
                                         <button 
                                             className="btn"
                                             onClick={() => openEditShop(shop)}
@@ -1187,6 +1513,461 @@ export default function DashboardPage() {
                             disabled={!selectedLocation}
                         >
                             Update Shop
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Manage Products Modal */}
+            <Modal 
+                isOpen={showManageProducts} 
+                onClose={() => {
+                    setShowManageProducts(false)
+                    setManagingShop(null)
+                    setShopProducts([])
+                }}
+                title={`Manage Products - ${managingShop?.name || 'Shop'}`}
+                size="xlarge"
+            >
+                <div className="manage-products-container">
+                    {/* Header with Add Product Button */}
+                    <div className="manage-products-header">
+                        <div className="manage-products-info">
+                            <h3 style={{ margin: 0, color: 'var(--text)' }}>Products ({shopProducts.length})</h3>
+                            <p className="muted" style={{ margin: '0.25rem 0 0 0' }}>
+                                Manage your shop's product catalog
+                            </p>
+                        </div>
+                        <button 
+                            className="btn btn-primary add-product-btn"
+                            onClick={() => setShowAddProduct(true)}
+                        >
+                            <span className="btn-icon">➕</span>
+                            Add New Product
+                        </button>
+                    </div>
+
+                    {/* Products List */}
+                    <div className="manage-products-list">
+                        {(!Array.isArray(shopProducts) || shopProducts.length === 0) ? (
+                            <div className="no-products-state">
+                                <div className="no-products-icon">📦</div>
+                                <h3 style={{ margin: '1rem 0 0.5rem 0', color: 'var(--text)' }}>No products yet</h3>
+                                <p className="muted" style={{ marginBottom: '1.5rem' }}>
+                                    Start selling by adding your first product to {managingShop?.name}
+                                </p>
+                                <button 
+                                    className="btn btn-primary"
+                                    onClick={() => setShowAddProduct(true)}
+                                >
+                                    <span className="btn-icon">➕</span>
+                                    Add Your First Product
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="products-management-grid">
+                                {Array.isArray(shopProducts) && shopProducts.map((product) => (
+                                    <div key={product.id} className="product-management-card">
+                                        <div className="product-management-image">
+                                            {(() => {
+                                                let imagePaths = [];
+                                                try {
+                                                    imagePaths = product.imagePathsJson ? JSON.parse(product.imagePathsJson) : [];
+                                                } catch (e) {
+                                                    imagePaths = [];
+                                                }
+                                                
+                                                if (imagePaths.length > 0) {
+                                                    return (
+                                                        <>
+                                                            <img 
+                                                                src={getImageUrl(imagePaths[0])} 
+                                                                alt={product.title}
+                                                                className="product-management-image"
+                                                                onError={(e) => {
+                                                                    e.target.style.display = 'none';
+                                                                    e.target.nextSibling.style.display = 'flex';
+                                                                }}
+                                                            />
+                                                            <div className="product-image-placeholder" style={{ display: 'none' }}>
+                                                                📷
+                                                            </div>
+                                                        </>
+                                                    );
+                                                }
+                                                
+                                                return (
+                                                    <div className="product-image-placeholder">
+                                                        📷
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                        <div className="product-management-content">
+                                            <div className="product-management-title">{product.title}</div>
+                                            <div className="product-management-price">
+                                                ₱{Number(product.price).toFixed(2)}
+                                            </div>
+                                            <div className="product-management-stock">
+                                                {product.stockCount > 0 ? (
+                                                    <span className="stock-in-stock">In Stock: {product.stockCount}</span>
+                                                ) : (
+                                                    <span className="stock-out-of-stock">Out of Stock</span>
+                                                )}
+                                                <div className="stock-controls">
+                                                    <button 
+                                                        className="stock-btn stock-minus"
+                                                        onClick={async () => {
+                                                            try {
+                                                                const productId = product.id
+                                                                const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products/${productId}/decrement-stock?amount=1`, {
+                                                                    method: 'POST',
+                                                                    headers: {
+                                                                        'Authorization': `Bearer ${token}`
+                                                                    }
+                                                                })
+                                                                
+                                                                if (!response.ok) {
+                                                                    const errorText = await response.text()
+                                                                    throw new Error(`Failed to decrease stock: ${response.status} - ${errorText}`)
+                                                                }
+                                                                
+                                                                const result = await response.json()
+                                                                
+                                                                // Update the product in the list
+                                                                setShopProducts(shopProducts.map(p => 
+                                                                    p.id === productId ? { ...p, stockCount: result.stockCount } : p
+                                                                ))
+                                                            } catch (error) {
+                                                                console.error('Failed to decrease stock:', error)
+                                                                setError('Failed to decrease stock: ' + error.message)
+                                                            }
+                                                        }}
+                                                        title="Decrease stock by 1"
+                                                    >
+                                                        -
+                                                    </button>
+                                                    <input
+                                                        type="number"
+                                                        className={`stock-input ${savingStock[product.id] ? 'saving' : ''}`}
+                                                        value={product.stockCount || 0}
+                                                        onChange={(e) => handleStockInputChange(product.id, e.target.value)}
+                                                        min="0"
+                                                        title={savingStock[product.id] ? "Saving..." : "Edit stock count"}
+                                                    />
+                                                    {savingStock[product.id] && (
+                                                        <div className="stock-saving-indicator">
+                                                            <div className="saving-spinner"></div>
+                                                        </div>
+                                                    )}
+                                                    <button 
+                                                        className="stock-btn stock-plus"
+                                                        onClick={async () => {
+                                                            try {
+                                                                const productId = product.id
+                                                                const currentProduct = shopProducts.find(p => p.id === productId)
+                                                                if (!currentProduct) return
+                                                                
+                                                                const newStock = (currentProduct.stockCount || 0) + 1
+                                                                
+                                                                // Update the product in the list immediately for better UX
+                                                                setShopProducts(shopProducts.map(p => 
+                                                                    p.id === productId ? { ...p, stockCount: newStock } : p
+                                                                ))
+                                                                
+                                                                const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products/${productId}`, {
+                                                                    method: 'PATCH',
+                                                                    headers: {
+                                                                        'Content-Type': 'application/json',
+                                                                        'Authorization': `Bearer ${token}`
+                                                                    },
+                                                                    body: JSON.stringify({ stockCount: newStock })
+                                                                })
+                                                                
+                                                                if (!response.ok) {
+                                                                    const errorText = await response.text()
+                                                                    throw new Error(`Failed to increase stock: ${response.status} - ${errorText}`)
+                                                                }
+                                                            } catch (error) {
+                                                                console.error('Failed to increase stock:', error)
+                                                                setError('Failed to increase stock: ' + error.message)
+                                                                // Revert by refreshing the products
+                                                                if (managingShop) {
+                                                                    const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products?shopId=${managingShop.id}`, {
+                                                                        headers: {
+                                                                            'Authorization': `Bearer ${token}`,
+                                                                            'Content-Type': 'application/json'
+                                                                        }
+                                                                    })
+                                                                    if (response.ok) {
+                                                                        const data = await response.json()
+                                                                        const products = Array.isArray(data) ? data : (data.content || [])
+                                                                        setShopProducts(products)
+                                                                    }
+                                                                }
+                                                            }
+                                                        }}
+                                                        title="Increase stock by 1"
+                                                    >
+                                                        +
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {product.description && (
+                                                <p className="product-management-description">
+                                                    {product.description.length > 80 
+                                                        ? product.description.substring(0, 80) + '...' 
+                                                        : product.description
+                                                    }
+                                                </p>
+                                            )}
+                                            <div className="product-management-actions">
+                                                <button className="btn btn-outline btn-sm">
+                                                    <span className="btn-icon">👁️</span>
+                                                    View
+                                                </button>
+                                                <button className="btn btn-secondary btn-sm">
+                                                    <span className="btn-icon">✏️</span>
+                                                    Edit
+                                                </button>
+                                                <button 
+                                                    className="btn btn-danger btn-sm"
+                                                    onClick={() => handleDeleteProduct(product.id)}
+                                                >
+                                                    <span className="btn-icon">🗑️</span>
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Add Product Modal */}
+            <Modal 
+                isOpen={showAddProduct} 
+                onClose={() => {
+                    setShowAddProduct(false)
+                    resetProductForm()
+                }}
+                title={`Add New Product - ${managingShop?.name || 'Shop'}`}
+                size="xlarge"
+            >
+                <form onSubmit={handleAddProduct} className="add-product-form">
+                    <div className="form-grid">
+                        {/* Left Column - Form Inputs */}
+                        <div className="form-inputs">
+                            {/* Product Title */}
+                            <div className="form-group">
+                                <label htmlFor="productTitle" className="form-label">
+                                    Product Title *
+                                </label>
+                                <input
+                                    type="text"
+                                    id="productTitle"
+                                    className="input"
+                                    value={productForm.title}
+                                    onChange={(e) => setProductForm({...productForm, title: e.target.value})}
+                                    required
+                                    placeholder="Enter product name"
+                                />
+                            </div>
+
+                            {/* Product Category */}
+                            <div className="form-group">
+                                <label htmlFor="productCategory" className="form-label">
+                                    Product Category
+                                </label>
+                                <select
+                                    id="productCategory"
+                                    className="input"
+                                    value={productForm.category}
+                                    onChange={(e) => setProductForm({...productForm, category: e.target.value})}
+                                >
+                                    <option value="">Select a category</option>
+                                    {categories.map((category) => (
+                                        <option key={category} value={category}>
+                                            {category}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Product Description */}
+                            <div className="form-group">
+                                <label htmlFor="productDescription" className="form-label">
+                                    Product Description
+                                </label>
+                                <textarea
+                                    id="productDescription"
+                                    className="input"
+                                    value={productForm.description}
+                                    onChange={(e) => setProductForm({...productForm, description: e.target.value})}
+                                    placeholder="Describe your product, features, specifications..."
+                                    rows={4}
+                                    style={{ resize: 'vertical' }}
+                                />
+                            </div>
+
+                            {/* Product Price */}
+                            <div className="form-group">
+                                <label htmlFor="productPrice" className="form-label">
+                                    Price (₱) *
+                                </label>
+                                <input
+                                    type="number"
+                                    id="productPrice"
+                                    className="input"
+                                    value={productForm.price}
+                                    onChange={(e) => setProductForm({...productForm, price: e.target.value})}
+                                    min="0"
+                                    step="0.01"
+                                    required
+                                    placeholder="0.00"
+                                />
+                            </div>
+
+                            {/* Product Stock */}
+                            <div className="form-group">
+                                <label htmlFor="productStock" className="form-label">
+                                    Stock Count *
+                                </label>
+                                <input
+                                    type="number"
+                                    id="productStock"
+                                    className="input"
+                                    value={productForm.stockCount}
+                                    onChange={(e) => setProductForm({...productForm, stockCount: e.target.value})}
+                                    min="0"
+                                    required
+                                    placeholder="0"
+                                />
+                            </div>
+
+                            {/* Product Images */}
+                            <div className="form-group">
+                                <label className="form-label">
+                                    Product Images
+                                </label>
+                                <div className="image-upload-section">
+                                    <input
+                                        type="file"
+                                        id="productImages"
+                                        className="image-upload-input"
+                                        multiple
+                                        accept="image/*"
+                                        onChange={(e) => handleProductImageUpload(e.target.files)}
+                                        style={{ display: 'none' }}
+                                    />
+                                    <label htmlFor="productImages" className="image-upload-button">
+                                        {uploadingImages ? (
+                                            <div className="upload-loading">
+                                                <div className="loading-spinner"></div>
+                                                <span>Uploading...</span>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <span className="upload-icon">📷</span>
+                                                <span>Upload Images</span>
+                                            </>
+                                        )}
+                                    </label>
+                                    <small className="form-help">
+                                        Upload up to 5 images (max 2MB each). Supported formats: JPG, PNG, GIF
+                                    </small>
+                                </div>
+                                
+                                {/* Image Preview */}
+                                {productImages.length > 0 && (
+                                    <div className="image-preview-grid">
+                                        {productImages.map((imagePath, index) => (
+                                            <div key={index} className="image-preview-item">
+                                                <img 
+                                                    src={getImageUrl(imagePath)} 
+                                                    alt={`Product image ${index + 1}`}
+                                                    className="image-preview"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="remove-image-btn"
+                                                    onClick={() => removeProductImage(index)}
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Right Column - Preview */}
+                        <div className="form-preview">
+                            <label className="form-label">
+                                Product Preview
+                            </label>
+                            <div className="product-preview-card">
+                                <div className="product-preview-image">
+                                    {productImages.length > 0 ? (
+                                        <img 
+                                            src={getImageUrl(productImages[0])} 
+                                            alt="Product preview"
+                                            className="product-preview-img"
+                                        />
+                                    ) : (
+                                        <div className="product-image-placeholder">📷</div>
+                                    )}
+                                </div>
+                                <div className="product-preview-content">
+                                    <h3 className="product-preview-title">
+                                        {productForm.title || 'Product Title'}
+                                    </h3>
+                                    <div className="product-preview-price">
+                                        ₱{productForm.price ? Number(productForm.price).toFixed(2) : '0.00'}
+                                    </div>
+                                    {productForm.description && (
+                                        <p className="product-preview-description">
+                                            {productForm.description}
+                                        </p>
+                                    )}
+                                    {productForm.category && (
+                                        <div className="product-preview-category">
+                                            <span className="pill">{productForm.category}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Error Display */}
+                    {error && (
+                        <div className="form-error">
+                            {error}
+                        </div>
+                    )}
+
+                    {/* Form Actions */}
+                    <div className="form-actions">
+                        <button 
+                            type="button" 
+                            className="btn cancel-btn" 
+                            onClick={() => {
+                                setShowAddProduct(false)
+                                resetProductForm()
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit" 
+                            className="btn btn-primary submit-btn"
+                        >
+                            Add Product
                         </button>
                     </div>
                 </form>

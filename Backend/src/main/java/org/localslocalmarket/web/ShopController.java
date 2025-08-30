@@ -68,7 +68,9 @@ public class ShopController {
             return ResponseEntity.status(401).body("Unauthorized");
         }
         User owner = (User) auth.getPrincipal();
-        return ResponseEntity.ok(shops.findByOwner(owner));
+        return ResponseEntity.ok(shops.findByOwner(owner).stream()
+                .map(ShopDtos.ShopResponse::fromShop)
+                .toList());
     }
 
     @Cacheable(cacheNames = "shops_by_id", key = "#slug")
@@ -78,7 +80,7 @@ public class ShopController {
         try {
             Long shopId = Long.parseLong(slug);
             return shops.findById(shopId)
-                    .<ResponseEntity<?>>map(ResponseEntity::ok)
+                    .<ResponseEntity<?>>map(shop -> ResponseEntity.ok(ShopDtos.ShopResponse.fromShop(shop)))
                     .orElseGet(() -> ResponseEntity.notFound().build());
         } catch (NumberFormatException e) {
             // Handle slug format: "shop-name-123"
@@ -88,20 +90,20 @@ public class ShopController {
                     // Extract ID from the last part
                     Long shopId = Long.parseLong(parts[parts.length - 1]);
                     return shops.findById(shopId)
-                            .<ResponseEntity<?>>map(ResponseEntity::ok)
+                            .<ResponseEntity<?>>map(shop -> ResponseEntity.ok(ShopDtos.ShopResponse.fromShop(shop)))
                             .orElseGet(() -> ResponseEntity.notFound().build());
                 } catch (NumberFormatException ex) {
                     // If last part is not a number, fall back to old behavior
                     String shopName = slug.replace("-", " ");
                     return shops.findByNameIgnoreCase(shopName)
-                            .<ResponseEntity<?>>map(ResponseEntity::ok)
+                            .<ResponseEntity<?>>map(shop -> ResponseEntity.ok(ShopDtos.ShopResponse.fromShop(shop)))
                             .orElseGet(() -> ResponseEntity.notFound().build());
                 }
             } else {
                 // Fall back to old behavior for simple names
                 String shopName = slug.replace("-", " ");
                 return shops.findByNameIgnoreCase(shopName)
-                        .<ResponseEntity<?>>map(ResponseEntity::ok)
+                        .<ResponseEntity<?>>map(shop -> ResponseEntity.ok(ShopDtos.ShopResponse.fromShop(shop)))
                         .orElseGet(() -> ResponseEntity.notFound().build());
             }
         }
@@ -109,10 +111,10 @@ public class ShopController {
 
     @Cacheable(cacheNames = "shops_list", key = "'q=' + #q.orElse('') + '&category=' + #category.orElse('') + '&page=' + #page + '&size=' + #size")
     @GetMapping
-    public Page<Shop> list(@RequestParam("q") Optional<String> q,
-                           @RequestParam("category") Optional<String> category,
-                           @RequestParam(value = "page", defaultValue = "0") int page,
-                           @RequestParam(value = "size", defaultValue = "20") int size){
+    public Page<ShopDtos.ShopResponse> list(@RequestParam("q") Optional<String> q,
+                                           @RequestParam("category") Optional<String> category,
+                                           @RequestParam(value = "page", defaultValue = "0") int page,
+                                           @RequestParam(value = "size", defaultValue = "20") int size){
         Specification<Shop> spec = Specification.where(null);
         if(q.isPresent()){
             String like = "%" + q.get().toLowerCase() + "%";
@@ -121,7 +123,8 @@ public class ShopController {
         if(category.isPresent()){
             spec = spec.and((root, cq, cb) -> cb.equal(root.get("category"), category.get()));
         }
-        return shops.findAll(spec, PageRequest.of(page, size));
+        Page<Shop> shopPage = shops.findAll(spec, PageRequest.of(page, size));
+        return shopPage.map(ShopDtos.ShopResponse::fromShop);
     }
 
     @Cacheable(cacheNames = "categories", key = "'categories'")

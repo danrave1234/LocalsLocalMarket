@@ -24,11 +24,14 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true)
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState(null)
+  const [savingStock, setSavingStock] = useState({})
   const [productForm, setProductForm] = useState({
     title: '',
     description: '',
     price: '',
-    category: ''
+    category: '',
+    stockCount: ''
   })
 
   // Utility function to format image paths
@@ -187,7 +190,8 @@ export default function ShopPage() {
         title: '',
         description: '',
         price: '',
-        category: ''
+        category: '',
+        stockCount: ''
       })
     } catch (error) {
       console.error('Failed to create product:', error)
@@ -209,6 +213,93 @@ export default function ShopPage() {
       console.error('Failed to delete product:', error)
       setError('Failed to delete product: ' + error.message)
     }
+  }
+
+  const handleStockChange = async (productId, change) => {
+    try {
+      const product = products.find(p => p.id === productId)
+      if (!product) return
+      
+      const newStock = Math.max(0, (product.stockCount || 0) + change)
+      
+      // Update the product in the list immediately for better UX
+      setProducts(products.map(p => 
+        p.id === productId ? { ...p, stockCount: newStock } : p
+      ))
+      
+      // Make API call to update stock
+      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products/${productId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ stockCount: newStock })
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to update stock')
+      }
+    } catch (error) {
+      console.error('Failed to update stock:', error)
+      setError('Failed to update stock: ' + error.message)
+      // Revert the optimistic update
+      const originalProducts = await fetchProducts({ shopId: shop.id })
+      setProducts(Array.isArray(originalProducts) ? originalProducts : (originalProducts.content || []))
+    }
+  }
+
+  // Debounce timer for stock input
+  const stockDebounceTimers = useRef({})
+
+  const handleStockInputChange = async (productId, value) => {
+    const newStock = Math.max(0, parseInt(value) || 0)
+    
+    // Update the product in the list immediately for better UX
+    setProducts(products.map(p => 
+      p.id === productId ? { ...p, stockCount: newStock } : p
+    ))
+    
+    // Clear existing timer for this product
+    if (stockDebounceTimers.current[productId]) {
+      clearTimeout(stockDebounceTimers.current[productId])
+    }
+    
+    // Set new timer for this product
+    stockDebounceTimers.current[productId] = setTimeout(async () => {
+      try {
+        // Show saving state
+        setSavingStock(prev => ({ ...prev, [productId]: true }))
+        
+        // Make API call to update stock
+        const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products/${productId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ stockCount: newStock })
+        })
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          throw new Error(`Failed to update stock: ${response.status} - ${errorText}`)
+        }
+        
+        // Clear the timer reference and saving state
+        delete stockDebounceTimers.current[productId]
+        setSavingStock(prev => ({ ...prev, [productId]: false }))
+      } catch (error) {
+        console.error('Failed to update stock:', error)
+        setError('Failed to update stock: ' + error.message)
+        // Revert the optimistic update
+        const originalProducts = await fetchProducts({ shopId: shop.id })
+        setProducts(Array.isArray(originalProducts) ? originalProducts : (originalProducts.content || []))
+        // Clear the timer reference and saving state
+        delete stockDebounceTimers.current[productId]
+        setSavingStock(prev => ({ ...prev, [productId]: false }))
+      }
+    }, 2000) // 2 second delay
   }
 
   if (loading) {
@@ -282,7 +373,7 @@ export default function ShopPage() {
 
       {/* Shop Content - Two Column Layout */}
       <div className="shop-content-layout">
-        {/* Left Column - Shop Info and Products */}
+        {/* Left Column - Shop Info Only */}
         <div className="shop-left-column">
           {/* Shop Header */}
           <section className="card shop-header">
@@ -302,29 +393,28 @@ export default function ShopPage() {
                   
                   {shop.addressLine && (
                     <div className="shop-location-section">
-                      <div className="location-header">
-                        <span className="location-icon">📍</span>
-                        <span className="location-label">Location</span>
-                      </div>
-                      <div className="location-content">
-                        <div className="location-and-shop-view">
+                      <div className="location-content-wrapper">
+                        <div className="location-info">
+                          <div className="location-header">
+                            <span className="location-icon">📍</span>
+                            <span className="location-label">Location</span>
+                          </div>
                           <p className="shop-address">
                             {shop.addressLine}
                           </p>
-                          {shop.coverPath && (
-                            <div className="shop-view-image">
-                              <img 
-                                src={getImageUrl(shop.coverPath)} 
-                                alt={`${shop.name} shop view`}
-                                style={{
-                                  objectFit: 'cover',
-                                  borderRadius: '8px',
-                                  marginTop: '8px'
-                                }}
-                              />
-                            </div>
-                          )}
                         </div>
+                        {shop.coverPath && (
+                          <div className="shop-view-image">
+                            <img 
+                              src={getImageUrl(shop.coverPath)} 
+                              alt={`${shop.name} shop view`}
+                              style={{
+                                objectFit: 'cover',
+                                borderRadius: '8px'
+                              }}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -344,22 +434,24 @@ export default function ShopPage() {
                     />
                 </div>
               {isOwner && (
-                <div style={{display:'flex', gap:8}}>
+                <div className="shop-owner-actions">
                   <button 
-                    className="btn"
+                    className="btn btn-secondary"
                     onClick={() => window.location.href = `/shops/${slug}/edit`}
                   >
+                    <span className="btn-icon">✏️</span>
                     Edit Shop
                   </button>
                   <button 
-                    className="btn btn-primary add-product-btn"
-                    onClick={() => setShowAddProduct(true)}
+                    className="btn btn-primary"
+                    onClick={() => window.location.href = '/dashboard'}
                   >
-                    Add Product
+                    <span className="btn-icon">📊</span>
+                    Go to Dashboard
                   </button>
                   {process.env.NODE_ENV === 'development' && (
                     <button 
-                      className="btn"
+                      className="btn btn-outline"
                       onClick={() => window.location.reload()}
                       style={{fontSize: '0.8rem', padding: '4px 8px'}}
                     >
@@ -465,84 +557,6 @@ export default function ShopPage() {
               )}
             </div>
           </section>
-
-          {/* Products Section */}
-          <section className="products-section">
-            <div className="products-header">
-              <div>
-                <h3 style={{ margin: 0 }}>Products</h3>
-                <p className="muted" style={{ marginTop: 4 }}>
-                  {(!Array.isArray(products) || products.length === 0) ? 'No products yet' : `${products.length} product${products.length !== 1 ? 's' : ''} available`}
-                </p>
-              </div>
-              {isOwner && Array.isArray(products) && products.length > 0 && (
-                <button 
-                  className="btn add-another-product-btn"
-                  onClick={() => setShowAddProduct(true)}
-                >
-                  Add Another Product
-                </button>
-              )}
-            </div>
-
-            {(!Array.isArray(products) || products.length === 0) ? (
-              <div className="card no-products-card">
-                <div className="no-products-icon">📦</div>
-                <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No products yet</h3>
-                <p className="muted" style={{ marginBottom: '1rem' }}>
-                  {isOwner ? 'Start selling by adding your first product' : 'This shop hasn\'t added any products yet'}
-                </p>
-                {isOwner && (
-                  <button 
-                    className="btn btn-primary add-first-product-btn"
-                    onClick={() => setShowAddProduct(true)}
-                  >
-                    Add Your First Product
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="products-grid">
-                {Array.isArray(products) && products.map((product) => (
-                  <article key={product.id} className="card product-card">
-                    <div className="product-image-placeholder">
-                      {product.imagePathsJson ? 'Product Image' : 'No Image'}
-                    </div>
-                    <div className="product-content">
-                      <div className="product-title">{product.title}</div>
-                      <div className="product-price">
-                        ₱{Number(product.price).toFixed(2)}
-                      </div>
-                      {product.description && (
-                        <p className="product-description">
-                          {product.description.length > 60 
-                            ? product.description.substring(0, 60) + '...' 
-                            : product.description
-                          }
-                        </p>
-                      )}
-                      <div className="product-actions">
-                        <button className="btn view-product-btn">View</button>
-                        {isOwner && (
-                          <button 
-                            className="btn delete-product-btn"
-                            onClick={() => handleDeleteProduct(product.id)}
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-             
-            {/* Bottom ad after products */}
-            <div className="bottom-ad">
-              <ResponsiveAd />
-            </div>
-          </section>
         </div>
 
         {/* Right Column - Map Only */}
@@ -567,6 +581,207 @@ export default function ShopPage() {
           )}
         </div>
       </div>
+
+      {/* Products Section - Full Width */}
+      <section className="products-section-full-width">
+        <div className="products-header">
+          <div>
+            <h3 style={{ margin: 0 }}>Products</h3>
+            <p className="muted" style={{ marginTop: 4 }}>
+              {(() => {
+                const filteredProducts = selectedCategory 
+                  ? products.filter(p => p.category === selectedCategory)
+                  : products;
+                const totalProducts = products.length;
+                const filteredCount = filteredProducts.length;
+                
+                if (!Array.isArray(products) || products.length === 0) {
+                  return 'No products yet';
+                }
+                
+                if (selectedCategory) {
+                  return `${filteredCount} of ${totalProducts} product${totalProducts !== 1 ? 's' : ''} in ${selectedCategory}`;
+                }
+                
+                return `${totalProducts} product${totalProducts !== 1 ? 's' : ''} available`;
+              })()}
+            </p>
+          </div>
+          {isOwner && Array.isArray(products) && products.length > 0 && (
+            <button 
+              className="btn add-another-product-btn"
+              onClick={() => setShowAddProduct(true)}
+            >
+              Add Another Product
+            </button>
+          )}
+        </div>
+
+        {/* Category Filter */}
+        {Array.isArray(products) && products.length > 0 && (() => {
+          const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
+          if (categories.length > 1) {
+            return (
+              <div className="category-filter">
+                <div className="filter-label">Filter by Category:</div>
+                <div className="category-buttons">
+                  <button 
+                    className={`category-btn ${!selectedCategory ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory(null)}
+                  >
+                    All
+                  </button>
+                  {categories.map(category => (
+                    <button 
+                      key={category}
+                      className={`category-btn ${selectedCategory === category ? 'active' : ''}`}
+                      onClick={() => setSelectedCategory(category)}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+
+        {(!Array.isArray(products) || products.length === 0) ? (
+          <div className="card no-products-card">
+            <div className="no-products-icon">📦</div>
+            <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No products yet</h3>
+            <p className="muted" style={{ marginBottom: '1rem' }}>
+              {isOwner ? 'Start selling by adding your first product' : 'This shop hasn\'t added any products yet'}
+            </p>
+            {isOwner && (
+              <button 
+                className="btn btn-primary add-first-product-btn"
+                onClick={() => setShowAddProduct(true)}
+              >
+                Add Your First Product
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="products-grid-full-width">
+            {Array.isArray(products) && products
+              .filter(product => !selectedCategory || product.category === selectedCategory)
+              .map((product) => (
+              <article key={product.id} className="card product-card">
+                <div className="product-image-container">
+                  {(() => {
+                    let imagePaths = [];
+                    try {
+                      imagePaths = product.imagePathsJson ? JSON.parse(product.imagePathsJson) : [];
+                    } catch (e) {
+                      imagePaths = [];
+                    }
+                    
+                    if (imagePaths.length > 0) {
+                      return (
+                        <>
+                          <img 
+                            src={getImageUrl(imagePaths[0])} 
+                            alt={product.title}
+                            className="product-image"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                          <div className="product-image-placeholder" style={{ display: 'none' }}>
+                            📷
+                          </div>
+                        </>
+                      );
+                    }
+                    
+                    return (
+                      <div className="product-image-placeholder">
+                        📷
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div className="product-content">
+                  <div className="product-title">{product.title}</div>
+                  <div className="product-price">
+                    ₱{Number(product.price).toFixed(2)}
+                  </div>
+                  {product.category && (
+                    <div className="product-category">
+                      <span className="category-tag">{product.category}</span>
+                    </div>
+                  )}
+                                      <div className="product-stock">
+                      {product.stockCount > 0 ? (
+                        <span className="stock-in-stock">In Stock: {product.stockCount}</span>
+                      ) : (
+                        <span className="stock-out-of-stock">Out of Stock</span>
+                      )}
+                      {isOwner && (
+                        <div className="stock-controls">
+                          <button 
+                            className="stock-btn stock-minus"
+                            onClick={() => handleStockChange(product.id, -1)}
+                            title="Decrease stock by 1"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            className={`stock-input ${savingStock[product.id] ? 'saving' : ''}`}
+                            value={product.stockCount || 0}
+                            onChange={(e) => handleStockInputChange(product.id, e.target.value)}
+                            min="0"
+                            title={savingStock[product.id] ? "Saving..." : "Edit stock count"}
+                          />
+                          {savingStock[product.id] && (
+                            <div className="stock-saving-indicator">
+                              <div className="saving-spinner"></div>
+                            </div>
+                          )}
+                          <button 
+                            className="stock-btn stock-plus"
+                            onClick={() => handleStockChange(product.id, 1)}
+                            title="Increase stock by 1"
+                          >
+                            +
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  {product.description && (
+                    <p className="product-description">
+                      {product.description.length > 60 
+                        ? product.description.substring(0, 60) + '...' 
+                        : product.description
+                      }
+                    </p>
+                  )}
+                  <div className="product-actions">
+                    <button className="btn view-product-btn">View</button>
+                    {isOwner && (
+                      <button 
+                        className="btn delete-product-btn"
+                        onClick={() => handleDeleteProduct(product.id)}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+         
+        {/* Bottom ad after products */}
+        <div className="bottom-ad">
+          <ResponsiveAd />
+        </div>
+      </section>
 
       {/* Advertisements Carousel */}
       {shop.adsEnabled && shop.adsImagePathsJson && (()=>{ let imgs=[]; try{ imgs = JSON.parse(shop.adsImagePathsJson)||[] } catch { imgs=[] }
@@ -650,6 +865,21 @@ export default function ShopPage() {
                 placeholder="e.g., Electronics, Food, Clothing"
               />
             </div>
+            <div>
+              <label htmlFor="productStock" className="muted form-label">
+                Stock Count *
+              </label>
+              <input
+                type="number"
+                id="productStock"
+                className="input"
+                value={productForm.stockCount}
+                onChange={(e) => setProductForm({...productForm, stockCount: e.target.value})}
+                min="0"
+                required
+                placeholder="0"
+              />
+            </div>
           </div>
 
           <div className="form-actions">
@@ -666,6 +896,8 @@ export default function ShopPage() {
           </div>
         </form>
       </Modal>
+
+
       </main>
     </>
   )

@@ -7,7 +7,7 @@ export default function Avatar({ src, alt, size = 36, fallback = "🏪", name })
         height: size,
         borderRadius: size * 0.3,
         background: 'var(--surface)',
-        display: 'inline-flex',
+        display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
@@ -19,7 +19,8 @@ export default function Avatar({ src, alt, size = 36, fallback = "🏪", name })
           style={{
             width: '100%',
             height: '100%',
-            objectFit: 'cover'
+            objectFit: 'cover',
+            objectPosition: 'center'
           }}
           onError={(e) => {
             // If image fails to load, hide it and show fallback
@@ -59,7 +60,7 @@ export default function Avatar({ src, alt, size = 36, fallback = "🏪", name })
       height: size,
       borderRadius: size * 0.3,
       background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
-      display: 'inline-flex',
+      display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       color: '#0b1020',

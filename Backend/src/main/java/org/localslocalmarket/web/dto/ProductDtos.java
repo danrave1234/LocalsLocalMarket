@@ -1,8 +1,12 @@
 package org.localslocalmarket.web.dto;
 
-import jakarta.validation.constraints.*;
-
 import java.math.BigDecimal;
+
+import org.localslocalmarket.model.Product;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public class ProductDtos {
     public record CreateProductRequest(
@@ -19,10 +23,55 @@ public class ProductDtos {
     public record UpdateProductRequest(
             String title,
             String description,
-            @DecimalMin(value = "0.0", inclusive = false) BigDecimal price,
+            BigDecimal price,
             Integer stockCount,
             String imagePathsJson,
             String category,
             Boolean isActive
     ){}
+    
+    public record ProductResponse(
+            Long id,
+            String title,
+            String description,
+            BigDecimal price,
+            Integer stockCount,
+            String imagePathsJson,
+            String category,
+            Boolean isActive,
+            java.time.Instant createdAt,
+            Long shopId,
+            String shopName
+    ){
+        public static ProductResponse fromProduct(Product product) {
+            // Safely handle lazy-loaded shop relationship
+            Long shopId = null;
+            String shopName = null;
+            
+            try {
+                if (product.getShop() != null) {
+                    shopId = product.getShop().getId();
+                    shopName = product.getShop().getName();
+                }
+            } catch (org.hibernate.LazyInitializationException e) {
+                // If shop is lazy-loaded and session is closed, just use null values
+                shopId = null;
+                shopName = null;
+            }
+            
+            return new ProductResponse(
+                product.getId(),
+                product.getTitle(),
+                product.getDescription(),
+                product.getPrice(),
+                product.getStockCount(),
+                product.getImagePathsJson(),
+                product.getCategory(),
+                product.getIsActive(),
+                product.getCreatedAt(),
+                shopId,
+                shopName
+            );
+        }
+    }
 }

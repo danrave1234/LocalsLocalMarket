@@ -60,31 +60,42 @@ public class ProductController {
 
     @Cacheable(cacheNames = "products_list", key = "'q=' + #q.orElse('') + '&category=' + #category.orElse('') + '&minPrice=' + (#minPrice.isPresent() ? #minPrice.get() : '') + '&maxPrice=' + (#maxPrice.isPresent() ? #maxPrice.get() : '') + '&shopId=' + (#shopId.isPresent() ? #shopId.get() : '') + '&page=' + #page + '&size=' + #size")
     @GetMapping
-    public Page<Product> list(@RequestParam("q") Optional<String> q,
-                              @RequestParam("category") Optional<String> category,
-                              @RequestParam("minPrice") Optional<Double> minPrice,
-                              @RequestParam("maxPrice") Optional<Double> maxPrice,
-                              @RequestParam("shopId") Optional<Long> shopId,
-                              @RequestParam(value = "page", defaultValue = "0") int page,
-                              @RequestParam(value = "size", defaultValue = "20") int size){
-        Specification<Product> spec = Specification.where((root, cq, cb) -> cb.equal(root.get("isActive"), true));
-        if(q.isPresent()){
-            String like = "%" + q.get().toLowerCase() + "%";
-            spec = spec.and((root, cq, cb) -> cb.like(cb.lower(root.get("title")), like));
+    public Page<ProductDtos.ProductResponse> list(@RequestParam("q") Optional<String> q,
+                                                  @RequestParam("category") Optional<String> category,
+                                                  @RequestParam("minPrice") Optional<Double> minPrice,
+                                                  @RequestParam("maxPrice") Optional<Double> maxPrice,
+                                                  @RequestParam("shopId") Optional<Long> shopId,
+                                                  @RequestParam(value = "page", defaultValue = "0") int page,
+                                                  @RequestParam(value = "size", defaultValue = "20") int size){
+        
+        Page<Product> productPage;
+        
+        // If only shopId filter is applied, use the optimized query
+        if (shopId.isPresent() && !q.isPresent() && !category.isPresent() && !minPrice.isPresent() && !maxPrice.isPresent()) {
+            productPage = products.findAllActiveByShopIdWithShop(shopId.get(), PageRequest.of(page, size));
+        } else {
+            // Use specification for complex queries
+            Specification<Product> spec = Specification.where((root, cq, cb) -> cb.equal(root.get("isActive"), true));
+            if(q.isPresent()){
+                String like = "%" + q.get().toLowerCase() + "%";
+                spec = spec.and((root, cq, cb) -> cb.like(cb.lower(root.get("title")), like));
+            }
+            if(category.isPresent()){
+                spec = spec.and((root, cq, cb) -> cb.equal(root.get("category"), category.get()));
+            }
+            if(minPrice.isPresent()){
+                spec = spec.and((root, cq, cb) -> cb.ge(root.get("price"), minPrice.get()));
+            }
+            if(maxPrice.isPresent()){
+                spec = spec.and((root, cq, cb) -> cb.le(root.get("price"), maxPrice.get()));
+            }
+            if(shopId.isPresent()){
+                spec = spec.and((root, cq, cb) -> cb.equal(root.get("shop").get("id"), shopId.get()));
+            }
+            productPage = products.findAll(spec, PageRequest.of(page, size));
         }
-        if(category.isPresent()){
-            spec = spec.and((root, cq, cb) -> cb.equal(root.get("category"), category.get()));
-        }
-        if(minPrice.isPresent()){
-            spec = spec.and((root, cq, cb) -> cb.ge(root.get("price"), minPrice.get()));
-        }
-        if(maxPrice.isPresent()){
-            spec = spec.and((root, cq, cb) -> cb.le(root.get("price"), maxPrice.get()));
-        }
-        if(shopId.isPresent()){
-            spec = spec.and((root, cq, cb) -> cb.equal(root.get("shop").get("id"), shopId.get()));
-        }
-        return products.findAll(spec, PageRequest.of(page, size));
+        
+        return productPage.map(ProductDtos.ProductResponse::fromProduct);
     }
 
     @PostMapping("/{id}/decrement-stock")
@@ -101,7 +112,7 @@ public class ProductController {
         User actor = (User) auth.getPrincipal();
         if (amount <= 0) amount = 1;
         final int dec = amount;
-        return products.findById(id).<ResponseEntity<?>>map(p -> {
+        return products.findByIdWithShopAndOwner(id).<ResponseEntity<?>>map(p -> {
             boolean isOwner = p.getShop() != null && p.getShop().getOwner() != null && p.getShop().getOwner().getId().equals(actor.getId());
             boolean isAdmin = actor.getRole() == User.Role.ADMIN;
             if(!(isOwner || isAdmin)){
@@ -128,7 +139,7 @@ public class ProductController {
         }
         User actor = (User) auth.getPrincipal();
 
-        return products.findById(id).<ResponseEntity<?>>map(p -> {
+        return products.findByIdWithShopAndOwner(id).<ResponseEntity<?>>map(p -> {
             boolean isOwner = p.getShop() != null && p.getShop().getOwner() != null && p.getShop().getOwner().getId().equals(actor.getId());
             boolean isAdmin = actor.getRole() == User.Role.ADMIN;
             if(!(isOwner || isAdmin)){
@@ -136,7 +147,12 @@ public class ProductController {
             }
             if(req.title() != null) p.setTitle(req.title());
             if(req.description() != null) p.setDescription(req.description());
-            if(req.price() != null) p.setPrice(req.price());
+            if(req.price() != null) {
+                if(req.price().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                    return ResponseEntity.badRequest().body("Price must be greater than 0");
+                }
+                p.setPrice(req.price());
+            }
             if(req.stockCount() != null) p.setStockCount(req.stockCount());
             if(req.imagePathsJson() != null) p.setImagePathsJson(req.imagePathsJson());
             if(req.category() != null) p.setCategory(req.category());
@@ -150,7 +166,7 @@ public class ProductController {
     @GetMapping("/{id}")
     public ResponseEntity<?> get(@PathVariable("id") Long id){
         return products.findById(id)
-                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .<ResponseEntity<?>>map(product -> ResponseEntity.ok(ProductDtos.ProductResponse.fromProduct(product)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -166,7 +182,7 @@ public class ProductController {
         }
         User actor = (User) auth.getPrincipal();
 
-        return products.findById(id).<ResponseEntity<?>>map(p -> {
+        return products.findByIdWithShopAndOwner(id).<ResponseEntity<?>>map(p -> {
             boolean isOwner = p.getShop() != null && p.getShop().getOwner() != null && p.getShop().getOwner().getId().equals(actor.getId());
             boolean isAdmin = actor.getRole() == User.Role.ADMIN;
             if(!(isOwner || isAdmin)){
