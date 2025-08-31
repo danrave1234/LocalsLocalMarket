@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Modal from '../components/Modal.jsx'
-// import { ResponsiveAd } from '../components/GoogleAds.jsx'
+import { ResponsiveAd } from '../components/GoogleAds.jsx'
 
 export default function ProfilePage() {
   const { user, updateProfile, changePassword } = useAuth()
@@ -422,10 +422,10 @@ export default function ProfilePage() {
         </form>
       </Modal>
 
-      {/* Bottom ad - DISABLED */}
-      {/* <div className="profile-ad">
+      {/* Bottom ad */}
+      <div className="profile-ad">
         <ResponsiveAd />
-      </div> */}
+      </div>
     </main>
   )
 }

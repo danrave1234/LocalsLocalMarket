@@ -1,5 +1,30 @@
-// With Vite proxy, always use '/api' in dev
-export const API_BASE = import.meta.env.VITE_API_BASE || '/api'
+// Smart API base URL detection
+function getApiBase() {
+  // If environment variable is explicitly set, use it
+  if (import.meta.env.VITE_API_BASE) {
+    return import.meta.env.VITE_API_BASE
+  }
+  
+  // Auto-detect environment
+  if (import.meta.env.DEV) {
+    // Development: use relative path for Vite proxy
+    return '/api'
+  } else {
+    // Production: use absolute URL
+    return 'https://api.localslocalmarket.com/api'
+  }
+}
+
+export const API_BASE = getApiBase()
+
+// Log API configuration in development
+if (import.meta.env.DEV) {
+  console.log('🔧 API Configuration:', {
+    environment: import.meta.env.DEV ? 'Development' : 'Production',
+    apiBase: API_BASE,
+    viteProxy: import.meta.env.DEV ? 'Enabled (localhost:8080)' : 'Disabled'
+  })
+}
 
 export async function apiRequest(path, { method = 'GET', body, token, headers } = {}) {
   const isFormData = body instanceof FormData;
@@ -33,6 +58,8 @@ export const api = {
   get: (p, opts) => apiRequest(p, { ...opts, method: 'GET' }),
   post: (p, body, opts) => apiRequest(p, { ...opts, method: 'POST', body }),
   patch: (p, body, opts) => apiRequest(p, { ...opts, method: 'PATCH', body }),
+  delete: (p, opts) => apiRequest(p, { ...opts, method: 'DELETE' }),
+  put: (p, body, opts) => apiRequest(p, { ...opts, method: 'PUT', body }),
 }
 
 

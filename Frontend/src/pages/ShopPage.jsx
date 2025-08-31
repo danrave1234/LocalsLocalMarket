@@ -5,12 +5,11 @@ import SEOHead from '../components/SEOHead.jsx'
 import SocialSharing from '../components/SocialSharing.jsx'
 import RelatedShops from '../components/RelatedShops.jsx'
 import { fetchShopById } from '../api/shops.js'
-import { fetchProducts, createProduct, updateProduct, deleteProduct } from '../api/products.js'
+import { fetchProducts, createProduct, updateProduct, deleteProduct, updateProductStock } from '../api/products.js'
 import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
 import { extractShopIdFromSlug } from '../utils/slugUtils.js'
-// import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
-import { API_BASE } from '../api/client.js'
+import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
 import './ShopPage.css'
 
 export default function ShopPage() {
@@ -71,7 +70,7 @@ export default function ShopPage() {
     if (!formattedPath) return null
     
     // Get the backend URL - use the same base as API requests
-    const backendUrl = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'
+    const backendUrl = import.meta.env.VITE_API_BASE || '/api'
     const baseUrl = backendUrl.replace('/api', '') // Remove /api to get just the base URL
     
     // Construct full URL to backend server
@@ -383,18 +382,7 @@ export default function ShopPage() {
       ))
       
       // Make API call to update stock
-      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products/${productId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ stockCount: newStock })
-      })
-      
-      if (!response.ok) {
-        throw new Error('Failed to update stock')
-      }
+      await updateProductStock(productId, newStock, token)
     } catch (error) {
       console.error('Failed to update stock:', error)
       setError('Failed to update stock: ' + error.message)
@@ -427,19 +415,7 @@ export default function ShopPage() {
         setSavingStock(prev => ({ ...prev, [productId]: true }))
         
         // Make API call to update stock
-        const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products/${productId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ stockCount: newStock })
-        })
-        
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(`Failed to update stock: ${response.status} - ${errorText}`)
-        }
+        await updateProductStock(productId, newStock, token)
         
         // Clear the timer reference and saving state
         delete stockDebounceTimers.current[productId]
@@ -1058,10 +1034,10 @@ export default function ShopPage() {
           </div>
         )}
          
-        {/* Bottom ad after products - DISABLED */}
-        {/* <div className="bottom-ad">
+        {/* Bottom ad after products */}
+        <div className="bottom-ad">
           <ResponsiveAd />
-        </div> */}
+        </div>
       </section>
 
       {/* Advertisements Carousel - DISABLED */}

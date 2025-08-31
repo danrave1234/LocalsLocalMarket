@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useNavigate } from 'react-router-dom'
-// import { ResponsiveAd } from '../components/GoogleAds.jsx'
+import { ResponsiveAd } from '../components/GoogleAds.jsx'
 
 export default function RegisterPage() {
     const [formData, setFormData] = useState({
@@ -224,10 +224,10 @@ export default function RegisterPage() {
                 </div>
             </div>
             
-            {/* Bottom ad - DISABLED */}
-            {/* <div className="auth-ad">
+            {/* Bottom ad */}
+            <div className="auth-ad">
                 <ResponsiveAd />
-            </div> */}
+            </div>
         </main>
     )
 }

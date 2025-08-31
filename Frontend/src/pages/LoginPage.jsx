@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useLocation, useNavigate } from 'react-router-dom'
-// import { ResponsiveAd } from '../components/GoogleAds.jsx'
+import { ResponsiveAd } from '../components/GoogleAds.jsx'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
@@ -160,10 +160,10 @@ export default function LoginPage() {
                 </div>
             </div>
             
-            {/* Bottom ad - DISABLED */}
-            {/* <div className="auth-ad">
+            {/* Bottom ad */}
+            <div className="auth-ad">
                 <ResponsiveAd />
-            </div> */}
+            </div>
         </main>
     )
 }

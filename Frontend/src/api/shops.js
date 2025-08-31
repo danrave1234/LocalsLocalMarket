@@ -1,4 +1,4 @@
-import { API_BASE } from './client.js'
+import { api } from './client.js'
 
 export async function fetchShops({ q, category } = {}) {
     const params = new URLSearchParams()
@@ -6,107 +6,35 @@ export async function fetchShops({ q, category } = {}) {
     if (category) params.set('category', category)
     const qs = params.toString()
     
-    const response = await fetch(`${API_BASE}/shops${qs ? `?${qs}` : ''}`)
-    
-    if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to fetch shops')
-    }
-    return response.json()
+    return api.get(`/shops${qs ? `?${qs}` : ''}`)
 }
 
 export async function fetchShopById(id) {
-    const response = await fetch(`${API_BASE}/shops/${id}`)
-    
-    if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to fetch shop')
-    }
-    return response.json()
+    return api.get(`/shops/${id}`)
 }
 
 export async function createShopRequest(shopData, token) {
-    const response = await fetch(`${API_BASE}/shops`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(shopData)
-    })
-
-    if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to create shop')
-    }
-    return response.json()
+    return api.post('/shops', shopData, { token })
 }
 
 export async function getUserShopsRequest(token) {
-    const response = await fetch(`${API_BASE}/shops/my-shops`, {
-        method: 'GET',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    })
-
-    if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to fetch shops')
-    }
-    return response.json()
+    return api.get('/shops/my-shops', { token })
 }
 
 export async function getShopRequest(id) {
-    const response = await fetch(`${API_BASE}/shops/${id}`)
-    
-    if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to fetch shop')
-    }
-    return response.json()
+    return api.get(`/shops/${id}`)
 }
 
 export async function updateShopRequest(id, shopData, token) {
-    const response = await fetch(`${API_BASE}/shops/${id}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(shopData)
-    })
-
-    if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to update shop')
-    }
-    return response.json()
+    return api.patch(`/shops/${id}`, shopData, { token })
 }
 
 export async function deleteShopRequest(id, token) {
-    const response = await fetch(`${API_BASE}/shops/${id}`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${token}`
-        }
-    })
-
-    if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to delete shop')
-    }
-    return response.json()
+    return api.delete(`/shops/${id}`, { token })
 }
 
 export async function fetchCategories() {
-    const response = await fetch(`${API_BASE}/shops/categories`)
-    
-    if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to fetch categories')
-    }
-    return response.json()
+    return api.get('/shops/categories')
 }
 
 

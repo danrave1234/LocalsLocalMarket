@@ -37,4 +37,20 @@ export async function getProductById(productId) {
   return api.get(`/products/${productId}`)
 }
 
+export async function updateProductStock(productId, stockCount, token) {
+  return api.patch(`/products/${productId}`, { stockCount }, { token })
+}
+
+export async function decrementProductStock(productId, amount = 1, token) {
+  return api.post(`/products/${productId}/decrement-stock?amount=${amount}`, null, { token })
+}
+
+export async function uploadImage(formData, token) {
+  return api.post('/uploads/image', formData, { token })
+}
+
+export async function fetchProductsByShopId(shopId, token) {
+  return api.get(`/products?shopId=${shopId}`, { token })
+}
+
 

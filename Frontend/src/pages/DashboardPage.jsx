@@ -3,10 +3,9 @@ import { useAuth } from '../auth/AuthContext.jsx'
 import Modal from '../components/Modal.jsx'
 import LocationMap from '../components/LocationMap.jsx'
 import { createShopRequest, getUserShopsRequest, deleteShopRequest, updateShopRequest, fetchCategories } from '../api/shops.js'
-import { createProduct, updateProduct, deleteProduct } from '../api/products.js'
+import { createProduct, updateProduct, deleteProduct, updateProductStock, decrementProductStock, uploadImage, fetchProductsByShopId } from '../api/products.js'
 import { generateShopUrl } from '../utils/slugUtils.js'
-// import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
-import { apiRequest } from '../api/client.js'
+import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
 
 // Utility function to format image paths
 const formatImagePath = (path) => {
@@ -29,7 +28,7 @@ const getImageUrl = (path) => {
   if (!formattedPath) return null
   
   // Get the backend URL - use the same base as API requests
-  const backendUrl = import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'
+  const backendUrl = import.meta.env.VITE_API_BASE || '/api'
   const baseUrl = backendUrl.replace('/api', '') // Remove /api to get just the base URL
   
   // Construct full URL to backend server
@@ -127,7 +126,7 @@ export default function DashboardPage() {
             const fd = new FormData()
             fd.append('file', file, file.name) // Include filename
             
-            const res = await apiRequest('/uploads/image', { method: 'POST', body: fd, token })
+            const res = await uploadImage(fd, token)
             console.log('Upload successful, path:', res.path)
             return res.path
         } catch (error) {
@@ -269,16 +268,7 @@ export default function DashboardPage() {
         setShowManageProducts(true)
         try {
             // Fetch products for this shop using the API client
-            const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products?shopId=${shop.id}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            })
-            if (!response.ok) {
-                throw new Error('Failed to fetch products')
-            }
-            const data = await response.json()
+            const data = await fetchProductsByShopId(shop.id, token)
             const products = Array.isArray(data) ? data : (data.content || [])
             setShopProducts(products)
         } catch (error) {
@@ -296,16 +286,7 @@ export default function DashboardPage() {
             await deleteProduct(productId, token)
             // Refresh products list
             if (managingShop) {
-                const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products?shopId=${managingShop.id}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                })
-                if (!response.ok) {
-                    throw new Error('Failed to refresh products')
-                }
-                const data = await response.json()
+                const data = await fetchProductsByShopId(managingShop.id, token)
                 const products = Array.isArray(data) ? data : (data.content || [])
                 setShopProducts(products)
             }
@@ -363,34 +344,15 @@ export default function DashboardPage() {
             ))
             
             // Make API call to update stock
-            const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products/${productId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ stockCount: newStock })
-            })
-            
-            if (!response.ok) {
-                throw new Error('Failed to update stock')
-            }
+            await updateProductStock(productId, newStock, token)
         } catch (error) {
             console.error('Failed to update stock:', error)
             setError('Failed to update stock: ' + error.message)
             // Revert the optimistic update by refreshing the products
             if (managingShop) {
-                const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products?shopId=${managingShop.id}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                })
-                if (response.ok) {
-                    const data = await response.json()
-                    const products = Array.isArray(data) ? data : (data.content || [])
-                    setShopProducts(products)
-                }
+                const data = await fetchProductsByShopId(managingShop.id, token)
+                const products = Array.isArray(data) ? data : (data.content || [])
+                setShopProducts(products)
             }
         }
     }
@@ -418,19 +380,7 @@ export default function DashboardPage() {
         setSavingStock(prev => ({ ...prev, [productId]: true }))
         
         // Make API call to update stock
-        const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products/${productId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ stockCount: newStock })
-        })
-        
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(`Failed to update stock: ${response.status} - ${errorText}`)
-        }
+        await updateProductStock(productId, newStock, token)
         
         // Clear the timer reference and saving state
         delete stockDebounceTimers.current[productId]
@@ -440,17 +390,9 @@ export default function DashboardPage() {
                 setError('Failed to update stock: ' + error.message)
                 // Revert the optimistic update by refreshing the products
                 if (managingShop) {
-                    const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products?shopId=${managingShop.id}`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    })
-                    if (response.ok) {
-                        const data = await response.json()
-                        const products = Array.isArray(data) ? data : (data.content || [])
-                        setShopProducts(products)
-                    }
+                    const data = await fetchProductsByShopId(managingShop.id, token)
+                    const products = Array.isArray(data) ? data : (data.content || [])
+                    setShopProducts(products)
                 }
                 // Clear the timer reference and saving state
                 delete stockDebounceTimers.current[productId]
@@ -551,19 +493,7 @@ export default function DashboardPage() {
                 const formData = new FormData()
                 formData.append('file', file)
                 
-                const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/uploads/image`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                })
-                
-                if (!response.ok) {
-                    throw new Error('Failed to upload image')
-                }
-                
-                const result = await response.json()
+                const result = await uploadImage(formData, token)
                 uploadedPaths.push(result.path)
             }
             
@@ -897,10 +827,10 @@ export default function DashboardPage() {
                     </div>
                  )}
                  
-                 {/* Bottom ad after shops - DISABLED */}
-                {/* <div className="dashboard-ad">
+                 {/* Bottom ad after shops */}
+                <div className="dashboard-ad">
                      <ResponsiveAd />
-                 </div> */}
+                 </div>
              </section>
 
             {/* Create Shop Modal */}
@@ -1667,19 +1597,7 @@ export default function DashboardPage() {
                                                         onClick={async () => {
                                                             try {
                                                                 const productId = product.id
-                                                                const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products/${productId}/decrement-stock?amount=1`, {
-                                                                    method: 'POST',
-                                                                    headers: {
-                                                                        'Authorization': `Bearer ${token}`
-                                                                    }
-                                                                })
-                                                                
-                                                                if (!response.ok) {
-                                                                    const errorText = await response.text()
-                                                                    throw new Error(`Failed to decrease stock: ${response.status} - ${errorText}`)
-                                                                }
-                                                                
-                                                                const result = await response.json()
+                                                                const result = await decrementProductStock(productId, 1, token)
                                                                 
                                                                 // Update the product in the list
                                                                 setShopProducts(shopProducts.map(p => 
@@ -1722,35 +1640,15 @@ export default function DashboardPage() {
                                                                     p.id === productId ? { ...p, stockCount: newStock } : p
                                                                 ))
                                                                 
-                                                                const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products/${productId}`, {
-                                                                    method: 'PATCH',
-                                                                    headers: {
-                                                                        'Content-Type': 'application/json',
-                                                                        'Authorization': `Bearer ${token}`
-                                                                    },
-                                                                    body: JSON.stringify({ stockCount: newStock })
-                                                                })
-                                                                
-                                                                if (!response.ok) {
-                                                                    const errorText = await response.text()
-                                                                    throw new Error(`Failed to increase stock: ${response.status} - ${errorText}`)
-                                                                }
+                                                                await updateProductStock(productId, newStock, token)
                                                             } catch (error) {
                                                                 console.error('Failed to increase stock:', error)
                                                                 setError('Failed to increase stock: ' + error.message)
                                                                 // Revert by refreshing the products
                                                                 if (managingShop) {
-                                                                    const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products?shopId=${managingShop.id}`, {
-                                                                        headers: {
-                                                                            'Authorization': `Bearer ${token}`,
-                                                                            'Content-Type': 'application/json'
-                                                                        }
-                                                                    })
-                                                                    if (response.ok) {
-                                                                        const data = await response.json()
-                                                                        const products = Array.isArray(data) ? data : (data.content || [])
-                                                                        setShopProducts(products)
-                                                                    }
+                                                                    const data = await fetchProductsByShopId(managingShop.id, token)
+                                                                    const products = Array.isArray(data) ? data : (data.content || [])
+                                                                    setShopProducts(products)
                                                                 }
                                                             }
                                                         }}

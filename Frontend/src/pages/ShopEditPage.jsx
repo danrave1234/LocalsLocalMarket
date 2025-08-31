@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { fetchShopById, updateShopRequest, fetchCategories } from '../api/shops.js'
-import { apiRequest, API_BASE } from '../api/client.js'
+import { fetchProductsByShopId, createProduct, updateProduct, deleteProduct, uploadImage, decrementProductStock } from '../api/products.js'
 
 export default function ShopEditPage(){
   const { id: slug } = useParams()
@@ -43,7 +43,7 @@ export default function ShopEditPage(){
   const onUpload = async (file) => {
     const fd = new FormData()
     fd.append('file', file)
-    const res = await apiRequest('/uploads/image', { method: 'POST', body: fd, token })
+    const res = await uploadImage(fd, token)
     return res.path
   }
 
@@ -359,7 +359,7 @@ function AdsManager({ form, setForm }){
 
   const upload = async(file)=>{
     const fd = new FormData(); fd.append('file', file)
-    const res = await apiRequest('/uploads/image', { method:'POST', body: fd, token })
+    const res = await uploadImage(fd, token)
     return res.path
   }
 
@@ -405,8 +405,7 @@ function ProductManager({ shopId }){
     setLoading(true)
     setError('')
     try{
-      const res = await fetch(`${API_BASE}/products?shopId=${shopId}`)
-      const data = await res.json()
+      const data = await fetchProductsByShopId(shopId, token)
       const list = Array.isArray(data) ? data : (data.content||[])
       setProducts(list)
     }catch(e){ setError(e.message)} finally{ setLoading(false)}
@@ -415,13 +414,13 @@ function ProductManager({ shopId }){
 
   const upload = async(file)=>{
     const fd = new FormData(); fd.append('file', file)
-    const res = await apiRequest('/uploads/image', { method:'POST', body: fd, token })
+    const res = await uploadImage(fd, token)
     return res.path
   }
   const create = async()=>{
     try{
       const imagePathsJson = JSON.stringify(newItem.images)
-      await apiRequest('/products', { method:'POST', token, body:{ shopId, title:newItem.title, description:newItem.description, price: Number(newItem.price), stockCount: newItem.stockCount===''? 0 : Number(newItem.stockCount), imagePathsJson, category: newItem.category }})
+      await createProduct({ shopId, title:newItem.title, description:newItem.description, price: Number(newItem.price), stockCount: newItem.stockCount===''? 0 : Number(newItem.stockCount), imagePathsJson, category: newItem.category }, token)
       setNewItem({ title:'', description:'', price:'', category:'', images: [] })
       await load()
     }catch(e){ setError(e.message) }
@@ -430,13 +429,13 @@ function ProductManager({ shopId }){
     try{
       const merged = { ...p, ...patch }
       const body = { title: merged.title, description: merged.description, price: merged.price, imagePathsJson: merged.imagePathsJson, category: merged.category }
-      await apiRequest(`/products/${p.id}`, { method:'PATCH', token, body })
+      await updateProduct(p.id, body, token)
       await load()
     }catch(e){ setError(e.message) }
   }
   const remove = async(id)=>{
     try{
-      await apiRequest(`/products/${id}`, { method:'DELETE', token })
+      await deleteProduct(id, token)
       await load()
     }catch(e){ setError(e.message) }
   }
@@ -485,7 +484,7 @@ function ProductManager({ shopId }){
                 <div>
                   <div className="form-row" style={{alignItems:'center'}}>
                     <label className="btn">Upload Image<input type="file" accept="image/*" onChange={async(e)=>{const f=e.target.files?.[0]; if(!f) return; const path=await upload(f); const images = Array.isArray(p.imagePathsJson)? p.imagePathsJson : (p.imagePathsJson? JSON.parse(p.imagePathsJson):[]); images.push(path); await update(p,{ imagePathsJson: JSON.stringify(images) })}} style={{display:'none'}}/></label>
-                    <button className="btn" onClick={async()=>{ await apiRequest(`/products/${p.id}/decrement-stock?amount=1`, { method:'POST', token }); await load() }}>Reduce Stock -1</button>
+                    <button className="btn" onClick={async()=>{ await decrementProductStock(p.id, 1, token); await load() }}>Reduce Stock -1</button>
                     <label style={{display:'flex', gap:8, alignItems:'center'}}>
                       <input type="checkbox" checked={!!p.isActive} onChange={async(e)=>{ await update(p,{ isActive: e.target.checked }) }} /> Active
                     </label>
