@@ -54,7 +54,7 @@ export default function GoogleAds({
         ref={adRef}
         className="adsbygoogle"
         style={{ display: 'block' }}
-        data-ad-client="ca-pub-YOUR_ADSENSE_ID"
+        data-ad-client="ca-pub-9245122431395001"
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
         data-full-width-responsive={responsive}
