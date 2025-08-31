@@ -1,6 +1,8 @@
 package org.localslocalmarket.config;
 
-import com.github.benmanes.caffeine.cache.Caffeine;
+import java.time.Duration;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -9,8 +11,7 @@ import org.springframework.cache.support.NoOpCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.time.Duration;
-import java.util.List;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 @Configuration
 @EnableCaching
@@ -32,7 +33,8 @@ public class CacheConfig {
         }
         Caffeine<Object, Object> builder = Caffeine.newBuilder()
                 .maximumSize(maxSize)
-                .expireAfterWrite(Duration.ofSeconds(ttlSeconds));
+                .expireAfterWrite(Duration.ofSeconds(ttlSeconds))
+                .recordStats(); // Enable statistics for metrics
         CaffeineCacheManager manager = new CaffeineCacheManager();
         manager.setCaffeine(builder);
         manager.setCacheNames(List.of(

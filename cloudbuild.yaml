@@ -34,8 +34,7 @@ steps:
       '--port', '8080',
       '--memory', '1Gi',
       '--cpu', '1',
-      '--max-instances', '10',
-      '--set-env-vars', 'SPRING_PROFILES_ACTIVE=prod'
+      '--max-instances', '10'
     ]
     id: 'deploy-backend'
     waitFor: ['push-backend-image']

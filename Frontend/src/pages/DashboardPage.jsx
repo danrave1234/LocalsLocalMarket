@@ -104,7 +104,7 @@ export default function DashboardPage() {
         }
     }
 
-    const onUpload = async (file) => {
+    const onUpload = async (file, type = 'general') => {
         if (!file) {
             throw new Error('No file selected')
         }
@@ -126,7 +126,7 @@ export default function DashboardPage() {
             const fd = new FormData()
             fd.append('file', file, file.name) // Include filename
             
-            const res = await uploadImage(fd, token)
+            const res = await uploadImage(fd, token, type)
             console.log('Upload successful, path:', res.path)
             return res.path
         } catch (error) {
@@ -493,7 +493,7 @@ export default function DashboardPage() {
                 const formData = new FormData()
                 formData.append('file', file)
                 
-                const result = await uploadImage(formData, token)
+                const result = await uploadImage(formData, token, 'products')
                 uploadedPaths.push(result.path)
             }
             
@@ -1165,7 +1165,7 @@ export default function DashboardPage() {
                                                 if(!f || uploading) return; 
                                                 
                                                 try {
-                                                    const path = await onUpload(f); 
+                                                    const path = await onUpload(f, 'shops'); 
                                                     console.log('Setting logo path:', path);
                                                     setShopForm(prev => {
                                                         const updated = {...prev, logoPath: path};
@@ -1241,7 +1241,7 @@ export default function DashboardPage() {
                                                 if(!f || uploading) return; 
                                                 
                                                 try {
-                                                    const path = await onUpload(f); 
+                                                    const path = await onUpload(f, 'shops'); 
                                                     console.log('Setting cover path:', path);
                                                     setShopForm(prev => {
                                                         const updated = {...prev, coverPath: path};

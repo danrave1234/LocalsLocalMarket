@@ -30,90 +30,55 @@ public class UserController {
 
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(Authentication auth) {
-        System.out.println("=== GET PROFILE DEBUG ===");
-        System.out.println("Authentication: " + (auth != null ? auth.getName() : "NULL"));
-        System.out.println("Authentication principal: " + (auth != null ? auth.getPrincipal() : "NULL"));
-        
         String email = auth.getName();
         if (auth.getPrincipal() instanceof org.localslocalmarket.model.User) {
             email = ((org.localslocalmarket.model.User) auth.getPrincipal()).getEmail();
         }
-        System.out.println("Extracted email: " + email);
         
         return users.findByEmail(email)
-                                        .map(user -> {
-                                            System.out.println("User found for GET: " + user.getEmail());
-                                            return ResponseEntity.ok(new AuthDtos.UserProfileResponse(
-                                user.getName(),
-                                user.getEmail(),
-                                user.getCreatedAt().toString()
-                        ));
-                                        })
-                .orElseGet(() -> {
-                    System.out.println("User not found for GET");
-                    return ResponseEntity.notFound().build();
-                });
+                .map(user -> ResponseEntity.ok(new AuthDtos.UserProfileResponse(
+                        user.getName(),
+                        user.getEmail(),
+                        user.getCreatedAt().toString()
+                )))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PutMapping("/profile")
     public ResponseEntity<?> updateProfile(@RequestBody @Validated AuthDtos.UpdateProfileRequest req, Authentication auth) {
-        System.out.println("=== PUT PROFILE DEBUG ===");
-        System.out.println("Authentication: " + (auth != null ? auth.getName() : "NULL"));
-        System.out.println("Authentication principal: " + (auth != null ? auth.getPrincipal() : "NULL"));
-        System.out.println("Request body: " + req);
-        
         String email = auth.getName();
         if (auth.getPrincipal() instanceof org.localslocalmarket.model.User) {
             email = ((org.localslocalmarket.model.User) auth.getPrincipal()).getEmail();
         }
-        System.out.println("Extracted email: " + email);
         
         return users.findByEmail(email)
-                                        .map(user -> {
-                            System.out.println("User found for PUT: " + user.getEmail());
-                            System.out.println("Updating name from '" + user.getName() + "' to '" + req.name() + "'");
-                            
-                            user.setName(req.name());
-                            users.save(user);
-                            System.out.println("Profile updated successfully");
-                            return ResponseEntity.ok(Map.of("message", "Profile updated successfully"));
-                        })
-                .orElseGet(() -> {
-                    System.out.println("User not found for PUT");
-                    return ResponseEntity.notFound().build();
-                });
+                .map(user -> {
+                    user.setName(req.name());
+                    users.save(user);
+                    return ResponseEntity.ok(Map.of("message", "Profile updated successfully"));
+                })
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PutMapping("/change-password")
     public ResponseEntity<?> changePassword(@RequestBody @Validated AuthDtos.ChangePasswordRequest req, Authentication auth) {
-        System.out.println("=== CHANGE PASSWORD DEBUG ===");
-        System.out.println("Authentication: " + (auth != null ? auth.getName() : "NULL"));
-        
         String email = auth.getName();
         if (auth.getPrincipal() instanceof org.localslocalmarket.model.User) {
             email = ((org.localslocalmarket.model.User) auth.getPrincipal()).getEmail();
         }
-        System.out.println("Extracted email: " + email);
         
         return users.findByEmail(email)
                 .map(user -> {
-                    System.out.println("User found for password change: " + user.getEmail());
-                    
                     // Verify current password
                     if (!passwordEncoder.matches(req.currentPassword(), user.getPasswordHash())) {
-                        System.out.println("Current password verification failed");
                         return ResponseEntity.badRequest().body(Map.of("error", "Current password is incorrect"));
                     }
                     
                     // Update password
                     user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
                     users.save(user);
-                    System.out.println("Password changed successfully");
                     return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
                 })
-                .orElseGet(() -> {
-                    System.out.println("User not found for password change");
-                    return ResponseEntity.notFound().build();
-                });
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

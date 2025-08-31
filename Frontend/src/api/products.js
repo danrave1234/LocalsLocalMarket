@@ -45,8 +45,10 @@ export async function decrementProductStock(productId, amount = 1, token) {
   return api.post(`/products/${productId}/decrement-stock?amount=${amount}`, null, { token })
 }
 
-export async function uploadImage(formData, token) {
-  return api.post('/uploads/image', formData, { token })
+export async function uploadImage(formData, token, type = 'general') {
+  // Add type parameter to the URL
+  const url = `/uploads/image?type=${encodeURIComponent(type)}`;
+  return api.post(url, formData, { token })
 }
 
 export async function fetchProductsByShopId(shopId, token) {
