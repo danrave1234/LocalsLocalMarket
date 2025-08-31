@@ -70,7 +70,14 @@ export default function ShopPage() {
     const formattedPath = formatImagePath(path)
     if (!formattedPath) return null
     
-    // Use the centralized API_BASE
+    // If it's already a full URL (Google Cloud Storage), return it directly
+    if (formattedPath.startsWith('http://') || formattedPath.startsWith('https://')) {
+      // Add timestamp to prevent caching issues
+      const separator = formattedPath.includes('?') ? '&' : '?'
+      return `${formattedPath}${separator}t=${Date.now()}`
+    }
+    
+    // Use the centralized API_BASE for local uploads
     const baseUrl = API_BASE.replace('/api', '') // Remove /api to get just the base URL
     
     // Construct full URL to backend server
