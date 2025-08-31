@@ -26,6 +26,16 @@ if (import.meta.env.DEV) {
   })
 }
 
+// Also log in production for debugging
+if (!import.meta.env.DEV) {
+  console.log('🚀 Production API Configuration:', {
+    environment: 'Production',
+    apiBase: API_BASE,
+    viteApiBase: import.meta.env.VITE_API_BASE,
+    isDev: import.meta.env.DEV
+  })
+}
+
 export async function apiRequest(path, { method = 'GET', body, token, headers } = {}) {
   const isFormData = body instanceof FormData;
   const requestHeaders = {

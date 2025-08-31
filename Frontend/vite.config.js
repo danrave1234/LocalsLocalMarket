@@ -6,9 +6,11 @@ export default defineConfig({
   plugins: [react()],
   define: {
     'import.meta.env.VITE_API_BASE': JSON.stringify(
-      process.env.NODE_ENV === 'production' 
-        ? 'https://api.localslocalmarket.com/api'
-        : '/api'
+      process.env.VITE_API_BASE || (
+        process.env.NODE_ENV === 'production' 
+          ? 'https://api.localslocalmarket.com/api'
+          : '/api'
+      )
     ),
   },
   server: {

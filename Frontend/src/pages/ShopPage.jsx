@@ -64,14 +64,16 @@ export default function ShopPage() {
     return `/uploads/${path}`
   }
 
+  // Import the centralized API_BASE
+  import { API_BASE } from '../api/client.js'
+
   // Add cache busting to image URLs
   const getImageUrl = (path) => {
     const formattedPath = formatImagePath(path)
     if (!formattedPath) return null
     
-    // Get the backend URL - use the same base as API requests
-    const backendUrl = import.meta.env.VITE_API_BASE || '/api'
-    const baseUrl = backendUrl.replace('/api', '') // Remove /api to get just the base URL
+    // Use the centralized API_BASE
+    const baseUrl = API_BASE.replace('/api', '') // Remove /api to get just the base URL
     
     // Construct full URL to backend server
     const fullUrl = `${baseUrl}${formattedPath}`
