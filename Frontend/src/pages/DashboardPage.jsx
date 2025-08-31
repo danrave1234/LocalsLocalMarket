@@ -6,6 +6,7 @@ import { createShopRequest, getUserShopsRequest, deleteShopRequest, updateShopRe
 import { createProduct, updateProduct, deleteProduct, updateProductStock, decrementProductStock, uploadImage, fetchProductsByShopId } from '../api/products.js'
 import { generateShopUrl } from '../utils/slugUtils.js'
 import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
+import { API_BASE } from '../api/client.js'
 
 // Utility function to format image paths
 const formatImagePath = (path) => {
@@ -21,9 +22,6 @@ const formatImagePath = (path) => {
   // Otherwise, assume it's a relative path and add /uploads/
   return `/uploads/${path}`
 }
-
-// Import the centralized API_BASE
-import { API_BASE } from '../api/client.js'
 
 // Add cache busting to image URLs
 const getImageUrl = (path) => {

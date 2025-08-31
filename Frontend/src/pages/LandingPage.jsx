@@ -9,6 +9,7 @@ import { fetchShops } from "../api/shops.js"
 import { generateShopUrl } from "../utils/slugUtils.js"
 import { InContentAd, ResponsiveAd } from "../components/GoogleAds.jsx"
 import { loadLeaflet, isLeafletLoaded } from "../utils/leafletLoader.js"
+import { API_BASE } from '../api/client.js'
 
 // Inline icon components to avoid external dependencies
 function MapPin(props) {
@@ -77,9 +78,6 @@ const formatImagePath = (path) => {
   // Otherwise, assume it's a relative path and add /uploads/
   return `/uploads/${path}`
 }
-
-// Import the centralized API_BASE
-import { API_BASE } from '../api/client.js'
 
 // Add cache busting to image URLs
 const getImageUrl = (path) => {

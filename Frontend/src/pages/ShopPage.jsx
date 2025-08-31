@@ -10,6 +10,7 @@ import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
 import { extractShopIdFromSlug } from '../utils/slugUtils.js'
 import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
+import { API_BASE } from '../api/client.js'
 import './ShopPage.css'
 
 export default function ShopPage() {
@@ -63,9 +64,6 @@ export default function ShopPage() {
     // Otherwise, assume it's a relative path and add /uploads/
     return `/uploads/${path}`
   }
-
-  // Import the centralized API_BASE
-  import { API_BASE } from '../api/client.js'
 
   // Add cache busting to image URLs
   const getImageUrl = (path) => {
