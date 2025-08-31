@@ -3,8 +3,9 @@ import { useAuth } from '../auth/AuthContext.jsx'
 import Modal from '../components/Modal.jsx'
 import LocationMap from '../components/LocationMap.jsx'
 import { createShopRequest, getUserShopsRequest, deleteShopRequest, updateShopRequest, fetchCategories } from '../api/shops.js'
+import { createProduct, updateProduct, deleteProduct } from '../api/products.js'
 import { generateShopUrl } from '../utils/slugUtils.js'
-import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
+// import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
 import { apiRequest } from '../api/client.js'
 
 // Utility function to format image paths
@@ -46,7 +47,9 @@ export default function DashboardPage() {
     const [showEditShop, setShowEditShop] = useState(false)
     const [showManageProducts, setShowManageProducts] = useState(false)
     const [showAddProduct, setShowAddProduct] = useState(false)
+    const [showEditProduct, setShowEditProduct] = useState(false)
     const [editingShop, setEditingShop] = useState(null)
+    const [editingProduct, setEditingProduct] = useState(null)
     const [managingShop, setManagingShop] = useState(null)
     const [shopProducts, setShopProducts] = useState([])
     const [loading, setLoading] = useState(true)
@@ -290,8 +293,7 @@ export default function DashboardPage() {
         }
         
         try {
-            // TODO: Implement product deletion API call
-            console.log('Delete product:', productId)
+            await deleteProduct(productId, token)
             // Refresh products list
             if (managingShop) {
                 const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products?shopId=${managingShop.id}`, {
@@ -310,6 +312,41 @@ export default function DashboardPage() {
         } catch (error) {
             console.error('Failed to delete product:', error)
             setError('Failed to delete product: ' + error.message)
+        }
+    }
+
+    const handleEditProduct = (product) => {
+        setEditingProduct(product)
+        setProductForm({
+            title: product.title,
+            description: product.description || '',
+            price: product.price,
+            category: product.category || '',
+            stockCount: product.stockCount || '',
+            imagePathsJson: product.imagePathsJson || ''
+        })
+        setProductImages([])
+        setShowEditProduct(true)
+    }
+
+    const handleUpdateProduct = async (e) => {
+        e.preventDefault()
+        try {
+            const updatedProduct = await updateProduct(editingProduct.id, productForm, token)
+            console.log('Updated product response:', updatedProduct)
+            
+            // Validate the response
+            if (!updatedProduct || !updatedProduct.id) {
+                throw new Error('Invalid product response from server')
+            }
+            
+            setShopProducts(shopProducts.map(p => p.id === editingProduct.id ? updatedProduct : p))
+            setShowEditProduct(false)
+            setEditingProduct(null)
+            resetProductForm()
+        } catch (error) {
+            console.error('Failed to update product:', error)
+            setError('Failed to update product: ' + error.message)
         }
     }
 
@@ -430,41 +467,46 @@ export default function DashboardPage() {
             return
         }
 
+        // Validate required fields
+        if (!productForm.title || !productForm.title.trim()) {
+            setError('Product title is required')
+            return
+        }
+
+        if (!productForm.price || parseFloat(productForm.price) <= 0) {
+            setError('Product price must be greater than 0')
+            return
+        }
+
+        if (!productForm.stockCount || parseInt(productForm.stockCount) < 0) {
+            setError('Stock count must be 0 or greater')
+            return
+        }
+
         try {
             const productData = {
                 ...productForm,
                 shopId: managingShop.id,
-                price: parseFloat(productForm.price),
+                price: productForm.price ? parseFloat(productForm.price) : 0,
                 stockCount: productForm.stockCount ? parseInt(productForm.stockCount) : 0
             }
 
-            const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8080/api'}/products`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(productData)
-            })
-
-            if (!response.ok) {
-                throw new Error('Failed to create product')
+            console.log('Creating product with data:', productData)
+            const newProduct = await createProduct(productData, token)
+            console.log('Created product response:', newProduct)
+            
+            // Validate the response
+            if (!newProduct || !newProduct.id) {
+                throw new Error('Invalid product response from server')
             }
-
-            const newProduct = await response.json()
             
             // Add the new product to the list
+            console.log('Current shopProducts before adding:', shopProducts)
+            console.log('Adding new product:', newProduct)
             setShopProducts([...shopProducts, newProduct])
             
             // Reset form and close modal
-            setProductForm({
-                title: '',
-                description: '',
-                price: '',
-                category: '',
-                stockCount: '',
-                imagePathsJson: ''
-            })
+            resetProductForm()
             setShowAddProduct(false)
             
         } catch (error) {
@@ -855,10 +897,10 @@ export default function DashboardPage() {
                     </div>
                  )}
                  
-                 {/* Bottom ad after shops */}
-                <div className="dashboard-ad">
+                 {/* Bottom ad after shops - DISABLED */}
+                {/* <div className="dashboard-ad">
                      <ResponsiveAd />
-                 </div>
+                 </div> */}
              </section>
 
             {/* Create Shop Modal */}
@@ -1606,8 +1648,13 @@ export default function DashboardPage() {
                                         <div className="product-management-content">
                                             <div className="product-management-title">{product.title}</div>
                                             <div className="product-management-price">
-                                                ₱{Number(product.price).toFixed(2)}
+                                                ₱{product.price ? Number(product.price).toFixed(2) : '0.00'}
                                             </div>
+                                            {product.category && (
+                                                <div className="product-management-category">
+                                                    <span className="category-tag">{product.category}</span>
+                                                </div>
+                                            )}
                                             <div className="product-management-stock">
                                                 {product.stockCount > 0 ? (
                                                     <span className="stock-in-stock">In Stock: {product.stockCount}</span>
@@ -1722,11 +1769,10 @@ export default function DashboardPage() {
                                                 </p>
                                             )}
                                             <div className="product-management-actions">
-                                                <button className="btn btn-outline btn-sm">
-                                                    <span className="btn-icon">👁️</span>
-                                                    View
-                                                </button>
-                                                <button className="btn btn-secondary btn-sm">
+                                                <button 
+                                                    className="btn btn-secondary btn-sm"
+                                                    onClick={() => handleEditProduct(product)}
+                                                >
                                                     <span className="btn-icon">✏️</span>
                                                     Edit
                                                 </button>
@@ -1885,7 +1931,7 @@ export default function DashboardPage() {
                                 {productImages.length > 0 && (
                                     <div className="image-preview-grid">
                                         {productImages.map((imagePath, index) => (
-                                            <div key={index} className="image-preview-item">
+                                            <div key={`add-${imagePath}-${index}`} className="image-preview-item">
                                                 <img 
                                                     src={getImageUrl(imagePath)} 
                                                     alt={`Product image ${index + 1}`}
@@ -1968,6 +2014,219 @@ export default function DashboardPage() {
                             className="btn btn-primary submit-btn"
                         >
                             Add Product
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Edit Product Modal */}
+            <Modal 
+                isOpen={showEditProduct} 
+                onClose={() => {
+                    setShowEditProduct(false)
+                    setEditingProduct(null)
+                    resetProductForm()
+                }}
+                title={`Edit Product - ${editingProduct?.title || ''}`}
+                size="xlarge"
+            >
+                <form onSubmit={handleUpdateProduct} className="add-product-form">
+                    <div className="form-grid">
+                        {/* Left Column - Form Inputs */}
+                        <div className="form-inputs">
+                            {/* Product Title */}
+                            <div className="form-group">
+                                <label htmlFor="editProductTitle" className="form-label">
+                                    Product Title *
+                                </label>
+                                <input
+                                    type="text"
+                                    id="editProductTitle"
+                                    className="input"
+                                    value={productForm.title}
+                                    onChange={(e) => setProductForm({...productForm, title: e.target.value})}
+                                    required
+                                    placeholder="Enter product name"
+                                />
+                            </div>
+
+                            {/* Product Category */}
+                            <div className="form-group">
+                                <label htmlFor="editProductCategory" className="form-label">
+                                    Product Category
+                                </label>
+                                <select
+                                    id="editProductCategory"
+                                    className="input"
+                                    value={productForm.category}
+                                    onChange={(e) => setProductForm({...productForm, category: e.target.value})}
+                                >
+                                    <option value="">Select a category</option>
+                                    {categories.map((category) => (
+                                        <option key={category} value={category}>
+                                            {category}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Product Description */}
+                            <div className="form-group">
+                                <label htmlFor="editProductDescription" className="form-label">
+                                    Product Description
+                                </label>
+                                <textarea
+                                    id="editProductDescription"
+                                    className="input"
+                                    value={productForm.description}
+                                    onChange={(e) => setProductForm({...productForm, description: e.target.value})}
+                                    placeholder="Describe your product, features, specifications..."
+                                    rows={4}
+                                    style={{ resize: 'vertical' }}
+                                />
+                            </div>
+
+                            {/* Product Price */}
+                            <div className="form-group">
+                                <label htmlFor="editProductPrice" className="form-label">
+                                    Price (₱) *
+                                </label>
+                                <input
+                                    type="number"
+                                    id="editProductPrice"
+                                    className="input"
+                                    value={productForm.price}
+                                    onChange={(e) => setProductForm({...productForm, price: e.target.value})}
+                                    min="0"
+                                    step="0.01"
+                                    required
+                                    placeholder="0.00"
+                                />
+                            </div>
+
+                            {/* Product Stock */}
+                            <div className="form-group">
+                                <label htmlFor="editProductStock" className="form-label">
+                                    Stock Count *
+                                </label>
+                                <input
+                                    type="number"
+                                    id="editProductStock"
+                                    className="input"
+                                    value={productForm.stockCount}
+                                    onChange={(e) => setProductForm({...productForm, stockCount: e.target.value})}
+                                    min="0"
+                                    required
+                                    placeholder="0"
+                                />
+                            </div>
+
+                            {/* Product Images */}
+                            <div className="form-group">
+                                <label htmlFor="editProductImages" className="form-label">
+                                    Product Images
+                                </label>
+                                <input
+                                    type="file"
+                                    id="editProductImages"
+                                    className="input"
+                                    multiple
+                                    accept="image/*"
+                                    onChange={(e) => handleProductImageUpload(e.target.files)}
+                                    disabled={uploadingImages}
+                                />
+                                <small className="form-help">
+                                    Upload up to 5 images (max 2MB each). Supported formats: JPG, PNG, GIF
+                                </small>
+                            </div>
+                            
+                            {/* Image Preview */}
+                            {productImages.length > 0 && (
+                                <div className="image-preview-grid">
+                                    {productImages.map((imagePath, index) => (
+                                        <div key={`edit-${imagePath}-${index}`} className="image-preview-item">
+                                            <img 
+                                                src={getImageUrl(imagePath)} 
+                                                alt={`Product image ${index + 1}`}
+                                                className="image-preview"
+                                            />
+                                            <button
+                                                type="button"
+                                                className="remove-image-btn"
+                                                onClick={() => removeProductImage(index)}
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right Column - Preview */}
+                        <div className="form-preview">
+                            <label className="form-label">
+                                Product Preview
+                            </label>
+                            <div className="product-preview-card">
+                                <div className="product-preview-image">
+                                    {productImages.length > 0 ? (
+                                        <img 
+                                            src={getImageUrl(productImages[0])} 
+                                            alt="Product preview"
+                                            className="product-preview-img"
+                                        />
+                                    ) : (
+                                        <div className="product-image-placeholder">📷</div>
+                                    )}
+                                </div>
+                                <div className="product-preview-content">
+                                    <h3 className="product-preview-title">
+                                        {productForm.title || 'Product Title'}
+                                    </h3>
+                                    <div className="product-preview-price">
+                                        ₱{productForm.price ? Number(productForm.price).toFixed(2) : '0.00'}
+                                    </div>
+                                    {productForm.description && (
+                                        <p className="product-preview-description">
+                                            {productForm.description}
+                                        </p>
+                                    )}
+                                    {productForm.category && (
+                                        <div className="product-preview-category">
+                                            <span className="pill">{productForm.category}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Error Display */}
+                    {error && (
+                        <div className="form-error">
+                            {error}
+                        </div>
+                    )}
+
+                    {/* Form Actions */}
+                    <div className="form-actions">
+                        <button 
+                            type="button" 
+                            className="btn cancel-btn" 
+                            onClick={() => {
+                                setShowEditProduct(false)
+                                setEditingProduct(null)
+                                resetProductForm()
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit" 
+                            className="btn btn-primary submit-btn"
+                        >
+                            Update Product
                         </button>
                     </div>
                 </form>

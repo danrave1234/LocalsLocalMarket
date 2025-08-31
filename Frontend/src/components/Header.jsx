@@ -18,7 +18,6 @@ export default function Header() {
           <div className="header-left">
             <Link to="/" className="brand-link">
               <Logo />
-              <span className="brand-text">LocalsLocalMarket</span>
             </Link>
             <span className="loading-pill">
               <div className="loading-spinner"></div>
@@ -48,8 +47,7 @@ export default function Header() {
       <div className="container header-row">
         <div className="header-left">
           <Link to="/" className="brand-link">
-            <Logo />
-            <span className="brand-text">LocalsLocalMarket</span>
+            <Logo size={80} />
           </Link>
         </div>
         

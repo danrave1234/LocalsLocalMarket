@@ -7,7 +7,7 @@ import FAQ from "../components/FAQ.jsx"
 import SearchOptimization from "../components/SearchOptimization.jsx"
 import { fetchShops } from "../api/shops.js"
 import { generateShopUrl } from "../utils/slugUtils.js"
-import { InContentAd, ResponsiveAd } from "../components/GoogleAds.jsx"
+// import { InContentAd, ResponsiveAd } from "../components/GoogleAds.jsx"
 import { loadLeaflet, isLeafletLoaded } from "../utils/leafletLoader.js"
 
 // Inline icon components to avoid external dependencies
@@ -914,10 +914,10 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Bottom Ad - Placed at the very bottom of the page */}
-      <div style={{ marginTop: '3rem', padding: '2rem 0', borderTop: '1px solid var(--border)' }}>
+      {/* Bottom Ad - Placed at the very bottom of the page - DISABLED */}
+      {/* <div style={{ marginTop: '3rem', padding: '2rem 0', borderTop: '1px solid var(--border)' }}>
         <ResponsiveAd />
-      </div>
+      </div> */}
       </main>
     </>
   )

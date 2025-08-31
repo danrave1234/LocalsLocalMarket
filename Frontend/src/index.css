@@ -931,6 +931,22 @@ h3 {
   word-break: break-word;
 }
 
+.product-management-category {
+  margin-bottom: 0.5rem;
+}
+
+.product-management-category .category-tag {
+  display: inline-block;
+  background: var(--primary);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .product-management-actions {
   display: flex;
   gap: 0.5rem;

@@ -1,15 +1,15 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 import SEOHead from '../components/SEOHead.jsx'
 import SocialSharing from '../components/SocialSharing.jsx'
 import RelatedShops from '../components/RelatedShops.jsx'
 import { fetchShopById } from '../api/shops.js'
-import { fetchProducts } from '../api/products.js'
+import { fetchProducts, createProduct, updateProduct, deleteProduct } from '../api/products.js'
 import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
 import { extractShopIdFromSlug } from '../utils/slugUtils.js'
-import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
+// import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
 import { API_BASE } from '../api/client.js'
 import './ShopPage.css'
 
@@ -23,6 +23,8 @@ export default function ShopPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [showAddProduct, setShowAddProduct] = useState(false)
+  const [showEditProduct, setShowEditProduct] = useState(false)
+  const [editingProduct, setEditingProduct] = useState(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [savingStock, setSavingStock] = useState({})
@@ -32,6 +34,20 @@ export default function ShopPage() {
     price: '',
     category: '',
     stockCount: ''
+  })
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState('newest')
+  const [showBackToTop, setShowBackToTop] = useState(false)
+  const [copiedText, setCopiedText] = useState('')
+  const [showBusinessHours, setShowBusinessHours] = useState(false)
+  const [businessHours, setBusinessHours] = useState({
+    monday: { open: '09:00', close: '18:00', closed: false },
+    tuesday: { open: '09:00', close: '18:00', closed: false },
+    wednesday: { open: '09:00', close: '18:00', closed: false },
+    thursday: { open: '09:00', close: '18:00', closed: false },
+    friday: { open: '09:00', close: '18:00', closed: false },
+    saturday: { open: '10:00', close: '16:00', closed: false },
+    sunday: { open: '10:00', close: '16:00', closed: true }
   })
 
   // Utility function to format image paths
@@ -76,6 +92,77 @@ export default function ShopPage() {
       console.log('Formatted shopViewPath:', formatImagePath(shop.coverPath))
     }
   }, [shop])
+
+  // Copy to clipboard functionality
+  const copyToClipboard = useCallback(async (text, label) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedText(label)
+      setTimeout(() => setCopiedText(''), 2000)
+    } catch (err) {
+      console.error('Failed to copy text: ', err)
+    }
+  }, [])
+
+  // Sort products function
+  const getSortedProducts = useCallback(() => {
+    if (!Array.isArray(products)) return []
+    
+    let filteredProducts = products.filter(product => {
+      const matchesSearch = !searchQuery || 
+        product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (product.category && product.category.toLowerCase().includes(searchQuery.toLowerCase()))
+      
+      const matchesCategory = !selectedCategory || product.category === selectedCategory
+      
+      return matchesSearch && matchesCategory
+    })
+
+    switch (sortBy) {
+      case 'price-low':
+        return filteredProducts.sort((a, b) => (a.price || 0) - (b.price || 0))
+      case 'price-high':
+        return filteredProducts.sort((a, b) => (b.price || 0) - (a.price || 0))
+      case 'stock':
+        return filteredProducts.sort((a, b) => (b.stockCount || 0) - (a.stockCount || 0))
+      case 'newest':
+        return filteredProducts.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      default:
+        return filteredProducts
+    }
+  }, [products, searchQuery, selectedCategory, sortBy])
+
+  // Check if shop is currently open
+  const isShopOpen = useCallback(() => {
+    const now = new Date()
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    const currentDay = days[now.getDay()]
+    const currentTime = now.toTimeString().slice(0, 5)
+    
+    const dayKey = currentDay
+    const hours = businessHours[dayKey]
+    
+    if (!hours || hours.closed) return false
+    
+    const { open, close } = hours
+    return currentTime >= open && currentTime <= close
+  }, [businessHours])
+
+  // Scroll handler for back to top button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 300)
+    }
+    
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Back to top function
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
@@ -181,10 +268,40 @@ export default function ShopPage() {
 
   const handleAddProduct = async (e) => {
     e.preventDefault()
+    
+    // Validate required fields
+    if (!productForm.title || !productForm.title.trim()) {
+      setError('Product title is required')
+      return
+    }
+
+    if (!productForm.price || parseFloat(productForm.price) <= 0) {
+      setError('Product price must be greater than 0')
+      return
+    }
+
+    if (!productForm.stockCount || parseInt(productForm.stockCount) < 0) {
+      setError('Stock count must be 0 or greater')
+      return
+    }
+    
     try {
-      // TODO: Implement product creation API call
-      // const newProduct = await createProductRequest({ ...productForm, shopId: id }, token)
-      // setProducts([...products, newProduct])
+      const productData = { 
+        ...productForm, 
+        shopId: shop.id,
+        price: productForm.price ? parseFloat(productForm.price) : 0,
+        stockCount: productForm.stockCount ? parseInt(productForm.stockCount) : 0
+      }
+      console.log('ShopPage - Creating product with data:', productData)
+      const newProduct = await createProduct(productData, token)
+      console.log('ShopPage - Created product response:', newProduct)
+      
+      // Validate the response
+      if (!newProduct || !newProduct.id) {
+        setError('Invalid product response from server')
+        return
+      }
+      setProducts([...products, newProduct])
       setShowAddProduct(false)
       setProductForm({
         title: '',
@@ -205,13 +322,51 @@ export default function ShopPage() {
     }
     
     try {
-      // TODO: Implement product deletion API call
-      // await deleteProductRequest(productId, token)
-      // setProducts(products.filter(p => p.id !== productId))
-      console.log('Delete product:', productId)
+      await deleteProduct(productId, token)
+      setProducts(products.filter(p => p.id !== productId))
     } catch (error) {
       console.error('Failed to delete product:', error)
       setError('Failed to delete product: ' + error.message)
+    }
+  }
+
+  const handleEditProduct = (product) => {
+    setEditingProduct(product)
+    setProductForm({
+      title: product.title,
+      description: product.description || '',
+      price: product.price,
+      category: product.category || '',
+      stockCount: product.stockCount || ''
+    })
+    setShowEditProduct(true)
+  }
+
+  const handleUpdateProduct = async (e) => {
+    e.preventDefault()
+    try {
+      const updatedProduct = await updateProduct(editingProduct.id, productForm, token)
+      console.log('Updated product response:', updatedProduct)
+      
+      // Validate the response
+      if (!updatedProduct || !updatedProduct.id) {
+        setError('Invalid product response from server')
+        return
+      }
+      
+      setProducts(products.map(p => p.id === editingProduct.id ? updatedProduct : p))
+      setShowEditProduct(false)
+      setEditingProduct(null)
+      setProductForm({
+        title: '',
+        description: '',
+        price: '',
+        category: '',
+        stockCount: ''
+      })
+    } catch (error) {
+      console.error('Failed to update product:', error)
+      setError('Failed to update product: ' + error.message)
     }
   }
 
@@ -398,6 +553,13 @@ export default function ShopPage() {
                           <div className="location-header">
                             <span className="location-icon">📍</span>
                             <span className="location-label">Location</span>
+                            <button 
+                              className="copy-btn"
+                              onClick={() => copyToClipboard(shop.addressLine, 'Address')}
+                              title="Copy address"
+                            >
+                              {copiedText === 'Address' ? '✓' : '📋'}
+                            </button>
                           </div>
                           <p className="shop-address">
                             {shop.addressLine}
@@ -418,6 +580,8 @@ export default function ShopPage() {
                       </div>
                     </div>
                   )}
+                  
+
                 </div>
               </div>
                 {/* Social Sharing Section */}
@@ -476,6 +640,13 @@ export default function ShopPage() {
                       >
                         {shop.phone}
                       </a>
+                      <button 
+                        className="copy-btn"
+                        onClick={() => copyToClipboard(shop.phone, 'Phone')}
+                        title="Copy phone number"
+                      >
+                        {copiedText === 'Phone' ? '✓' : '📋'}
+                      </button>
                     </div>
                   )}
                   {shop.email && (
@@ -577,6 +748,36 @@ export default function ShopPage() {
                   </div>
                 )}
               </div>
+              
+              {/* Business Hours Dropdown */}
+              <div className="business-hours-dropdown">
+                <button 
+                  className="hours-toggle-btn"
+                  onClick={() => setShowBusinessHours(!showBusinessHours)}
+                >
+                  <span className="hours-icon">🕒</span>
+                  <span className="hours-label">Business Hours</span>
+                  <div className={`status-indicator ${isShopOpen() ? 'open' : 'closed'}`}>
+                    {isShopOpen() ? 'Open' : 'Closed'}
+                  </div>
+                  <span className="dropdown-arrow">{showBusinessHours ? '▲' : '▼'}</span>
+                </button>
+                
+                {showBusinessHours && (
+                  <div className="hours-dropdown-content">
+                    <div className="hours-grid">
+                      {Object.entries(businessHours).map(([day, hours]) => (
+                        <div key={day} className="hours-row">
+                          <span className="day-name">{day.charAt(0).toUpperCase() + day.slice(1)}</span>
+                          <span className="hours-time">
+                            {hours.closed ? 'Closed' : `${hours.open} - ${hours.close}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </section>
           )}
         </div>
@@ -589,18 +790,16 @@ export default function ShopPage() {
             <h3 style={{ margin: 0 }}>Products</h3>
             <p className="muted" style={{ marginTop: 4 }}>
               {(() => {
-                const filteredProducts = selectedCategory 
-                  ? products.filter(p => p.category === selectedCategory)
-                  : products;
+                const sortedProducts = getSortedProducts();
                 const totalProducts = products.length;
-                const filteredCount = filteredProducts.length;
+                const filteredCount = sortedProducts.length;
                 
                 if (!Array.isArray(products) || products.length === 0) {
                   return 'No products yet';
                 }
                 
-                if (selectedCategory) {
-                  return `${filteredCount} of ${totalProducts} product${totalProducts !== 1 ? 's' : ''} in ${selectedCategory}`;
+                if (searchQuery || selectedCategory) {
+                  return `${filteredCount} of ${totalProducts} product${totalProducts !== 1 ? 's' : ''} found`;
                 }
                 
                 return `${totalProducts} product${totalProducts !== 1 ? 's' : ''} available`;
@@ -616,6 +815,42 @@ export default function ShopPage() {
             </button>
           )}
         </div>
+
+        {/* Search and Sort Controls */}
+        {Array.isArray(products) && products.length > 0 && (
+          <div className="search-sort-controls">
+            <div className="search-container">
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+              {searchQuery && (
+                <button 
+                  className="clear-search-btn"
+                  onClick={() => setSearchQuery('')}
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <div className="sort-container">
+              <select 
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value)}
+                className="sort-select"
+              >
+                <option value="newest">Newest First</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="stock">Most Stock</option>
+              </select>
+            </div>
+          </div>
+        )}
 
         {/* Category Filter */}
         {Array.isArray(products) && products.length > 0 && (() => {
@@ -665,11 +900,26 @@ export default function ShopPage() {
           </div>
         ) : (
           <div className="products-grid-full-width">
-            {Array.isArray(products) && products
-              .filter(product => !selectedCategory || product.category === selectedCategory)
-              .map((product) => (
-              <article key={product.id} className="card product-card">
-                <div className="product-image-container">
+            {getSortedProducts().map((product) => (
+                              <article 
+                  key={product.id} 
+                  className="card product-card"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.querySelector('.product-quick-view')?.classList.add('show')
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.querySelector('.product-quick-view')?.classList.remove('show')
+                  }}
+                >
+                  <div className="product-image-container">
+                  {/* New Badge - Show for products created in the last 7 days */}
+                  {(() => {
+                    const createdAt = product.createdAt ? new Date(product.createdAt) : null;
+                    const isNew = createdAt && (Date.now() - createdAt.getTime()) < (7 * 24 * 60 * 60 * 1000);
+                    return isNew ? (
+                      <div className="new-badge">NEW</div>
+                    ) : null;
+                  })()}
                   {(() => {
                     let imagePaths = [];
                     try {
@@ -685,6 +935,7 @@ export default function ShopPage() {
                             src={getImageUrl(imagePaths[0])} 
                             alt={product.title}
                             className="product-image"
+                            loading="lazy"
                             onError={(e) => {
                               e.target.style.display = 'none';
                               e.target.nextSibling.style.display = 'flex';
@@ -707,7 +958,7 @@ export default function ShopPage() {
                 <div className="product-content">
                   <div className="product-title">{product.title}</div>
                   <div className="product-price">
-                    ₱{Number(product.price).toFixed(2)}
+                    ₱{product.price ? Number(product.price).toFixed(2) : '0.00'}
                   </div>
                   {product.category && (
                     <div className="product-category">
@@ -760,31 +1011,61 @@ export default function ShopPage() {
                       }
                     </p>
                   )}
+                  
+                  {/* Quick View Tooltip */}
+                  <div className="product-quick-view">
+                    <div className="quick-view-content">
+                      <h4>{product.title}</h4>
+                      <p className="quick-view-price">₱{product.price ? Number(product.price).toFixed(2) : '0.00'}</p>
+                      {product.description && (
+                        <p className="quick-view-description">{product.description}</p>
+                      )}
+                      {product.category && (
+                        <span className="quick-view-category">{product.category}</span>
+                      )}
+                      <div className="quick-view-stock">
+                        {product.stockCount > 0 ? (
+                          <span className="stock-in-stock">In Stock: {product.stockCount}</span>
+                        ) : (
+                          <span className="stock-out-of-stock">Out of Stock</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   <div className="product-actions">
-                    <button className="btn view-product-btn">View</button>
                     {isOwner && (
-                      <button 
-                        className="btn delete-product-btn"
-                        onClick={() => handleDeleteProduct(product.id)}
-                      >
-                        Delete
-                      </button>
+                      <>
+                        <button 
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleEditProduct(product)}
+                        >
+                          <span className="btn-icon">✏️</span>
+                          Edit
+                        </button>
+                        <button 
+                          className="btn btn-danger btn-sm"
+                          onClick={() => handleDeleteProduct(product.id)}
+                        >
+                          <span className="btn-icon">🗑️</span>
+                          Delete
+                        </button>
+                      </>
                     )}
                   </div>
-                </div>
-              </article>
-            ))}
+                                  </div>
+                </article>
+              ))}
           </div>
         )}
          
-        {/* Bottom ad after products */}
-        <div className="bottom-ad">
+        {/* Bottom ad after products - DISABLED */}
+        {/* <div className="bottom-ad">
           <ResponsiveAd />
-        </div>
+        </div> */}
       </section>
 
-      {/* Advertisements Carousel */}
-      {shop.adsEnabled && shop.adsImagePathsJson && (()=>{ let imgs=[]; try{ imgs = JSON.parse(shop.adsImagePathsJson)||[] } catch { imgs=[] }
+      {/* Advertisements Carousel - DISABLED */}
+      {/* {shop.adsEnabled && shop.adsImagePathsJson && (()=>{ let imgs=[]; try{ imgs = JSON.parse(shop.adsImagePathsJson)||[] } catch { imgs=[] }
         return imgs.length>0 ? (
           <section className="card" style={{marginBottom:16}}>
             <div style={{display:'flex', overflowX:'auto', gap:8}}>
@@ -795,7 +1076,7 @@ export default function ShopPage() {
               ))}
             </div>
           </section>
-        ) : null })()}
+        ) : null })()} */}
 
       {/* Related Shops */}
       <RelatedShops currentShop={shop} />
@@ -897,6 +1178,133 @@ export default function ShopPage() {
         </form>
       </Modal>
 
+      {/* Edit Product Modal */}
+      <Modal 
+        isOpen={showEditProduct} 
+        onClose={() => {
+          setShowEditProduct(false)
+          setEditingProduct(null)
+          setProductForm({
+            title: '',
+            description: '',
+            price: '',
+            category: '',
+            stockCount: ''
+          })
+        }}
+        title={`Edit Product - ${editingProduct?.title || ''}`}
+        size="xlarge"
+      >
+        <form onSubmit={handleUpdateProduct} className="add-product-form">
+          <div>
+            <label htmlFor="editProductTitle" className="muted form-label">
+              Product Title *
+            </label>
+            <input
+              type="text"
+              id="editProductTitle"
+              className="input"
+              value={productForm.title}
+              onChange={(e) => setProductForm({...productForm, title: e.target.value})}
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="editProductDescription" className="muted form-label">
+              Description
+            </label>
+            <textarea
+              id="editProductDescription"
+              className="input"
+              value={productForm.description}
+              onChange={(e) => setProductForm({...productForm, description: e.target.value})}
+              rows={3}
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+
+          <div className="form-row">
+            <div>
+              <label htmlFor="editProductPrice" className="muted form-label">
+                Price *
+              </label>
+              <input
+                type="number"
+                id="editProductPrice"
+                className="input"
+                value={productForm.price}
+                onChange={(e) => setProductForm({...productForm, price: e.target.value})}
+                min="0"
+                step="0.01"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="editProductCategory" className="muted form-label">
+                Category
+              </label>
+              <input
+                type="text"
+                id="editProductCategory"
+                className="input"
+                value={productForm.category}
+                onChange={(e) => setProductForm({...productForm, category: e.target.value})}
+                placeholder="e.g., Electronics, Food, Clothing"
+              />
+            </div>
+            <div>
+              <label htmlFor="editProductStock" className="muted form-label">
+                Stock Count *
+              </label>
+              <input
+                type="number"
+                id="editProductStock"
+                className="input"
+                value={productForm.stockCount}
+                onChange={(e) => setProductForm({...productForm, stockCount: e.target.value})}
+                min="0"
+                required
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div className="form-actions">
+            <button 
+              type="button" 
+              className="btn cancel-btn" 
+              onClick={() => {
+                setShowEditProduct(false)
+                setEditingProduct(null)
+                setProductForm({
+                  title: '',
+                  description: '',
+                  price: '',
+                  category: '',
+                  stockCount: ''
+                })
+              }}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary submit-btn">
+              Update Product
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Back to Top Button */}
+      {showBackToTop && (
+        <button 
+          className="back-to-top-btn"
+          onClick={scrollToTop}
+          title="Back to top"
+        >
+          ↑
+        </button>
+      )}
 
       </main>
     </>

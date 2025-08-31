@@ -217,6 +217,133 @@ export default function ShopEditPage(){
         </div>
       </form>
 
+      {/* Shop Preview */}
+      <h3 style={{marginTop:24}}>Shop Preview</h3>
+      <div className="card" style={{padding:16}}>
+        <div style={{display:'flex', gap:16, alignItems:'flex-start'}}>
+          {/* Shop Logo */}
+          <div style={{flexShrink:0}}>
+            {form.logoPath ? (
+              <img 
+                src={form.logoPath} 
+                alt="Shop logo" 
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  border: '2px solid var(--border)'
+                }}
+              />
+            ) : (
+              <div style={{
+                width: 80,
+                height: 80,
+                borderRadius: '50%',
+                backgroundColor: 'var(--surface)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid var(--border)',
+                color: 'var(--muted)',
+                fontSize: '2rem'
+              }}>
+                🏪
+              </div>
+            )}
+          </div>
+
+          {/* Shop Details */}
+          <div style={{flex:1}}>
+            <h2 style={{margin: '0 0 8px 0', fontSize: '1.5rem'}}>
+              {form.name || 'Shop Name'}
+            </h2>
+            
+            {form.category && (
+              <div style={{
+                display: 'inline-block',
+                background: 'var(--primary)',
+                color: 'white',
+                padding: '4px 12px',
+                borderRadius: '12px',
+                fontSize: '0.8rem',
+                marginBottom: '8px'
+              }}>
+                {form.category}
+              </div>
+            )}
+
+            {form.description && (
+              <p style={{margin: '0 0 12px 0', color: 'var(--muted)', lineHeight: 1.4}}>
+                {form.description}
+              </p>
+            )}
+
+            {form.addressLine && (
+              <div style={{marginBottom: '8px', fontSize: '0.9rem'}}>
+                <span style={{color: 'var(--muted)'}}>📍</span> {form.addressLine}
+              </div>
+            )}
+
+            {/* Contact Info */}
+            <div style={{display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.9rem'}}>
+              {form.phone && (
+                <div>
+                  <span style={{color: 'var(--muted)'}}>📞</span> {form.phone}
+                </div>
+              )}
+              {form.email && (
+                <div>
+                  <span style={{color: 'var(--muted)'}}>✉️</span> {form.email}
+                </div>
+              )}
+              {form.website && (
+                <div>
+                  <span style={{color: 'var(--muted)'}}>🌐</span> {form.website}
+                </div>
+              )}
+            </div>
+
+            {/* Social Media */}
+            {(form.facebook || form.instagram || form.twitter) && (
+              <div style={{display: 'flex', gap: 8, marginTop: '8px'}}>
+                {form.facebook && (
+                  <a href={form.facebook} target="_blank" rel="noopener noreferrer" style={{color: 'var(--primary)', textDecoration: 'none'}}>
+                    Facebook
+                  </a>
+                )}
+                {form.instagram && (
+                  <a href={form.instagram} target="_blank" rel="noopener noreferrer" style={{color: 'var(--primary)', textDecoration: 'none'}}>
+                    Instagram
+                  </a>
+                )}
+                {form.twitter && (
+                  <a href={form.twitter} target="_blank" rel="noopener noreferrer" style={{color: 'var(--primary)', textDecoration: 'none'}}>
+                    Twitter
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Shop View Image */}
+        {form.coverPath && (
+          <div style={{marginTop: 16}}>
+            <img 
+              src={form.coverPath} 
+              alt="Shop view" 
+              style={{
+                width: '100%',
+                height: 200,
+                borderRadius: 8,
+                objectFit: 'cover'
+              }}
+            />
+          </div>
+        )}
+      </div>
+
       <h3 style={{marginTop:24}}>Advertisements</h3>
       <AdsManager form={form} setForm={setForm} />
 

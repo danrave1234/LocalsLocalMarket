@@ -55,7 +55,7 @@ public class ProductController {
         p.setImagePathsJson(req.imagePathsJson());
         p.setCategory(req.category());
         products.save(p);
-        return ResponseEntity.ok(p.getId());
+        return ResponseEntity.ok(ProductDtos.ProductResponse.fromProduct(p));
     }
 
     @Cacheable(cacheNames = "products_list", key = "'q=' + #q.orElse('') + '&category=' + #category.orElse('') + '&minPrice=' + (#minPrice.isPresent() ? #minPrice.get() : '') + '&maxPrice=' + (#maxPrice.isPresent() ? #maxPrice.get() : '') + '&shopId=' + (#shopId.isPresent() ? #shopId.get() : '') + '&page=' + #page + '&size=' + #size")
@@ -158,7 +158,7 @@ public class ProductController {
             if(req.category() != null) p.setCategory(req.category());
             if(req.isActive() != null) p.setIsActive(req.isActive());
             products.save(p);
-            return ResponseEntity.ok(p.getId());
+            return ResponseEntity.ok(ProductDtos.ProductResponse.fromProduct(p));
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 

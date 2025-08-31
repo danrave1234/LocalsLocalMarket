@@ -1,32 +1,44 @@
-# ---- Build stage ----
-FROM maven:3.9-eclipse-temurin-21 AS builder
-WORKDIR /workspace
+# Build stage
+FROM maven:3.8.4-openjdk-17 AS build
 
-# Only copy pom first to leverage Docker layer caching when sources change
-COPY pom.xml ./
-RUN --mount=type=cache,target=/root/.m2 mvn -q -e -DskipTests dependency:go-offline
-
-# Copy sources and build
-COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 mvn -q -e -DskipTests package
-
-# ---- Runtime stage ----
-FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-# Create a non-root user
-RUN useradd -m -u 1001 appuser
+# Copy pom.xml first for better layer caching
+COPY pom.xml .
 
-# Copy built jar
-COPY --from=builder /workspace/target/*.jar /app/app.jar
+# Download dependencies
+RUN mvn dependency:go-offline -B
 
-# Create a default uploads directory (can be overridden by LLM_UPLOADS_DIR)
-RUN mkdir -p /app/uploads && chown -R appuser:appuser /app
+# Copy source code
+COPY src ./src
 
-# Cloud Run/App Engine provide PORT; Spring Boot reads server.port from env
-ENV PORT=8080
-EXPOSE 8080
+# Build the application
+RUN mvn clean package -DskipTests
 
+# Production stage
+FROM openjdk:17-jre-slim
+
+# Create app user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy the built JAR from build stage
+COPY --from=build /app/target/*.jar app.jar
+
+# Create uploads directory
+RUN mkdir -p uploads && chown -R appuser:appuser /app
+
+# Switch to app user
 USER appuser
 
-ENTRYPOINT ["java","-jar","/app/app.jar"]
+# Expose port 8080
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/actuator/health || exit 1
+
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]
