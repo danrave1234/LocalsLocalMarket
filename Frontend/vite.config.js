@@ -9,17 +9,12 @@ export default defineConfig({
       process.env.VITE_API_BASE || (
         process.env.NODE_ENV === 'production' 
           ? 'https://api.localslocalmarket.com/api'
-          : '/api'
+          : 'http://localhost:8080/api'
       )
     ),
   },
   server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-      },
-    },
+    // Proxy removed since we're using direct localhost:8080 URLs
   },
   build: {
     rollupOptions: {

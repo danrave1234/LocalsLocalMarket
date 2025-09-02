@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Modal from '../components/Modal.jsx'
 import { ResponsiveAd } from '../components/GoogleAds.jsx'
+import { SkeletonText, SkeletonAvatar, SkeletonButton, SkeletonForm } from '../components/Skeleton.jsx'
+import '../profile.css'
 
 export default function ProfilePage() {
   const { user, updateProfile, changePassword } = useAuth()
@@ -88,17 +90,27 @@ export default function ProfilePage() {
 
   if (!user) {
     return (
-      <main className="container profile-container">
-        <div className="profile-loading">
-          <div className="loading-spinner-large"></div>
-          <p className="muted">Loading your profile...</p>
+      <main className="container profile-page-container">
+        {/* Profile Header Skeleton */}
+        <div className="profile-header">
+          <SkeletonAvatar size="120px" style={{ marginBottom: '1rem' }} />
+          <SkeletonText lines={1} height="1.5rem" style={{ marginBottom: '0.5rem' }} />
+          <SkeletonText lines={1} height="1rem" style={{ width: '40%', marginBottom: '2rem' }} />
+        </div>
+
+        {/* Profile Content Skeleton */}
+        <div className="profile-content">
+          <div className="profile-section">
+            <SkeletonText lines={1} height="1.2rem" style={{ marginBottom: '1rem' }} />
+            <SkeletonForm fields={3} />
+          </div>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="container profile-container">
+    <main className="container profile-page-container">
       {/* Profile Header */}
       <div className="profile-header">
         <div className="profile-header-content">

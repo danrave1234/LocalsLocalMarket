@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
+import { SkeletonText, SkeletonButton } from '../components/Skeleton.jsx'
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -129,7 +130,31 @@ export default function SettingsPage() {
              </div>
           </div>
         ) : (
-          <p className="muted">Loading...</p>
+          <div style={{ marginTop: '1rem' }}>
+            <SkeletonText lines={1} height="1.5rem" style={{ marginBottom: '1rem' }} />
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <div>
+                <SkeletonText lines={1} height="1.2rem" style={{ marginBottom: '0.5rem' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ flex: 1 }}>
+                    <SkeletonText lines={1} height="1rem" style={{ marginBottom: '0.25rem' }} />
+                    <SkeletonText lines={1} height="0.875rem" style={{ width: '60%' }} />
+                  </div>
+                  <SkeletonButton width="44px" height="24px" style={{ borderRadius: '24px' }} />
+                </div>
+              </div>
+              <div>
+                <SkeletonText lines={1} height="1.2rem" style={{ marginBottom: '0.5rem' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ flex: 1 }}>
+                    <SkeletonText lines={1} height="1rem" style={{ marginBottom: '0.25rem' }} />
+                    <SkeletonText lines={1} height="0.875rem" style={{ width: '60%' }} />
+                  </div>
+                  <SkeletonButton width="44px" height="24px" style={{ borderRadius: '24px' }} />
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </section>
     </main>

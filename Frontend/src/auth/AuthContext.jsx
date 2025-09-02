@@ -20,9 +20,16 @@ export function AuthProvider({ children }) {
             
             // Verify the token is still valid by making a test request
             try {
-              await getProfileRequest(storedToken)
+              const profileData = await getProfileRequest(storedToken)
+              const updatedUser = { 
+                ...parsedUser,
+                name: profileData.name,
+                createdAt: profileData.createdAt,
+                role: profileData.role || 'SELLER' // Default to SELLER if role is not provided
+              }
+              localStorage.setItem('auth_user', JSON.stringify(updatedUser))
               setToken(storedToken)
-              setUser(parsedUser)
+              setUser(updatedUser)
             } catch (error) {
               console.log('Stored token is invalid, clearing auth data')
               localStorage.removeItem('auth_token')
@@ -64,14 +71,15 @@ export function AuthProvider({ children }) {
       const newUser = { 
         email,
         name: profileData.name,
-        createdAt: profileData.createdAt
+        createdAt: profileData.createdAt,
+        role: profileData.role || 'SELLER' // Default to SELLER if role is not provided
       }
       localStorage.setItem('auth_user', JSON.stringify(newUser))
       setUser(newUser)
       return newUser
     } catch (error) {
       console.error('Failed to fetch profile:', error)
-      const newUser = { email }
+      const newUser = { email, role: 'SELLER' }
       localStorage.setItem('auth_user', JSON.stringify(newUser))
       setUser(newUser)
       return newUser
@@ -85,7 +93,7 @@ export function AuthProvider({ children }) {
     if (newToken) setToken(newToken)
     
     // Create user object with provided data
-    const newUser = { name, email, createdAt: new Date().toISOString() }
+    const newUser = { name, email, createdAt: new Date().toISOString(), role: 'SELLER' }
     localStorage.setItem('auth_user', JSON.stringify(newUser))
     setUser(newUser)
     return newUser

@@ -10,10 +10,17 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(indexes = {
+    @Index(name = "idx_shop_owner", columnList = "owner_id"),
+    @Index(name = "idx_shop_category", columnList = "category"),
+    @Index(name = "idx_shop_created_at", columnList = "createdAt")
+})
 public class Shop {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

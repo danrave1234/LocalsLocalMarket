@@ -40,6 +40,7 @@ public class CacheConfig {
         manager.setCacheNames(List.of(
                 "shops_by_id",
                 "shops_list",
+                "all_shops",
                 "products_by_id",
                 "products_list",
                 "categories"

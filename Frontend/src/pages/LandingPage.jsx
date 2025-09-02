@@ -5,11 +5,16 @@ import SEOHead from "../components/SEOHead.jsx"
 import SocialSharing from "../components/SocialSharing.jsx"
 import FAQ from "../components/FAQ.jsx"
 import SearchOptimization from "../components/SearchOptimization.jsx"
-import { fetchShops } from "../api/shops.js"
+import { fetchAllShops } from "../api/shops.js"
 import { generateShopUrl } from "../utils/slugUtils.js"
 import { InContentAd, ResponsiveAd } from "../components/GoogleAds.jsx"
 import { loadLeaflet, isLeafletLoaded } from "../utils/leafletLoader.js"
-import { API_BASE } from '../api/client.js'
+import { getImageUrl } from '../utils/imageUtils.js'
+import { handleApiError } from '../utils/errorHandler.js'
+import { SkeletonShopCard, SkeletonMap, SkeletonText } from "../components/Skeleton.jsx"
+import ErrorDisplay from "../components/ErrorDisplay.jsx"
+import { LoadingSpinner, LoadingCard, LoadingOverlay } from "../components/Loading.jsx"
+import '../landing-page.css'
 
 // Inline icon components to avoid external dependencies
 function MapPin(props) {
@@ -64,43 +69,7 @@ function haversineDistanceKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(c))
 }
 
-// Utility function to format image paths
-const formatImagePath = (path) => {
-  if (!path) return null
-  // If path already starts with http/https, return as is
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    return path
-  }
-  // If path starts with /uploads, it's already correct
-  if (path.startsWith('/uploads/')) {
-    return path
-  }
-  // Otherwise, assume it's a relative path and add /uploads/
-  return `/uploads/${path}`
-}
-
-// Add cache busting to image URLs
-const getImageUrl = (path) => {
-  const formattedPath = formatImagePath(path)
-  if (!formattedPath) return null
-  
-  // If it's already a full URL (Google Cloud Storage), return it directly
-  if (formattedPath.startsWith('http://') || formattedPath.startsWith('https://')) {
-    // Add timestamp to prevent caching issues
-    const separator = formattedPath.includes('?') ? '&' : '?'
-    return `${formattedPath}${separator}t=${Date.now()}`
-  }
-  
-  // Use the centralized API_BASE for local uploads
-  const baseUrl = API_BASE.replace('/api', '') // Remove /api to get just the base URL
-  
-  // Construct full URL to backend server
-  const fullUrl = `${baseUrl}${formattedPath}`
-  
-  // Add timestamp to prevent caching issues
-  const separator = fullUrl.includes('?') ? '&' : '?'
-  return `${fullUrl}${separator}t=${Date.now()}`
-}
+// Helper function to extract shops from paginated response
 
 // Helper function to extract shops from paginated response
 function extractShopsFromResponse(response) {
@@ -116,6 +85,7 @@ function extractShopsFromResponse(response) {
 export default function LandingPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const query = (searchParams.get("q") || "").trim().toLowerCase()
+  const [clientQuery, setClientQuery] = useState("")
   const [coords, setCoords] = useState(null)
   const [pinnedLocation, setPinnedLocation] = useState(null)
   const [shops, setShops] = useState([])
@@ -124,28 +94,39 @@ export default function LandingPage() {
   const [mapInstance, setMapInstance] = useState(null)
   const [mapMarkers, setMapMarkers] = useState([])
   const [isMapExpanded, setIsMapExpanded] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false)
   const [mapContainerReady, setMapContainerReady] = useState(false)
   const [showTip, setShowTip] = useState(true)
   const mapRef = useRef(null)
 
   useEffect(() => {
+    // Restore persisted tip visibility
+    try {
+      const tipClosed = localStorage.getItem('landing_map_tip_closed')
+      if (tipClosed === '1') {
+        setShowTip(false)
+      }
+    } catch (e) {
+      // Ignore storage errors
+    }
     const saved = localStorage.getItem("user_location")
     if (saved) setCoords(JSON.parse(saved))
   }, [])
 
+  // Load shops only once on component mount
   useEffect(() => {
     const loadShops = async () => {
       setLoading(true)
       setError('')
       try {
-        const response = await fetchShops({ 
-          q: query || undefined
-        })
+        const response = await fetchAllShops()
         const shopsData = extractShopsFromResponse(response)
         setShops(shopsData)
       } catch (err) {
         console.error('Failed to fetch shops:', err)
-        setError('Failed to load shops. Please try again.')
+        const errorInfo = handleApiError(err)
+        setError(errorInfo.message)
         setShops([])
       } finally {
         setLoading(false)
@@ -153,26 +134,53 @@ export default function LandingPage() {
     }
 
     loadShops()
-    
-    // Clear pinned location when search query changes
-    if (pinnedLocation) {
-      setPinnedLocation(null)
-    }
-  }, [query])
+  }, [])
+
+  // Handle client-side search
+  const handleSearchChange = (searchTerm) => {
+    setClientQuery(searchTerm)
+  }
 
   const sortedShops = useMemo(() => {
-    const copy = [...shops]
+    let copy = [...shops]
+    
+    // Client-side filtering - comprehensive search across multiple fields
+    if (clientQuery.trim()) {
+      const searchTerm = clientQuery.toLowerCase().trim()
+      copy = copy.filter(shop => 
+        shop.name.toLowerCase().includes(searchTerm) ||
+        (shop.description && shop.description.toLowerCase().includes(searchTerm)) ||
+        (shop.addressLine && shop.addressLine.toLowerCase().includes(searchTerm)) ||
+        (shop.category && shop.category.toLowerCase().includes(searchTerm)) ||
+        (shop.phone && shop.phone.toLowerCase().includes(searchTerm)) ||
+        (shop.email && shop.email.toLowerCase().includes(searchTerm))
+      )
+    }
+    
     // Use pinned location for sorting if available, otherwise use user coords
     const referenceLocation = pinnedLocation || coords
     if (referenceLocation) {
       copy.sort((a, b) => haversineDistanceKm(referenceLocation, a) - haversineDistanceKm(referenceLocation, b))
     }
     return copy
-  }, [shops, coords, pinnedLocation])
+  }, [shops, coords, pinnedLocation, clientQuery])
 
   // Load Leaflet CSS and JS
   useEffect(() => {
-    loadLeaflet().catch(console.error)
+    const loadMap = async () => {
+      try {
+        await loadLeaflet()
+        // Only initialize map once after Leaflet loads
+        if (!mapInstance) {
+          setTimeout(() => {
+            setMapContainerReady(true)
+          }, 300)
+        }
+      } catch (error) {
+        console.error('Failed to load Leaflet:', error)
+      }
+    }
+    loadMap()
   }, [])
 
 
@@ -212,11 +220,19 @@ export default function LandingPage() {
           attributionControl: true,
           dragging: true,
           touchZoom: true,
-          scrollWheelZoom: true,
-          doubleClickZoom: true,
-          boxZoom: true,
-          keyboard: true
-        }).setView(center, 13)
+          scrollWheelZoom: !isMobile, // Disable scroll wheel zoom on mobile for better UX
+          doubleClickZoom: !isMobile, // Disable double-click zoom on mobile
+          boxZoom: !isMobile, // Disable box zoom on mobile
+          keyboard: true,
+          // Mobile-optimized settings
+          tap: true, // Enable tap events
+          tapTolerance: 15, // Increase tap tolerance for mobile
+          bounceAtZoomLimits: false, // Prevent bounce effect on mobile
+          // Better mobile performance
+          preferCanvas: isMobile, // Use canvas renderer on mobile for better performance
+          zoomSnap: 0.5, // Snap to zoom levels for smoother mobile experience
+          zoomDelta: 0.5 // Smaller zoom increments for mobile
+        }).setView(center, 12) // Start with a balanced zoom level
 
         // Add OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -234,15 +250,28 @@ export default function LandingPage() {
 
         setMapInstance(map)
 
-        // Force map to invalidate size
-        setTimeout(() => {
-          if (map) {
+        // Force map to invalidate size with multiple attempts
+        const invalidateSize = () => {
+          if (map && map.invalidateSize) {
             map.invalidateSize()
+            // Try again after a short delay to ensure it works
+            setTimeout(() => {
+              if (map && map.invalidateSize) {
+                map.invalidateSize()
+              }
+            }, 50)
           }
-        }, 100)
+        }
+        
+        // Call invalidateSize multiple times to ensure it works
+        setTimeout(invalidateSize, 100)
+        setTimeout(invalidateSize, 300)
+        setTimeout(invalidateSize, 500)
 
       } catch (err) {
         console.error('Error initializing map:', err)
+        // Retry initialization after error
+        setTimeout(initializeMap, 1000)
       }
     }
 
@@ -261,6 +290,33 @@ export default function LandingPage() {
       }
     }
   }, [mapContainerReady]) // Only reinitialize when container readiness changes
+
+  // Handle window resize for map
+  useEffect(() => {
+    const handleResize = () => {
+      if (mapInstance && mapInstance.invalidateSize) {
+        setTimeout(() => {
+          mapInstance.invalidateSize()
+        }, 100)
+      }
+      setIsMobile(window.innerWidth <= 900)
+    }
+
+    window.addEventListener('resize', handleResize)
+    // initialize value
+    setIsMobile(window.innerWidth <= 900)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [mapInstance])
+
+  // Update map center when coords change (without reinitializing)
+  useEffect(() => {
+    if (mapInstance && coords) {
+      // Use a more zoomed out view when updating center
+      const currentZoom = mapInstance.getZoom()
+      const newZoom = Math.min(currentZoom, 12) // Don't zoom in too much
+      mapInstance.setView([coords.lat, coords.lng], newZoom)
+    }
+  }, [coords, mapInstance])
 
   // Update markers when shops or pinned location changes
   useEffect(() => {
@@ -390,20 +446,34 @@ export default function LandingPage() {
           const marker = L.marker([shop.lat, shop.lng], { icon: shopIcon })
             .addTo(mapInstance)
             .bindPopup(`
-              <div style="min-width: 200px;">
-                <h4 style="margin: 0 0 0.5rem 0; color: #6366f1;">${shop.name}</h4>
-                ${shop.addressLine ? `<p style="margin: 0 0 0.5rem 0; font-size: 0.875rem; color: #666;">${shop.addressLine}</p>` : ''}
+              <div style="min-width: ${isMobile ? '280px' : '200px'}; max-width: ${isMobile ? '320px' : '250px'};">
+                <h4 style="margin: 0 0 0.5rem 0; color: #6366f1; font-size: ${isMobile ? '1rem' : '0.875rem'};">${shop.name}</h4>
+                ${shop.addressLine ? `<p style="margin: 0 0 0.5rem 0; font-size: ${isMobile ? '0.9rem' : '0.875rem'}; color: #666; line-height: 1.4;">${shop.addressLine}</p>` : ''}
                 <a href="/shops/${shop.id}" style="
                   display: inline-block;
                   background: #6366f1;
                   color: white;
-                  padding: 0.5rem 1rem;
+                  padding: ${isMobile ? '0.75rem 1.25rem' : '0.5rem 1rem'};
                   text-decoration: none;
-                  border-radius: 6px;
-                  font-size: 0.875rem;
-                ">View Shop</a>
+                  border-radius: ${isMobile ? '8px' : '6px'};
+                  font-size: ${isMobile ? '0.9rem' : '0.875rem'};
+                  font-weight: 500;
+                  text-align: center;
+                  width: ${isMobile ? '100%' : 'auto'};
+                  box-sizing: border-box;
+                  transition: background-color 0.2s;
+                " onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='#6366f1'">View Shop</a>
               </div>
-            `)
+            `, {
+              // Mobile-optimized popup options
+              maxWidth: isMobile ? 320 : 250,
+              className: isMobile ? 'mobile-popup' : '',
+              closeButton: true,
+              autoClose: false,
+              closeOnClick: false,
+              // Better mobile positioning
+              offset: isMobile ? [0, -10] : [0, 0]
+            })
           
           newMarkers.push(marker)
         } catch (error) {
@@ -414,22 +484,40 @@ export default function LandingPage() {
 
     setMapMarkers(newMarkers)
 
-    // Fit bounds to show all markers
+    // Fit bounds to show all markers with better zoom level
     if (newMarkers.length > 0) {
       try {
         const group = L.featureGroup(newMarkers)
         const bounds = group.getBounds()
-        mapInstance.fitBounds(bounds.pad(0.1))
+        
+        // Check if we have search results (filtered shops)
+        const hasSearchResults = clientQuery.trim().length > 0
+        
+                  if (hasSearchResults) {
+            // For search results, show a closer view with less padding
+            const paddedBounds = bounds.pad(0.02) // Very minimal padding for search results
+            mapInstance.fitBounds(paddedBounds, {
+              maxZoom: 15, // Allow even closer zoom for search results
+              animate: true
+            })
+          } else {
+            // For all shops, use moderate padding
+            const paddedBounds = bounds.pad(0.1)
+            mapInstance.fitBounds(paddedBounds, {
+              maxZoom: 13, // Good detail for browsing all shops
+              animate: true
+            })
+          }
       } catch (error) {
         console.error('Error fitting map bounds:', error)
         // Fallback: set a default view if bounds fitting fails
         const center = coords ? [coords.lat, coords.lng] : [10.3157, 123.8854]
-        mapInstance.setView(center, 13)
+        mapInstance.setView(center, 12)
       }
     } else {
       // Set default view if no markers
       const center = coords ? [coords.lat, coords.lng] : [10.3157, 123.8854]
-      mapInstance.setView(center, 13)
+      mapInstance.setView(center, 12)
     }
 
   }, [mapInstance, sortedShops, coords, pinnedLocation])
@@ -458,31 +546,108 @@ export default function LandingPage() {
     }, 100)
   }
 
+  const openMapModal = () => {
+    setIsMapModalOpen(true)
+    setTimeout(() => {
+      if (mapInstance) mapInstance.invalidateSize()
+    }, 250)
+  }
+  const closeMapModal = () => {
+    setIsMapModalOpen(false)
+    setTimeout(() => {
+      if (mapInstance) mapInstance.invalidateSize()
+    }, 250)
+  }
+
   const clearPinnedLocation = () => {
     setPinnedLocation(null)
   }
 
+  const forceMapRefresh = () => {
+    if (mapInstance) {
+      try {
+        mapInstance.remove()
+      } catch (error) {
+        console.log('Map already removed')
+      }
+      setMapInstance(null)
+    }
+    // Only refresh if map is not already ready
+    if (!mapContainerReady) {
+      setMapContainerReady(true)
+    }
+  }
+
   if (loading) {
     return (
-      <main className="container" style={{ padding: '2rem', textAlign: 'center' }}>
-        <div className="muted">Loading shops...</div>
-      </main>
+      <>
+        <SEOHead 
+          title="Explore Local Shops"
+          description="Discover amazing local shops and businesses in your community. Find unique products, fresh goods, and support local entrepreneurs on LocalsLocalMarket."
+          keywords="local shops, local businesses, community shopping, local products, neighborhood stores, shop local, local market"
+        />
+        <main className="container landing-page-container">
+          {/* Header */}
+          <section style={{ marginBottom: "2rem" }}>
+            <SkeletonText lines={1} height="1.5rem" style={{ marginBottom: "0.5rem" }} />
+            <SkeletonText lines={1} height="1rem" style={{ width: "60%" }} />
+          </section>
+
+          {/* Search Bar */}
+          <section style={{ marginBottom: "2rem" }}>
+            <SkeletonText lines={1} height="3rem" style={{ borderRadius: "8px" }} />
+          </section>
+
+          {/* Main Content - Shops List and Map Side by Side */}
+          <div className="landing-layout">
+            {/* Left Side - Shops List */}
+            <div>
+              <div style={{ marginBottom: "1rem" }}>
+                <SkeletonText lines={1} height="1.2rem" style={{ marginBottom: "0.25rem" }} />
+                <SkeletonText lines={1} height="0.875rem" style={{ width: "40%" }} />
+              </div>
+              
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: "1rem",
+              }}>
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <SkeletonShopCard key={index} />
+                ))}
+              </div>
+            </div>
+
+            {/* Right Side - Map */}
+            <div style={{ 
+              height: 'calc(60vh - 2rem)', // Increased from 42vh to 60vh for taller map
+              minHeight: '400px', // Increased minHeight from 300px to 400px
+              position: 'sticky',
+              top: 'calc(70px + 1rem)',
+              zIndex: 10
+            }}>
+              <SkeletonMap style={{ height: '100%' }} />
+            </div>
+          </div>
+        </main>
+      </>
     )
   }
 
   if (error) {
     return (
-      <main className="container" style={{ padding: '2rem' }}>
-        <div style={{ 
-          backgroundColor: 'var(--error-bg)', 
-          color: 'var(--error)', 
-          padding: '0.75rem', 
-          borderRadius: '8px',
-          fontSize: '0.9rem'
-        }}>
-          {error}
-        </div>
-      </main>
+      <>
+        <SEOHead 
+          title="Error - LocalsLocalMarket"
+          description="We encountered an issue loading the shops. Please try again."
+        />
+        <main className="container landing-page-container" style={{ padding: '2rem' }}>
+          <ErrorDisplay 
+            error={error}
+            title="Unable to Load Shops"
+          />
+        </main>
+      </>
     )
   }
 
@@ -515,7 +680,7 @@ export default function LandingPage() {
           }))
         }}
       />
-      <main className="container">
+      <main className="container landing-page-container">
         {/* Header */}
         <section style={{ marginBottom: "2rem" }}>
         <h2
@@ -535,16 +700,14 @@ export default function LandingPage() {
 
       {/* Search Bar */}
       <section style={{ marginBottom: "2rem" }}>
-        <SearchOptimization onClearFilters={clearPinnedLocation} />
+        <SearchOptimization 
+          onClearFilters={clearPinnedLocation} 
+          onSearchChange={handleSearchChange}
+        />
       </section>
 
       {/* Main Content - Shops List and Map Side by Side */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: isMapExpanded ? '1fr 2fr' : '2fr 1fr',
-        gap: '2rem',
-        alignItems: 'start'
-      }}>
+      <div className={`landing-layout ${isMapExpanded ? 'expanded' : ''}`}>
         {/* Left Side - Shops List */}
         <div>
           {sortedShops.length === 0 ? (
@@ -573,7 +736,7 @@ export default function LandingPage() {
                     )}
                   </h3>
                   <p className="muted" style={{ margin: 0, fontSize: "0.875rem" }}>
-                    {query ? `Showing results for "${query}"` : 'All available shops'}
+                    {clientQuery ? `Showing results for "${clientQuery}"` : 'All available shops'}
                   </p>
                   {pinnedLocation && (
                     <div style={{ 
@@ -604,11 +767,7 @@ export default function LandingPage() {
 
 
               
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                gap: "1rem",
-              }}>
+              <div className="shops-grid">
                 {sortedShops.map((shop) => (
                   <div key={shop.id} className="card" style={{ 
                     padding: 0, 
@@ -799,11 +958,12 @@ export default function LandingPage() {
         </div>
 
         {/* Right Side - Map */}
+        {!isMobile && (
         <div 
           className="map-sticky-container"
           style={{ 
-            height: isMapExpanded ? 'calc(100vh - 90px)' : 'calc(42vh - 2rem)', // Adjust for header height (70px + 20px padding)
-            minHeight: isMapExpanded ? '600px' : '300px',
+            height: isMapExpanded ? 'calc(100vh - 90px)' : 'calc(60vh - 2rem)', // Increased from 42vh to 60vh for taller map
+            minHeight: isMapExpanded ? '600px' : '400px', // Increased minHeight from 300px to 400px
             position: 'sticky',
             top: 'calc(70px + 1rem)',
             zIndex: 10
@@ -850,46 +1010,87 @@ export default function LandingPage() {
                 onClick={toggleMapSize}
                 className="btn"
                 style={{
-                  width: '40px',
-                  height: '40px',
+                  width: isMobile ? '48px' : '40px', // Larger touch target on mobile
+                  height: isMobile ? '48px' : '40px',
                   padding: '0',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   backgroundColor: 'var(--card)',
                   border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                  borderRadius: isMobile ? '12px' : '8px', // Larger radius on mobile
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  // Mobile-optimized touch feedback
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent'
                 }}
                 title={isMapExpanded ? 'Minimize Map' : 'Expand Map'}
               >
-                {isMapExpanded ? <Minimize width={16} height={16} /> : <Expand width={16} height={16} />}
+                {isMapExpanded ? <Minimize width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} /> : <Expand width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} />}
+              </button>
+              
+              <button
+                onClick={forceMapRefresh}
+                className="btn"
+                style={{
+                  width: isMobile ? '48px' : '40px', // Larger touch target on mobile
+                  height: isMobile ? '48px' : '40px',
+                  padding: '0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: isMobile ? '12px' : '8px', // Larger radius on mobile
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  // Mobile-optimized touch feedback
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent'
+                }}
+                title="Refresh Map"
+              >
+                <svg width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                  <path d="M21 3v5h-5"/>
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                  <path d="M3 21v-5h5"/>
+                </svg>
               </button>
             </div>
 
             {/* Map Instructions */}
             {showTip && (
-              <div style={{
-                position: 'absolute',
-                bottom: '1rem',
-                left: '1rem',
-                right: '1rem',
-                backgroundColor: 'var(--card)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                padding: '0.75rem',
-                fontSize: '0.875rem',
-                color: 'var(--muted)',
-                zIndex: 1000,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-              }}>
+              <div 
+                className={isMobile ? 'map-tip mobile-tip' : 'map-tip'}
+                style={{
+                  position: 'absolute',
+                  bottom: isMobile ? '0.5rem' : '1rem',
+                  left: isMobile ? '0.5rem' : '1rem',
+                  right: isMobile ? '0.5rem' : '1rem',
+                  backgroundColor: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: isMobile ? '12px' : '8px',
+                  padding: isMobile ? '0.5rem' : '0.75rem',
+                  fontSize: isMobile ? '0.8rem' : '0.875rem',
+                  color: 'var(--muted)',
+                  zIndex: 1000,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{ fontSize: '1rem' }}>💡</span>
                     <strong>Tip:</strong>
                   </div>
                   <button
-                    onClick={() => setShowTip(false)}
+                    onClick={() => {
+                      setShowTip(false)
+                      try {
+                        localStorage.setItem('landing_map_tip_closed', '1')
+                      } catch (e) {
+                        // Ignore storage errors
+                      }
+                    }}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -919,7 +1120,48 @@ export default function LandingPage() {
             )}
           </div>
         </div>
+        )}
       </div>
+
+      {
+        <>
+          <button 
+            className="floating-map-btn" 
+            onClick={openMapModal} 
+            title="Open map"
+            style={{
+              // Mobile-optimized touch target
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
+              // Prevent text selection on mobile
+              WebkitUserSelect: 'none',
+              userSelect: 'none'
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7z"/><path d="M9 4v13"/><path d="M15 7v13"/></svg>
+          </button>
+
+          {isMapModalOpen && (
+            <div className="map-modal-overlay" onClick={closeMapModal}>
+              <div className="map-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="map-modal-header">
+                  <span>Map</span>
+                  <button onClick={closeMapModal} className="map-modal-close">×</button>
+                </div>
+                <div className="map-modal-body">
+                  <div 
+                    ref={(el) => {
+                      mapRef.current = el
+                      if (el) setMapContainerReady(true)
+                    }}
+                    style={{ width: '100%', height: '100%', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      }
 
       {/* Bottom Ad - Placed at the very bottom of the page */}
       <div style={{ marginTop: '3rem', padding: '2rem 0', borderTop: '1px solid var(--border)' }}>

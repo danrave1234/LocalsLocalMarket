@@ -13,5 +13,10 @@ public class AuthDtos {
     public record UpdateProfileRequest(@NotBlank String name) {}
     public record ChangePasswordRequest(@NotBlank String currentPassword,
                                         @NotBlank String newPassword) {}
-    public record UserProfileResponse(String name, String email, String createdAt) {}
+        public record ChangeRoleRequest(@Email @NotBlank String email,
+                                    @NotBlank String newRole) {}
+    public record ForgotPasswordRequest(@Email @NotBlank String email) {}
+    public record ResetPasswordRequest(@NotBlank String token,
+                                      @NotBlank String password) {}
+    public record UserProfileResponse(String name, String email, String createdAt, String role) {}
 }

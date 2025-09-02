@@ -75,17 +75,33 @@ export const loadLeaflet = async () => {
         await loadScriptWithFallbacks(jsCDNs)
       }
 
-      // Wait until window.L is available (with timeout)
+      // Wait until window.L is available (with timeout and retry)
       const start = Date.now()
-      while (typeof window.L === 'undefined') {
-        if (Date.now() - start > 5000) {
+      let retries = 0
+      const maxRetries = 10
+      
+      while (typeof window.L === 'undefined' && retries < maxRetries) {
+        if (Date.now() - start > 10000) {
           throw new Error('Leaflet did not initialize within timeout')
         }
-        await new Promise(r => setTimeout(r, 50))
+        await new Promise(r => setTimeout(r, 100))
+        retries++
       }
+      
+      if (typeof window.L === 'undefined') {
+        throw new Error('Leaflet failed to initialize after multiple retries')
+      }
+      
+      // Additional check to ensure Leaflet is fully loaded
+      if (!window.L.map) {
+        throw new Error('Leaflet map function not available')
+      }
+      
       return window.L
     } catch (e) {
       console.error('[leafletLoader] Failed to load Leaflet:', e)
+      // Reset promise on error to allow retry
+      leafletPromise = null
       throw e
     }
   })()

@@ -1,18 +1,7 @@
 // Smart API base URL detection
 function getApiBase() {
-  // If environment variable is explicitly set, use it
-  if (import.meta.env.VITE_API_BASE) {
-    return import.meta.env.VITE_API_BASE
-  }
-  
-  // Auto-detect environment
-  if (import.meta.env.DEV) {
-    // Development: use relative path for Vite proxy
-    return '/api'
-  } else {
-    // Production: use absolute URL
-    return 'https://api.localslocalmarket.com/api'
-  }
+  // Use Vite environment variable (configured in vite.config.js)
+  return import.meta.env.VITE_API_BASE
 }
 
 export const API_BASE = getApiBase()
@@ -20,9 +9,9 @@ export const API_BASE = getApiBase()
 // Log API configuration in development
 if (import.meta.env.DEV) {
   console.log('🔧 API Configuration:', {
-    environment: import.meta.env.DEV ? 'Development' : 'Production',
+    environment: 'Development',
     apiBase: API_BASE,
-    viteProxy: import.meta.env.DEV ? 'Enabled (localhost:8080)' : 'Disabled'
+    viteApiBase: import.meta.env.VITE_API_BASE
   })
 }
 

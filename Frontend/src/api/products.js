@@ -38,21 +38,54 @@ export async function getProductById(productId) {
 }
 
 export async function updateProductStock(productId, stockCount, token) {
-  return api.patch(`/products/${productId}`, { stockCount }, { token })
+  return api.patch(`/products/${productId}`, { stockCount }, { headers: { 'Authorization': `Bearer ${token}` } })
 }
 
 export async function decrementProductStock(productId, amount = 1, token) {
-  return api.post(`/products/${productId}/decrement-stock?amount=${amount}`, null, { token })
+  return api.post(`/products/${productId}/decrement-stock?amount=${amount}`, null, { headers: { 'Authorization': `Bearer ${token}` } })
 }
 
 export async function uploadImage(formData, token, type = 'general') {
   // Add type parameter to the URL
   const url = `/uploads/image?type=${encodeURIComponent(type)}`;
-  return api.post(url, formData, { token })
+  return api.post(url, formData, { headers: { 'Authorization': `Bearer ${token}` } })
 }
 
 export async function fetchProductsByShopId(shopId, token) {
-  return api.get(`/products?shopId=${shopId}`, { token })
+  return api.get(`/products?shopId=${shopId}`, { headers: { 'Authorization': `Bearer ${token}` } })
+}
+
+// New category-based product functions
+export async function fetchProductsByMainCategory(mainCategory, page = 0, size = 20) {
+  return api.get(`/products/by-category/${encodeURIComponent(mainCategory)}?page=${page}&size=${size}`)
+}
+
+export async function fetchProductsByMainCategoryAndSubcategory(mainCategory, subcategory, page = 0, size = 20) {
+  return api.get(`/products/by-category/${encodeURIComponent(mainCategory)}/${encodeURIComponent(subcategory)}?page=${page}&size=${size}`)
+}
+
+export async function fetchProductMainCategories() {
+  return api.get('/products/categories/main')
+}
+
+export async function fetchProductSubcategories(mainCategory) {
+  return api.get(`/products/categories/subcategories?mainCategory=${encodeURIComponent(mainCategory)}`)
+}
+
+// Helper function to format category data for API calls
+export function formatCategoryData(categoryValue) {
+  if (typeof categoryValue === 'string') {
+    // Legacy format - just a string
+    return { category: categoryValue }
+  } else if (typeof categoryValue === 'object' && categoryValue !== null) {
+    // New hierarchical format
+    return {
+      mainCategory: categoryValue.mainCategory || null,
+      subcategory: categoryValue.subcategory || null,
+      customCategory: categoryValue.customCategory || null
+    }
+  }
+  return {}
 }
 
 

@@ -9,6 +9,11 @@ export async function fetchShops({ q, category } = {}) {
     return api.get(`/shops${qs ? `?${qs}` : ''}`)
 }
 
+export async function fetchAllShops() {
+    // Fetch all shops for client-side filtering
+    return api.get('/shops/all')
+}
+
 export async function fetchShopById(id) {
     return api.get(`/shops/${id}`)
 }

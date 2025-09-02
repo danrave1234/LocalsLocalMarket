@@ -1,17 +1,34 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchCategories } from '../api/shops.js'
+import { useDebounce } from '../hooks/useDebounce.js'
 
-const SearchOptimization = ({ onClearFilters }) => {
+const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchSuggestions, setSearchSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [categories, setCategories] = useState([])
   const [isExpanded, setIsExpanded] = useState(false)
   const [activeFilter, setActiveFilter] = useState(null)
+  const [localQuery, setLocalQuery] = useState(searchParams.get('q') || '')
 
   const query = searchParams.get('q') || ''
   const category = searchParams.get('category') || ''
+  
+  // Debounce the local query to prevent immediate updates
+  const debouncedQuery = useDebounce(localQuery, 300)
+
+  // Update parent component with debounced search query (client-side only)
+  useEffect(() => {
+    if (onSearchChange) {
+      onSearchChange(debouncedQuery)
+    }
+  }, [debouncedQuery, onSearchChange])
+
+  // Sync local query with URL params only on initial load
+  useEffect(() => {
+    setLocalQuery(query)
+  }, [query])
 
   // Popular search terms for suggestions
   const popularSearches = [
@@ -38,15 +55,6 @@ const SearchOptimization = ({ onClearFilters }) => {
   ]
 
   useEffect(() => {
-    // Update URL for better SEO when search changes
-    if (query) {
-      const url = new URL(window.location)
-      url.searchParams.set('q', query)
-      window.history.replaceState({}, '', url.toString())
-    }
-  }, [query])
-
-  useEffect(() => {
     // Fetch categories
     const loadCategories = async () => {
       try {
@@ -61,7 +69,7 @@ const SearchOptimization = ({ onClearFilters }) => {
 
   const handleSearch = (searchTerm) => {
     if (searchTerm.trim()) {
-      setSearchParams({ q: searchTerm.trim() })
+      setLocalQuery(searchTerm.trim())
       setShowSuggestions(false)
       setIsExpanded(false)
     }
@@ -94,6 +102,7 @@ const SearchOptimization = ({ onClearFilters }) => {
   }
 
   const clearFilters = () => {
+    setLocalQuery('')
     setSearchParams({})
     setActiveFilter(null)
     if (onClearFilters) {
@@ -127,14 +136,10 @@ const SearchOptimization = ({ onClearFilters }) => {
             <input
               type="text"
               placeholder="Search shops, products, or services..."
-              value={query}
+              value={localQuery}
               onChange={(e) => {
                 const newQuery = e.target.value
-                if (newQuery) {
-                  setSearchParams({ q: newQuery })
-                } else {
-                  setSearchParams({})
-                }
+                setLocalQuery(newQuery)
                 setShowSuggestions(true)
                 setActiveFilter('search')
               }}
@@ -146,11 +151,11 @@ const SearchOptimization = ({ onClearFilters }) => {
               onKeyPress={handleKeyPress}
               className="search-input"
             />
-            {query && (
+            {localQuery && (
               <button 
                 className="clear-search"
                 onClick={() => {
-                  setSearchParams({})
+                  setLocalQuery('')
                   setShowSuggestions(false)
                   if (onClearFilters) {
                     onClearFilters()
@@ -167,7 +172,7 @@ const SearchOptimization = ({ onClearFilters }) => {
 
           {/* Search Button */}
           <button
-            onClick={() => handleSearch(query)}
+            onClick={() => handleSearch(localQuery)}
             className="search-button"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -178,11 +183,11 @@ const SearchOptimization = ({ onClearFilters }) => {
         </div>
 
         {/* Active Filters Display - Only show search query, not category */}
-        {query && (
+        {localQuery && (
           <div className="active-filters">
             <div className="filter-tag">
-              <span>"{query}"</span>
-              <button onClick={() => setSearchParams({ category })}>×</button>
+              <span>"{localQuery}"</span>
+              <button onClick={() => setLocalQuery('')}>×</button>
             </div>
             <button onClick={clearFilters} className="clear-all">
               Clear all

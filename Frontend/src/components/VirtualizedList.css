@@ -1,0 +1,57 @@
+/* Virtualized List Component Styles */
+.virtualized-list {
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+
+.virtualized-list-content {
+  position: relative;
+  width: 100%;
+}
+
+.virtualized-list-items {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  will-change: transform;
+}
+
+.virtualized-list-item {
+  width: 100%;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--border);
+}
+
+.virtualized-list-item:last-child {
+  border-bottom: none;
+}
+
+/* Scrollbar styling */
+.virtualized-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.virtualized-list::-webkit-scrollbar-track {
+  background: var(--surface);
+  border-radius: 4px;
+}
+
+.virtualized-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.virtualized-list::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Firefox scrollbar */
+.virtualized-list {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--surface);
+}

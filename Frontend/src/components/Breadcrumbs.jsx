@@ -11,13 +11,24 @@ const Breadcrumbs = () => {
     'dashboard': 'Dashboard',
     'profile': 'Profile',
     'settings': 'Settings',
-    'donate': 'Donate'
+    'donate': 'Donate',
+    'product-management': 'Product Management'
   }
 
   const breadcrumbs = pathnames.map((name, index) => {
     const routeTo = `/${pathnames.slice(0, index + 1).join('/')}`
     const isLast = index === pathnames.length - 1
-    const displayName = breadcrumbMap[name] || name
+    let displayName = breadcrumbMap[name] || name
+
+    // Handle product-management slug parameter
+    if (pathnames[index - 1] === 'product-management' && name !== 'product-management') {
+      // Extract shop name from slug (remove the ID part)
+      const slugParts = name.split('-')
+      if (slugParts.length > 1) {
+        const shopName = slugParts.slice(0, -1).join(' ').replace(/\b\w/g, l => l.toUpperCase())
+        displayName = shopName
+      }
+    }
 
     return {
       name: displayName,

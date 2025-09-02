@@ -1,0 +1,205 @@
+/* Landing Page Styles */
+
+/* Layout helpers */
+.container {
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+}
+
+/* Utility classes */
+.muted {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* Enhanced pill/tag styles */
+.pill {
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(99, 102, 241, 0.1);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--accent);
+  transition: all 0.2s ease;
+}
+
+.pill:hover {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: var(--accent);
+}
+
+/* Enhanced input styles with premium focus states */
+.landing-page .input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.875rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.landing-page .input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.landing-page .input::placeholder {
+  color: var(--muted);
+}
+
+/* Auto-filled input styles */
+.landing-page .input-auto-filled {
+  background-color: var(--surface) !important;
+  color: var(--text) !important;
+}
+
+.landing-page .input-not-filled {
+  background-color: var(--card-2) !important;
+  color: var(--muted) !important;
+}
+
+/* Added location selector premium styling */
+.location-selector {
+  background: linear-gradient(135deg, var(--card) 0%, var(--card-2) 100%);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.location-selector:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Added shop card image placeholder styling */
+.shop-image-placeholder {
+  background: linear-gradient(135deg, var(--surface) 0%, var(--card) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.shop-image-placeholder::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(99, 102, 241, 0.1) 50%, transparent 70%);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Map styles */
+.map-sticky-container {
+  z-index: 10;
+  background: var(--bg);
+}
+
+/* Map controls should be above the map */
+.map-controls {
+  z-index: 1000;
+  position: relative;
+}
+
+.map-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: white;
+  z-index: 1000;
+}
+
+.map-current-location-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  transition: all 0.2s ease;
+}
+
+.map-current-location-btn:hover {
+  background-color: var(--accent);
+  transform: scale(1.05);
+}
+
+.location-status {
+  padding: 0.75rem;
+  background-color: var(--primary-bg);
+  border-radius: 8px;
+  border: 1px solid var(--primary);
+  font-size: 0.875rem;
+  margin-top: 1rem;
+}
+
+.location-status-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.location-status-title {
+  font-weight: 500;
+  color: var(--primary);
+}
+
+.location-status-coordinates {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* Map error styles */
+.map-error {
+  padding: 2rem;
+  text-align: center;
+  background-color: var(--error-bg);
+  border-radius: 8px;
+  color: var(--error);
+}
+
+.map-error-icon {
+  margin-bottom: 1rem;
+  font-size: 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+}

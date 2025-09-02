@@ -10,6 +10,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
@@ -30,14 +31,14 @@ public class SecurityConfig {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource));
         http.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
+        // Security headers
+        http.headers(headers -> headers
+                .frameOptions().deny()
+                .contentTypeOptions()
+        );
+
+        // For development, allow all requests
         http.authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/uploads/image").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/shops/**", "/api/products/**", "/uploads/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/shops", "/api/products").authenticated()
-                .requestMatchers(HttpMethod.PATCH, "/api/shops/**", "/api/products/**").authenticated()
-                .requestMatchers(HttpMethod.DELETE, "/api/products/**").authenticated()
-                .requestMatchers("/api/users/**").authenticated()
                 .anyRequest().permitAll()
         );
 

@@ -35,13 +35,38 @@ public class UserController {
             email = ((org.localslocalmarket.model.User) auth.getPrincipal()).getEmail();
         }
         
-        return users.findByEmail(email)
-                .map(user -> ResponseEntity.ok(new AuthDtos.UserProfileResponse(
-                        user.getName(),
-                        user.getEmail(),
-                        user.getCreatedAt().toString()
-                )))
-                .orElseGet(() -> ResponseEntity.notFound().build());
+        final String finalEmail = email;
+        
+        // First try to find user with strict criteria
+        var user = users.findByEmailAndEnabledTrueAndIsActiveTrue(finalEmail)
+                .orElseGet(() -> {
+                    // If not found with strict criteria, try to find by email only
+                    return users.findByEmail(finalEmail.toLowerCase())
+                            .filter(u -> u.isActive() != null && u.isActive())
+                            .orElse(null);
+                });
+        
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        // Only include role if user is admin
+        if (user.getRole() == org.localslocalmarket.model.User.Role.ADMIN) {
+            return ResponseEntity.ok(new AuthDtos.UserProfileResponse(
+                    user.getName(),
+                    user.getEmail(),
+                    user.getCreatedAt().toString(),
+                    user.getRole().name()
+            ));
+        } else {
+            // For non-admin users, don't include role
+            return ResponseEntity.ok(new AuthDtos.UserProfileResponse(
+                    user.getName(),
+                    user.getEmail(),
+                    user.getCreatedAt().toString(),
+                    null
+            ));
+        }
     }
 
     @PutMapping("/profile")
@@ -51,7 +76,7 @@ public class UserController {
             email = ((org.localslocalmarket.model.User) auth.getPrincipal()).getEmail();
         }
         
-        return users.findByEmail(email)
+        return users.findByEmailAndEnabledTrueAndIsActiveTrue(email)
                 .map(user -> {
                     user.setName(req.name());
                     users.save(user);
@@ -67,7 +92,7 @@ public class UserController {
             email = ((org.localslocalmarket.model.User) auth.getPrincipal()).getEmail();
         }
         
-        return users.findByEmail(email)
+        return users.findByEmailAndEnabledTrueAndIsActiveTrue(email)
                 .map(user -> {
                     // Verify current password
                     if (!passwordEncoder.matches(req.currentPassword(), user.getPasswordHash())) {

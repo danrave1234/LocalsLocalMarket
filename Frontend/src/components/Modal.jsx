@@ -65,13 +65,6 @@ export default function Modal({ isOpen, onClose, title, children, size = 'medium
         onMouseDown={handleContentMouseDown}
         onMouseUp={handleContentMouseUp}
         onClick={handleContentClick}
-        style={{ 
-          width: '100%', 
-          maxWidth: sizeClasses[size] === 'max-w-sm' ? '380px' : 
-                     sizeClasses[size] === 'max-w-md' ? '570px' : 
-                     sizeClasses[size] === 'max-w-lg' ? '760px' : 
-                     sizeClasses[size] === 'max-w-2xl' ? '1140px' : '1330px' 
-        }}
       >
         <div className="modal-header">
           <h3 className="modal-title">{title}</h3>

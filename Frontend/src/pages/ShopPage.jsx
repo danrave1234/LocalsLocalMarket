@@ -4,13 +4,26 @@ import { useAuth } from '../auth/AuthContext.jsx'
 import SEOHead from '../components/SEOHead.jsx'
 import SocialSharing from '../components/SocialSharing.jsx'
 import RelatedShops from '../components/RelatedShops.jsx'
+import CategorySelector from '../components/CategorySelector.jsx'
+import OptimizedSearch from '../components/OptimizedSearch.jsx'
+import OptimizedImage from '../components/OptimizedImage.jsx'
+import ServiceCard from '../components/ServiceCard.jsx'
+import ServiceForm from '../components/ServiceForm.jsx'
 import { fetchShopById } from '../api/shops.js'
 import { fetchProducts, createProduct, updateProduct, deleteProduct, updateProductStock } from '../api/products.js'
 import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
 import { extractShopIdFromSlug } from '../utils/slugUtils.js'
 import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
-import { API_BASE } from '../api/client.js'
+import { getImageUrl } from '../utils/imageUtils.js'
+import { handleApiError } from '../utils/errorHandler.js'
+import { SkeletonProductCard, SkeletonText, SkeletonAvatar, SkeletonButton, SkeletonMap } from '../components/Skeleton.jsx'
+import ErrorDisplay from '../components/ErrorDisplay.jsx'
+import { LoadingSpinner, LoadingOverlay } from '../components/Loading.jsx'
+import { useDebounce } from '../hooks/useDebounce.js'
+import { useScroll } from '../hooks/useEvents.js'
+import { useClipboard } from '../hooks/useStorage.js'
+import { useLocalStorage } from '../hooks/useStorage.js'
 import './ShopPage.css'
 
 export default function ShopPage() {
@@ -32,7 +45,9 @@ export default function ShopPage() {
     title: '',
     description: '',
     price: '',
-    category: '',
+    mainCategory: '',
+    subcategory: '',
+    customCategory: '',
     stockCount: ''
   })
   const [searchQuery, setSearchQuery] = useState('')
@@ -50,77 +65,49 @@ export default function ShopPage() {
     sunday: { open: '10:00', close: '16:00', closed: true }
   })
 
-  // Utility function to format image paths
-  const formatImagePath = (path) => {
-    if (!path) return null
-    // If path already starts with http/https, return as is
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path
-    }
-    // If path starts with /uploads, it's already correct
-    if (path.startsWith('/uploads/')) {
-      return path
-    }
-    // Otherwise, assume it's a relative path and add /uploads/
-    return `/uploads/${path}`
-  }
+  // Optimized hooks
+  const debouncedSearchQuery = useDebounce(searchQuery, 300)
+  const { isScrolled } = useScroll(300)
+  const { copyToClipboard } = useClipboard()
+  const [recentlyViewedShops, setRecentlyViewedShops] = useLocalStorage('recentlyViewedShops', [])
 
-  // Add cache busting to image URLs
-  const getImageUrl = (path) => {
-    const formattedPath = formatImagePath(path)
-    if (!formattedPath) return null
-    
-    // If it's already a full URL (Google Cloud Storage), return it directly
-    if (formattedPath.startsWith('http://') || formattedPath.startsWith('https://')) {
-      // Add timestamp to prevent caching issues
-      const separator = formattedPath.includes('?') ? '&' : '?'
-      return `${formattedPath}${separator}t=${Date.now()}`
-    }
-    
-    // Use the centralized API_BASE for local uploads
-    const baseUrl = API_BASE.replace('/api', '') // Remove /api to get just the base URL
-    
-    // Construct full URL to backend server
-    const fullUrl = `${baseUrl}${formattedPath}`
-    
-    // Add timestamp to prevent caching issues
-    const separator = fullUrl.includes('?') ? '&' : '?'
-    return `${fullUrl}${separator}t=${Date.now()}`
-  }
+  // Debug logging for image paths
 
   // Debug logging for image paths
   useEffect(() => {
     if (shop && process.env.NODE_ENV === 'development') {
       console.log('Shop data:', shop)
       console.log('Original logoPath:', shop.logoPath)
-      console.log('Formatted logoPath:', formatImagePath(shop.logoPath))
       console.log('Original shopViewPath:', shop.coverPath)
-      console.log('Formatted shopViewPath:', formatImagePath(shop.coverPath))
     }
   }, [shop])
 
-  // Copy to clipboard functionality
-  const copyToClipboard = useCallback(async (text, label) => {
-    try {
-      await navigator.clipboard.writeText(text)
+  // Optimized copy to clipboard functionality using hook
+  const handleCopyToClipboard = useCallback(async (text, label) => {
+    const success = await copyToClipboard(text)
+    if (success) {
       setCopiedText(label)
       setTimeout(() => setCopiedText(''), 2000)
-    } catch (err) {
-      console.error('Failed to copy text: ', err)
     }
-  }, [])
+  }, [copyToClipboard])
 
-  // Sort products function
+  // Sort products function with memoization
   const getSortedProducts = useCallback(() => {
     if (!Array.isArray(products)) return []
     
     let filteredProducts = products.filter(product => {
-      const matchesSearch = !searchQuery || 
-        product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (product.category && product.category.toLowerCase().includes(searchQuery.toLowerCase()))
+      const matchesSearch = !debouncedSearchQuery || 
+        product.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        (product.description && product.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase())) ||
+        (product.mainCategory && product.mainCategory.toLowerCase().includes(debouncedSearchQuery.toLowerCase())) ||
+        (product.subcategory && product.subcategory.toLowerCase().includes(debouncedSearchQuery.toLowerCase())) ||
+        (product.customCategory && product.customCategory.toLowerCase().includes(debouncedSearchQuery.toLowerCase()))
       
-      const matchesCategory = !selectedCategory || product.category === selectedCategory
+      const matchesCategory = !selectedCategory || 
+        product.mainCategory === selectedCategory ||
+        product.subcategory === selectedCategory ||
+        product.customCategory === selectedCategory ||
+        product.category === selectedCategory // Backward compatibility
       
       return matchesSearch && matchesCategory
     })
@@ -137,7 +124,7 @@ export default function ShopPage() {
       default:
         return filteredProducts
     }
-  }, [products, searchQuery, selectedCategory, sortBy])
+  }, [products, debouncedSearchQuery, selectedCategory, sortBy])
 
   // Check if shop is currently open
   const isShopOpen = useCallback(() => {
@@ -155,15 +142,10 @@ export default function ShopPage() {
     return currentTime >= open && currentTime <= close
   }, [businessHours])
 
-  // Scroll handler for back to top button
+  // Scroll handler for back to top button - now using optimized hook
   useEffect(() => {
-    const handleScroll = () => {
-      setShowBackToTop(window.scrollY > 300)
-    }
-    
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+    setShowBackToTop(isScrolled)
+  }, [isScrolled])
 
   // Back to top function
   const scrollToTop = () => {
@@ -188,7 +170,9 @@ export default function ShopPage() {
         const productsData = Array.isArray(productsResponse) ? productsResponse : (productsResponse.content || [])
         setProducts(productsData)
       } catch (e) {
-        setError(e.message)
+        console.error('Failed to load shop data:', e)
+        const errorInfo = handleApiError(e)
+        setError(errorInfo.message)
       } finally {
         setLoading(false)
       }
@@ -292,11 +276,12 @@ export default function ShopPage() {
     }
     
     try {
-      const productData = { 
+            const productData = {
         ...productForm, 
         shopId: shop.id,
         price: productForm.price ? parseFloat(productForm.price) : 0,
-        stockCount: productForm.stockCount ? parseInt(productForm.stockCount) : 0
+        stockCount: productForm.stockCount ? parseInt(productForm.stockCount) : 0,
+        category: productForm.customCategory || productForm.subcategory || productForm.mainCategory
       }
       console.log('ShopPage - Creating product with data:', productData)
       const newProduct = await createProduct(productData, token)
@@ -313,7 +298,9 @@ export default function ShopPage() {
         title: '',
         description: '',
         price: '',
-        category: '',
+        mainCategory: '',
+        subcategory: '',
+        customCategory: '',
         stockCount: ''
       })
     } catch (error) {
@@ -342,7 +329,9 @@ export default function ShopPage() {
       title: product.title,
       description: product.description || '',
       price: product.price,
-      category: product.category || '',
+      mainCategory: product.mainCategory || '',
+      subcategory: product.subcategory || '',
+      customCategory: product.customCategory || '',
       stockCount: product.stockCount || ''
     })
     setShowEditProduct(true)
@@ -351,7 +340,11 @@ export default function ShopPage() {
   const handleUpdateProduct = async (e) => {
     e.preventDefault()
     try {
-      const updatedProduct = await updateProduct(editingProduct.id, productForm, token)
+      const productData = {
+        ...productForm,
+        category: productForm.customCategory || productForm.subcategory || productForm.mainCategory
+      }
+      const updatedProduct = await updateProduct(editingProduct.id, productData, token)
       console.log('Updated product response:', updatedProduct)
       
       // Validate the response
@@ -367,7 +360,9 @@ export default function ShopPage() {
         title: '',
         description: '',
         price: '',
-        category: '',
+        mainCategory: '',
+        subcategory: '',
+        customCategory: '',
         stockCount: ''
       })
     } catch (error) {
@@ -442,25 +437,75 @@ export default function ShopPage() {
 
   if (loading) {
     return (
-      <main className="container shop-page-container">
-        <div className="muted">Loading shop...</div>
-      </main>
+      <>
+        <SEOHead 
+          title="Loading Shop"
+          description="Loading shop information..."
+        />
+        <main className="container shop-page-container">
+          {/* Shop Header Skeleton */}
+          <div className="shop-content-layout">
+            <div className="shop-left-column">
+              <section className="card shop-header">
+                <div className="shop-header-content">
+                  <div className="shop-info-section">
+                    <SkeletonAvatar size="200px" style={{ marginBottom: '1rem' }} />
+                    <div className="shop-details">
+                      <SkeletonText lines={1} height="2rem" style={{ marginBottom: '0.5rem' }} />
+                      <SkeletonText lines={2} height="1rem" style={{ marginBottom: '1rem' }} />
+                      
+                      <div className="shop-location-section">
+                        <SkeletonText lines={1} height="1.2rem" style={{ marginBottom: '0.5rem' }} />
+                        <SkeletonText lines={1} height="1rem" style={{ width: '80%' }} />
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                        <SkeletonButton width="120px" />
+                        <SkeletonButton width="120px" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+            
+            <div className="shop-right-column">
+              <SkeletonMap style={{ height: '300px', marginBottom: '1rem' }} />
+            </div>
+          </div>
+          
+          {/* Products Section Skeleton */}
+          <section className="card" style={{ marginTop: '2rem' }}>
+            <SkeletonText lines={1} height="1.5rem" style={{ marginBottom: '1rem' }} />
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '1rem'
+            }}>
+              {Array.from({ length: 6 }).map((_, index) => (
+                <SkeletonProductCard key={index} />
+              ))}
+            </div>
+          </section>
+        </main>
+      </>
     )
   }
 
   if (error) {
     return (
-      <main className="container shop-page-container">
-        <div style={{ 
-          backgroundColor: 'var(--error-bg)', 
-          color: 'var(--error)', 
-          padding: '0.75rem', 
-          borderRadius: '8px',
-          fontSize: '0.9rem'
-        }}>
-          {error}
-        </div>
-      </main>
+      <>
+        <SEOHead 
+          title="Error - LocalsLocalMarket"
+          description="We encountered an issue loading the shop. Please try again."
+        />
+        <main className="container shop-page-container">
+          <ErrorDisplay 
+            error={error}
+            title="Unable to Load Shop"
+          />
+        </main>
+      </>
     )
   }
 
@@ -726,8 +771,7 @@ export default function ShopPage() {
               >
                 {!mapLoaded && (
                   <div className="map-loading">
-                    <div className="map-loading-icon">📍</div>
-                    <div>Loading map...</div>
+                    <SkeletonMap style={{ height: '100%', borderRadius: '8px' }} />
                   </div>
                 )}
               </div>
@@ -803,22 +847,13 @@ export default function ShopPage() {
         {Array.isArray(products) && products.length > 0 && (
           <div className="search-sort-controls">
             <div className="search-container">
-              <input
-                type="text"
+              <OptimizedSearch
+                onSearch={setSearchQuery}
                 placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                debounceDelay={300}
+                minLength={2}
                 className="search-input"
               />
-              {searchQuery && (
-                <button 
-                  className="clear-search-btn"
-                  onClick={() => setSearchQuery('')}
-                  title="Clear search"
-                >
-                  ✕
-                </button>
-              )}
             </div>
             <div className="sort-container">
               <select 
@@ -837,7 +872,12 @@ export default function ShopPage() {
 
         {/* Category Filter */}
         {Array.isArray(products) && products.length > 0 && (() => {
-          const categories = [...new Set(products.map(p => p.category).filter(Boolean))];
+          const categories = [...new Set([
+            ...products.map(p => p.mainCategory).filter(Boolean),
+            ...products.map(p => p.subcategory).filter(Boolean),
+            ...products.map(p => p.customCategory).filter(Boolean),
+            ...products.map(p => p.category).filter(Boolean) // Backward compatibility
+          ])];
           if (categories.length > 1) {
             return (
               <div className="category-filter">
@@ -914,15 +954,12 @@ export default function ShopPage() {
                     if (imagePaths.length > 0) {
                       return (
                         <>
-                          <img 
+                          <OptimizedImage 
                             src={getImageUrl(imagePaths[0])} 
                             alt={product.title}
                             className="product-image"
+                            fallbackSrc="/placeholder-product.jpg"
                             loading="lazy"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'flex';
-                            }}
                           />
                           <div className="product-image-placeholder" style={{ display: 'none' }}>
                             📷
@@ -946,6 +983,13 @@ export default function ShopPage() {
                   {product.category && (
                     <div className="product-category">
                       <span className="category-tag">{product.category}</span>
+                    </div>
+                  )}
+                  {(product.mainCategory || product.subcategory || product.customCategory) && (
+                    <div className="product-category">
+                      <span className="category-tag">
+                        {product.customCategory || product.subcategory || product.mainCategory}
+                      </span>
                     </div>
                   )}
                                       <div className="product-stock">
@@ -1005,6 +1049,11 @@ export default function ShopPage() {
                       )}
                       {product.category && (
                         <span className="quick-view-category">{product.category}</span>
+                      )}
+                      {(product.mainCategory || product.subcategory || product.customCategory) && (
+                        <span className="quick-view-category">
+                          {product.customCategory || product.subcategory || product.mainCategory}
+                        </span>
                       )}
                       <div className="quick-view-stock">
                         {product.stockCount > 0 ? (
@@ -1118,15 +1167,26 @@ export default function ShopPage() {
             </div>
             <div>
               <label htmlFor="productCategory" className="muted form-label">
-                Category
+                Product Category
               </label>
-              <input
-                type="text"
-                id="productCategory"
-                className="input"
-                value={productForm.category}
-                onChange={(e) => setProductForm({...productForm, category: e.target.value})}
-                placeholder="e.g., Electronics, Food, Clothing"
+              <CategorySelector
+                value={{
+                  mainCategory: productForm.mainCategory,
+                  subcategory: productForm.subcategory,
+                  customCategory: productForm.customCategory
+                }}
+                onChange={(categoryData) => {
+                  setProductForm({
+                    ...productForm,
+                    mainCategory: categoryData.mainCategory || '',
+                    subcategory: categoryData.subcategory || '',
+                    customCategory: categoryData.customCategory || ''
+                  })
+                }}
+                placeholder="Select a category"
+                showSubcategories={true}
+                allowCustom={true}
+                required={false}
               />
             </div>
             <div>
@@ -1167,13 +1227,15 @@ export default function ShopPage() {
         onClose={() => {
           setShowEditProduct(false)
           setEditingProduct(null)
-          setProductForm({
-            title: '',
-            description: '',
-            price: '',
-            category: '',
-            stockCount: ''
-          })
+                          setProductForm({
+                  title: '',
+                  description: '',
+                  price: '',
+                  mainCategory: '',
+                  subcategory: '',
+                  customCategory: '',
+                  stockCount: ''
+                })
         }}
         title={`Edit Product - ${editingProduct?.title || ''}`}
         size="xlarge"
@@ -1225,15 +1287,26 @@ export default function ShopPage() {
             </div>
             <div>
               <label htmlFor="editProductCategory" className="muted form-label">
-                Category
+                Product Category
               </label>
-              <input
-                type="text"
-                id="editProductCategory"
-                className="input"
-                value={productForm.category}
-                onChange={(e) => setProductForm({...productForm, category: e.target.value})}
-                placeholder="e.g., Electronics, Food, Clothing"
+              <CategorySelector
+                value={{
+                  mainCategory: productForm.mainCategory,
+                  subcategory: productForm.subcategory,
+                  customCategory: productForm.customCategory
+                }}
+                onChange={(categoryData) => {
+                  setProductForm({
+                    ...productForm,
+                    mainCategory: categoryData.mainCategory || '',
+                    subcategory: categoryData.subcategory || '',
+                    customCategory: categoryData.customCategory || ''
+                  })
+                }}
+                placeholder="Select a category"
+                showSubcategories={true}
+                allowCustom={true}
+                required={false}
               />
             </div>
             <div>

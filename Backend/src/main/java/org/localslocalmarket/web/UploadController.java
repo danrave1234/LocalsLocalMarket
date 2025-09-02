@@ -8,6 +8,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.UUID;
 
+import org.localslocalmarket.security.AuditService;
+import org.localslocalmarket.security.AuthorizationService;
+import org.localslocalmarket.security.FileUploadSecurityService;
 import org.localslocalmarket.service.CloudStorageService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -29,33 +32,49 @@ public class UploadController {
     private final float outputQuality; // 0..1 for lossy encoders
     private final boolean webpLossless;
     private final CloudStorageService cloudStorageService;
+    private final FileUploadSecurityService fileUploadSecurityService;
+    private final AuthorizationService authorizationService;
+    private final AuditService auditService;
 
     public UploadController(@Value("${llm.uploads.dir}") String dir,
                             @Value("${llm.uploads.image.format}") String outputFormat,
                             @Value("${llm.uploads.image.quality}") float outputQuality,
                             @Value("${llm.uploads.webp.lossless}") boolean webpLossless,
-                            CloudStorageService cloudStorageService) throws IOException {
+                            CloudStorageService cloudStorageService,
+                            FileUploadSecurityService fileUploadSecurityService,
+                            AuthorizationService authorizationService,
+                            AuditService auditService) throws IOException {
         this.uploadRoot = Paths.get(dir).toAbsolutePath();
         this.outputFormat = (outputFormat == null || outputFormat.isBlank()) ? "webp" : outputFormat.toLowerCase();
         this.outputQuality = outputQuality;
         this.webpLossless = webpLossless;
         this.cloudStorageService = cloudStorageService;
+        this.fileUploadSecurityService = fileUploadSecurityService;
+        this.authorizationService = authorizationService;
+        this.auditService = auditService;
         Files.createDirectories(uploadRoot);
     }
 
-    @PostMapping(path = "/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        @PostMapping(path = "/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> upload(@RequestPart("file") MultipartFile file,
                                    @RequestParam(value = "type", defaultValue = "general") String type) throws IOException {
-        if(file.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", "Empty file"));
-        String ext = StringUtils.getFilenameExtension(file.getOriginalFilename());
-        String lower = ext==null? "" : ext.toLowerCase();
-        if(!(lower.equals("jpg") || lower.equals("jpeg") || lower.equals("png") || lower.equals("webp"))){
-            return ResponseEntity.badRequest().body(Map.of("error", "Only jpg/jpeg/png/webp allowed"));
-        }
-        if(file.getSize() > 2_000_000){
-            return ResponseEntity.badRequest().body(Map.of("error", "Max 2MB"));
+        // Get current user for security logging
+        String userId = authorizationService.getCurrentUserOrThrow().getId().toString();
+        
+        // Validate and secure the file upload
+        FileUploadSecurityService.FileValidationResult validation = 
+            fileUploadSecurityService.validateAndSecureFile(file, userId);
+        
+        if (!validation.isValid()) {
+            auditService.logSecurityEvent(AuditService.AuditEventType.SUSPICIOUS_ACTIVITY, 
+                userId, "File upload rejected: " + validation.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", validation.getMessage()));
         }
         
+        // Log successful validation
+        auditService.logSecurityEvent(AuditService.AuditEventType.SHOP_CREATE, 
+            userId, "File upload validated successfully: " + file.getOriginalFilename());
+    
         try {
             // Use Cloud Storage if enabled, otherwise fall back to local storage
             if (cloudStorageService.isEnabled()) {

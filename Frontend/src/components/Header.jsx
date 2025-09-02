@@ -66,7 +66,7 @@ export default function Header() {
           
           {token ? (
             <>
-              <Link to="/dashboard" className="nav-link">
+              <Link to={user?.role === 'ADMIN' ? "/admin" : "/dashboard"} className="nav-link">
                 <svg className="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect x="3" y="3" width="7" height="7" rx="1.5" fill="currentColor"/>
                   <rect x="14" y="3" width="7" height="7" rx="1.5" fill="currentColor"/>

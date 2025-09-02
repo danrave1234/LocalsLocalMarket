@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext.jsx'
+import { SkeletonPage } from '../components/Skeleton.jsx'
 
 export default function ProtectedRoute({ children }) {
   const { token, isLoading } = useAuth()
@@ -7,18 +8,7 @@ export default function ProtectedRoute({ children }) {
 
   // Show loading while checking authentication
   if (isLoading) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '1.1rem',
-        color: 'var(--muted)'
-      }}>
-        Loading...
-      </div>
-    )
+    return <SkeletonPage />
   }
 
   // Redirect to login if not authenticated

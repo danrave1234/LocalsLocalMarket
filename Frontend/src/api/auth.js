@@ -93,4 +93,30 @@ export async function changePasswordRequest({ currentPassword, newPassword }, to
   return response.json()
 }
 
+export async function forgotPasswordRequest({ email }) {
+  const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to process forgot password request')
+  }
+  return response.json()
+}
+
+export async function resetPasswordRequest({ token, password }) {
+  const response = await fetch(`${API_BASE}/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, password })
+  })
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.error || 'Failed to reset password')
+  }
+  return response.json()
+}
+
 

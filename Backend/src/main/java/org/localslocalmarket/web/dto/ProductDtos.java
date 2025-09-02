@@ -16,7 +16,10 @@ public class ProductDtos {
             @NotNull @DecimalMin(value = "0.0", inclusive = false) BigDecimal price,
             Integer stockCount,
             String imagePathsJson,
-            String category
+            String category, // Legacy field for backward compatibility
+            String mainCategory,
+            String subcategory,
+            String customCategory
     ){}
 
     // All fields optional for PATCH; isActive included for moderation
@@ -26,7 +29,10 @@ public class ProductDtos {
             BigDecimal price,
             Integer stockCount,
             String imagePathsJson,
-            String category,
+            String category, // Legacy field for backward compatibility
+            String mainCategory,
+            String subcategory,
+            String customCategory,
             Boolean isActive
     ){}
     
@@ -37,7 +43,10 @@ public class ProductDtos {
             BigDecimal price,
             Integer stockCount,
             String imagePathsJson,
-            String category,
+            String category, // Legacy field for backward compatibility
+            String mainCategory,
+            String subcategory,
+            String customCategory,
             Boolean isActive,
             java.time.Instant createdAt,
             Long shopId,
@@ -67,6 +76,9 @@ public class ProductDtos {
                 product.getStockCount(),
                 product.getImagePathsJson(),
                 product.getCategory(),
+                product.getMainCategory(),
+                product.getSubcategory(),
+                product.getCustomCategory(),
                 product.getIsActive(),
                 product.getCreatedAt(),
                 shopId,

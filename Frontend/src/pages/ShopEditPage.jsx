@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { fetchShopById, updateShopRequest, fetchCategories } from '../api/shops.js'
 import { fetchProductsByShopId, createProduct, updateProduct, deleteProduct, uploadImage, decrementProductStock } from '../api/products.js'
+import { SkeletonText, SkeletonForm } from '../components/Skeleton.jsx'
+import { handleApiError } from '../utils/errorHandler.js'
+import { LoadingButton } from '../components/Loading.jsx'
 
 export default function ShopEditPage(){
   const { id: slug } = useParams()
@@ -12,6 +15,7 @@ export default function ShopEditPage(){
   const [categories, setCategories] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [creatingProduct, setCreatingProduct] = useState(false)
 
   const [form, setForm] = useState({
     name: '', description: '', category: '', addressLine: '', phone: '', website: '', email: '',
@@ -34,7 +38,11 @@ export default function ShopEditPage(){
           lat: s.lat ?? '', lng: s.lng ?? '', logoPath: s.logoPath||'', coverPath: s.coverPath||'',
           adsEnabled: !!s.adsEnabled, adsImagePathsJson: s.adsImagePathsJson || '[]'
         })
-      }catch(e){ setError(e.message) }
+      }catch(e){ 
+        console.error('Failed to load shop:', e)
+        const errorInfo = handleApiError(e)
+        setError(errorInfo.message) 
+      }
     })()
   },[slug])
 
@@ -62,11 +70,22 @@ export default function ShopEditPage(){
       }
       await updateShopRequest(slug, payload, token)
       navigate(`/shops/${slug}`)
-    }catch(e){ setError(e.message||'Failed to save') }
+    }catch(e){ 
+      console.error('Failed to save shop:', e)
+      const errorInfo = handleApiError(e)
+      setError(errorInfo.message || 'Failed to save') 
+    }
     finally{ setSaving(false) }
   }
 
-  if(!shop) return <main className="container"><div className="muted">Loading...</div></main>
+  if(!shop) return (
+    <main className="container" style={{maxWidth: 900}}>
+      <SkeletonText lines={1} height="2rem" style={{ marginBottom: '1rem' }} />
+      <div className="card" style={{padding: 16}}>
+        <SkeletonForm fields={8} />
+      </div>
+    </main>
+  )
 
   return (
     <main className="container" style={{maxWidth: 900}}>
@@ -213,7 +232,14 @@ export default function ShopEditPage(){
 
         <div className="form-actions">
           <button type="button" className="btn" onClick={()=>navigate(-1)}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={saving}>{saving? 'Saving...':'Save Changes'}</button>
+          <LoadingButton 
+            type="submit" 
+            className="btn btn-primary" 
+            loading={saving}
+            loadingText="Saving..."
+          >
+            Save Changes
+          </LoadingButton>
         </div>
       </form>
 
@@ -377,7 +403,29 @@ function AdsManager({ form, setForm }){
           <input type="file" accept="image/*" style={{display:'none'}} onChange={async(e)=>{const f=e.target.files?.[0]; if(!f) return; setUploading(true); const path=await upload(f); const arr=[...images, path]; setForm({...form, adsImagePathsJson: JSON.stringify(arr)}); setUploading(false)}} />
         </label>
       </div>
-      {uploading && <div className="muted">Uploading...</div>}
+      {uploading && (
+        <div style={{ 
+          padding: '0.5rem', 
+          backgroundColor: 'var(--primary-bg)', 
+          borderRadius: '8px',
+          fontSize: '0.875rem',
+          color: 'var(--primary)',
+          marginBottom: '0.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <div style={{
+            width: '16px',
+            height: '16px',
+            border: '2px solid var(--primary)',
+            borderTop: '2px solid transparent',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+          Uploading...
+        </div>
+      )}
       <div style={{display:'flex', gap:8, flexWrap:'wrap', marginTop:8}}>
         {images.map((p, i)=> (
           <div key={i} className="card" style={{padding:4, position:'relative'}}>
@@ -408,7 +456,11 @@ function ProductManager({ shopId }){
       const data = await fetchProductsByShopId(shopId, token)
       const list = Array.isArray(data) ? data : (data.content||[])
       setProducts(list)
-    }catch(e){ setError(e.message)} finally{ setLoading(false)}
+    }catch(e){ 
+      console.error('Failed to load products:', e)
+      const errorInfo = handleApiError(e)
+      setError(errorInfo.message)
+    } finally{ setLoading(false)}
   }
   useEffect(()=>{ load() },[shopId])
 
@@ -419,11 +471,18 @@ function ProductManager({ shopId }){
   }
   const create = async()=>{
     try{
+      setCreatingProduct(true)
       const imagePathsJson = JSON.stringify(newItem.images)
       await createProduct({ shopId, title:newItem.title, description:newItem.description, price: Number(newItem.price), stockCount: newItem.stockCount===''? 0 : Number(newItem.stockCount), imagePathsJson, category: newItem.category }, token)
       setNewItem({ title:'', description:'', price:'', category:'', images: [] })
       await load()
-    }catch(e){ setError(e.message) }
+    }catch(e){ 
+      console.error('Failed to create product:', e)
+      const errorInfo = handleApiError(e)
+      setError(errorInfo.message) 
+    } finally {
+      setCreatingProduct(false)
+    }
   }
   const update = async(p, patch)=>{
     try{
@@ -431,13 +490,21 @@ function ProductManager({ shopId }){
       const body = { title: merged.title, description: merged.description, price: merged.price, imagePathsJson: merged.imagePathsJson, category: merged.category }
       await updateProduct(p.id, body, token)
       await load()
-    }catch(e){ setError(e.message) }
+    }catch(e){ 
+      console.error('Failed to update product:', e)
+      const errorInfo = handleApiError(e)
+      setError(errorInfo.message) 
+    }
   }
   const remove = async(id)=>{
     try{
       await deleteProduct(id, token)
       await load()
-    }catch(e){ setError(e.message) }
+    }catch(e){ 
+      console.error('Failed to delete product:', e)
+      const errorInfo = handleApiError(e)
+      setError(errorInfo.message) 
+    }
   }
 
   return (
@@ -462,11 +529,28 @@ function ProductManager({ shopId }){
         </div>
       </div>
       <div className="form-actions">
-        <button className="btn btn-primary" onClick={create}>Add Product</button>
+        <LoadingButton 
+          className="btn btn-primary" 
+          onClick={create}
+          loading={creatingProduct}
+          loadingText="Adding..."
+        >
+          Add Product
+        </LoadingButton>
       </div>
 
       <h4>Existing Products</h4>
-      {loading ? <div className="muted">Loading...</div> : (
+      {loading ? (
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="card" style={{ padding: '1rem' }}>
+              <SkeletonText lines={1} height="1.2rem" style={{ marginBottom: '0.5rem' }} />
+              <SkeletonText lines={2} height="0.875rem" style={{ marginBottom: '0.5rem' }} />
+              <SkeletonText lines={1} height="1rem" style={{ width: '30%' }} />
+            </div>
+          ))}
+        </div>
+      ) : (
         products.length===0 ? <div className="muted">No products yet.</div> : (
           <div style={{display:'grid', gap:12}}>
             {products.map(p=> (

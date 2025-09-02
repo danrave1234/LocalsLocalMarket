@@ -1,0 +1,540 @@
+/* Landing Page Specific Styles with Scoped Variables */
+
+/* Landing Page CSS Variables */
+.landing-page-container {
+  --landing-bg: #0a0b0f;
+  --landing-surface: #12141a;
+  --landing-card: #1a1d26;
+  --landing-card-2: #1f2330;
+  --landing-border: #2a2f3e;
+  --landing-text: #f8fafc;
+  --landing-muted: #94a3b8;
+  --landing-accent: #6366f1;
+  --landing-accent-2: #4f46e5;
+  --landing-accent-hover: #5b21b6;
+  --landing-primary: #6366f1;
+  --landing-primary-bg: rgba(99, 102, 241, 0.1);
+  --landing-error: #ef4444;
+  --landing-error-bg: rgba(239, 68, 68, 0.1);
+  --landing-success: #10b981;
+  --landing-success-bg: rgba(16, 185, 129, 0.1);
+  --landing-warning: #f59e0b;
+  --landing-warning-bg: rgba(245, 158, 11, 0.1);
+}
+
+/* Landing Page Layout */
+.landing-page-container {
+  background: var(--landing-bg);
+  color: var(--landing-text);
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+/* Shop Cards Grid - Fix max width issue */
+.landing-page-container .shops-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  max-width: 100%;
+}
+
+.landing-page-container .shops-grid .card {
+  max-width: 400px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Ensure cards don't stretch too wide when there are few items */
+@media (min-width: 1200px) {
+  .landing-page-container .shops-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 350px));
+    justify-content: start;
+  }
+}
+
+/* Tablet-friendly grid: 2 columns for medium widths */
+@media (max-width: 1100px) {
+  .landing-page-container .shops-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.875rem;
+  }
+}
+
+/* iPad Pro portrait: fit three smaller cards */
+@media (max-width: 1100px) and (min-width: 993px) {
+  .landing-page-container .shops-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+  .landing-page-container .shops-grid .card {
+    max-width: 100%;
+  }
+}
+
+/* Phones: single column */
+@media (max-width: 700px) {
+  .landing-page-container .shops-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* iPad / medium tablets: compact cards */
+@media (max-width: 1200px) and (min-width: 993px) {
+  .landing-page-container .shops-grid .card {
+    max-width: 360px;
+  }
+  /* Reduce top image height */
+  .landing-page-container .shops-grid .card > div:first-child {
+    height: 100px !important;
+  }
+  /* Tighten card content */
+  .landing-page-container .shops-grid .card h3 {
+    font-size: 0.9rem !important;
+  }
+  .landing-page-container .shops-grid .pill {
+    font-size: 0.68rem !important;
+    padding: 0.18rem 0.4rem !important;
+  }
+  .landing-page-container .btn.btn-primary {
+    padding: 0.45rem 0.75rem !important;
+    font-size: 0.78rem !important;
+    border-radius: 8px !important;
+  }
+}
+
+.landing-page-container .container {
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+}
+
+/* Landing Page Utility Classes */
+.landing-page-container .muted {
+  color: var(--landing-muted);
+  font-size: 0.875rem;
+}
+
+/* Landing Page Enhanced Pill/Tag Styles */
+.landing-page-container .pill {
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--landing-border);
+  background: rgba(168, 85, 247, 0.1);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--landing-accent);
+  transition: all 0.2s ease;
+}
+
+.landing-page-container .pill:hover {
+  background: rgba(168, 85, 247, 0.2);
+  border-color: var(--landing-accent);
+}
+
+/* Landing Page Enhanced Input Styles */
+.landing-page-container .input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--landing-border);
+  background: var(--landing-surface);
+  color: var(--landing-text);
+  font-size: 0.875rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.landing-page-container .input:focus {
+  outline: none;
+  border-color: var(--landing-accent);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+.landing-page-container .input::placeholder {
+  color: var(--landing-muted);
+}
+
+/* Landing Page Auto-filled Input Styles */
+.landing-page-container .input-auto-filled {
+  background-color: var(--landing-surface) !important;
+  color: var(--landing-text) !important;
+}
+
+.landing-page-container .input-not-filled {
+  background-color: var(--landing-card-2) !important;
+  color: var(--landing-muted) !important;
+}
+
+/* Landing Page Location Selector */
+.landing-page-container .location-selector {
+  background: linear-gradient(135deg, var(--landing-card) 0%, var(--landing-card-2) 100%);
+  border: 1px solid var(--landing-border);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.landing-page-container .location-selector:hover {
+  border-color: var(--landing-accent);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Landing Page Shop Card Image Placeholder */
+.landing-page-container .shop-image-placeholder {
+  background: linear-gradient(135deg, var(--landing-surface) 0%, var(--landing-card) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-page-container .shop-image-placeholder::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 30%, rgba(168, 85, 247, 0.1) 50%, transparent 70%);
+  animation: landing-shimmer 2s infinite;
+}
+
+@keyframes landing-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Landing Page Map Styles */
+.landing-page-container .map-sticky-container {
+  z-index: 10;
+  background: var(--landing-bg);
+}
+
+.landing-page-container .map-controls {
+  z-index: 1000;
+  position: relative;
+}
+
+.landing-page-container .map-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: white;
+  z-index: 1000;
+}
+
+.landing-page-container .map-current-location-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: var(--landing-primary);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  transition: all 0.2s ease;
+}
+
+.landing-page-container .map-current-location-btn:hover {
+  background-color: var(--landing-accent);
+  transform: scale(1.05);
+}
+
+/* Landing Page Location Status */
+.landing-page-container .location-status {
+  padding: 0.75rem;
+  background-color: var(--landing-primary-bg);
+  border-radius: 8px;
+  border: 1px solid var(--landing-primary);
+  font-size: 0.875rem;
+  margin-top: 1rem;
+}
+
+.landing-page-container .location-status-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.landing-page-container .location-status-title {
+  font-weight: 500;
+  color: var(--landing-primary);
+}
+
+.landing-page-container .location-status-coordinates {
+  color: var(--landing-muted);
+  font-size: 0.8rem;
+}
+
+/* Landing Page Map Error Styles */
+.landing-page-container .map-error {
+  padding: 2rem;
+  text-align: center;
+  background-color: var(--landing-error-bg);
+  border-radius: 8px;
+  color: var(--landing-error);
+}
+
+.landing-page-container .map-error-icon {
+  margin-bottom: 1rem;
+  font-size: 2rem;
+}
+
+/* Landing Page Button Styles */
+.landing-page-container .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--landing-surface);
+  color: var(--landing-text);
+  box-sizing: border-box;
+}
+
+.landing-page-container .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.landing-page-container .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.landing-page-container .btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+}
+
+.landing-page-container .btn-primary {
+  background: linear-gradient(135deg, var(--landing-accent) 0%, var(--landing-accent-2) 100%);
+  border-color: var(--landing-accent);
+  color: white;
+}
+
+.landing-page-container .btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--landing-accent-2) 0%, var(--landing-accent-hover) 100%);
+  border-color: var(--landing-accent-2);
+}
+
+.landing-page-container .btn-secondary {
+  background: var(--landing-surface);
+  border-color: var(--landing-border);
+  color: var(--landing-text);
+}
+
+.landing-page-container .btn-secondary:hover:not(:disabled) {
+  background: var(--landing-card);
+  border-color: var(--landing-accent);
+  color: var(--landing-accent);
+}
+
+.landing-page-container .btn-danger {
+  background: var(--landing-error-bg);
+  border-color: var(--landing-error);
+  color: var(--landing-error);
+}
+
+.landing-page-container .btn-danger:hover:not(:disabled) {
+  background: var(--landing-error);
+  color: white;
+}
+
+/* Landing Page Responsive Design */
+@media (max-width: 768px) {
+  .landing-page-container .container {
+    padding: 1rem;
+  }
+}
+
+/* Responsive layout for list + map */
+.landing-page-container .landing-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.landing-page-container .landing-layout.expanded {
+  grid-template-columns: 1fr 2fr;
+}
+
+/* 14" screens (~1366px width) and below: tighten spacing */
+@media (max-width: 1400px) {
+  .landing-page-container .landing-layout {
+    gap: 1.5rem;
+  }
+}
+
+/* Large tablets/smaller laptops */
+@media (max-width: 1200px) {
+  .landing-page-container .landing-layout,
+  .landing-page-container .landing-layout.expanded {
+    grid-template-columns: 2fr 1fr; /* maintain map at right like desktop */
+  }
+}
+
+/* Stack on narrower tablets and phones */
+@media (max-width: 900px) {
+  .landing-page-container .landing-layout,
+  .landing-page-container .landing-layout.expanded {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-page-container .map-sticky-container {
+    position: relative !important;
+    top: auto !important;
+    height: 380px !important;
+    min-height: 320px !important;
+    margin-top: 1rem;
+  }
+}
+
+/* Small phones */
+@media (max-width: 600px) {
+  .landing-page-container {
+    padding: 0.75rem;
+  }
+  .landing-page-container .shops-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 0.75rem;
+  }
+  .landing-page-container .map-sticky-container {
+    height: 320px !important;
+    min-height: 280px !important;
+  }
+}
+
+/* Floating map button on mobile */
+.floating-map-btn {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  width: 56px; /* Increased from 52px for better touch target */
+  height: 56px;
+  border-radius: 16px; /* Increased radius for modern mobile look */
+  border: 1px solid var(--landing-border);
+  background: linear-gradient(135deg, var(--landing-card) 0%, var(--landing-card-2) 100%);
+  color: var(--landing-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0,0,0,.3));
+  z-index: 1200;
+  /* Mobile touch optimizations */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s ease;
+}
+
+.floating-map-btn:hover {
+  border-color: var(--landing-accent);
+}
+
+/* Show button only under 1060px */
+@media (min-width: 1061px) {
+  .floating-map-btn { display: none; }
+}
+
+.map-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1300;
+  padding: 1rem;
+}
+
+.map-modal {
+  width: min(720px, 100%);
+  height: min(70vh, 520px);
+  background: var(--landing-bg);
+  border: 1px solid var(--landing-border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--landing-border);
+}
+
+.map-modal-close {
+  background: none;
+  border: none;
+  color: var(--landing-muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.map-modal-body {
+  flex: 1;
+  padding: 0.75rem;
+}
+
+/* Mobile-optimized map popups */
+.mobile-popup .leaflet-popup-content-wrapper {
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+}
+
+.mobile-popup .leaflet-popup-content {
+  margin: 0.75rem !important;
+  font-size: 0.9rem !important;
+  line-height: 1.4 !important;
+}
+
+.mobile-popup .leaflet-popup-tip {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+}
+
+/* Mobile map controls optimization */
+@media (max-width: 900px) {
+  .map-controls button {
+    /* Ensure minimum touch target size on mobile */
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  
+  /* Mobile map tip positioning */
+  .map-tip {
+    bottom: 0.5rem !important;
+    left: 0.5rem !important;
+    right: 0.5rem !important;
+    font-size: 0.8rem !important;
+    padding: 0.5rem !important;
+  }
+}
