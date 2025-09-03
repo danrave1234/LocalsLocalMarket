@@ -62,6 +62,10 @@ public class Shop {
     @Column(nullable = false)
     private Boolean adsEnabled = false;
 
+    // Business Hours - JSON string to store schedule for each day
+    @Column(columnDefinition = "TEXT")
+    private String businessHoursJson;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -134,6 +138,8 @@ public class Shop {
     public String getAdsImagePathsJson() { return adsImagePathsJson; }
     public Boolean getAdsEnabled() { return adsEnabled; }
 
+    public String getBusinessHoursJson() { return businessHoursJson; }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -156,6 +162,7 @@ public class Shop {
     public void setTwitter(String twitter) { this.twitter = twitter; }
     public void setAdsImagePathsJson(String adsImagePathsJson) { this.adsImagePathsJson = adsImagePathsJson; }
     public void setAdsEnabled(Boolean adsEnabled) { this.adsEnabled = adsEnabled; }
+    public void setBusinessHoursJson(String businessHoursJson) { this.businessHoursJson = businessHoursJson; }
 
     @PrePersist
     void prePersist(){

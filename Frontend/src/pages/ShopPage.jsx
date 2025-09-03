@@ -25,6 +25,7 @@ import { useScroll } from '../hooks/useEvents.js'
 import { useClipboard } from '../hooks/useStorage.js'
 import { useLocalStorage } from '../hooks/useStorage.js'
 import './ShopPage.css'
+import { Clock } from 'lucide-react'
 
 export default function ShopPage() {
   const { id: slug } = useParams()
@@ -55,14 +56,16 @@ export default function ShopPage() {
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [copiedText, setCopiedText] = useState('')
   const [showBusinessHours, setShowBusinessHours] = useState(false)
+  const [showMobileSocials, setShowMobileSocials] = useState(false)
+  const [showFloatingMap, setShowFloatingMap] = useState(false)
   const [businessHours, setBusinessHours] = useState({
-    monday: { open: '09:00', close: '18:00', closed: false },
-    tuesday: { open: '09:00', close: '18:00', closed: false },
-    wednesday: { open: '09:00', close: '18:00', closed: false },
-    thursday: { open: '09:00', close: '18:00', closed: false },
-    friday: { open: '09:00', close: '18:00', closed: false },
-    saturday: { open: '10:00', close: '16:00', closed: false },
-    sunday: { open: '10:00', close: '16:00', closed: true }
+    monday: { open: '9:00 AM', close: '6:00 PM', closed: false },
+    tuesday: { open: '9:00 AM', close: '6:00 PM', closed: false },
+    wednesday: { open: '9:00 AM', close: '6:00 PM', closed: false },
+    thursday: { open: '9:00 AM', close: '6:00 PM', closed: false },
+    friday: { open: '9:00 AM', close: '6:00 PM', closed: false },
+    saturday: { open: '10:00 AM', close: '4:00 PM', closed: false },
+    sunday: { open: '10:00 AM', close: '4:00 PM', closed: true }
   })
 
   // Optimized hooks
@@ -70,6 +73,56 @@ export default function ShopPage() {
   const { isScrolled } = useScroll(300)
   const { copyToClipboard } = useClipboard()
   const [recentlyViewedShops, setRecentlyViewedShops] = useLocalStorage('recentlyViewedShops', [])
+
+  // Floating map scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY
+      const mapElement = document.getElementById('shop-map')
+      if (mapElement) {
+        const mapRect = mapElement.getBoundingClientRect()
+        const isMapOutOfView = mapRect.bottom < 0
+        setShowFloatingMap(isMapOutOfView)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Initialize floating map when it appears
+  useEffect(() => {
+    if (showFloatingMap && shop && mapLoaded) {
+      const initializeFloatingMap = async () => {
+        if (typeof window.L === 'undefined') return
+        
+        try {
+          // Remove existing map if any
+          const existingMap = document.getElementById('floating-shop-map')
+          if (existingMap._leaflet_id) {
+            window.L.map(existingMap).remove()
+          }
+          
+          // Initialize new floating map
+          const floatingMap = window.L.map('floating-shop-map').setView([shop.lat, shop.lng], 15)
+          
+          window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+          }).addTo(floatingMap)
+
+          // Add shop marker
+          window.L.marker([shop.lat, shop.lng])
+            .addTo(floatingMap)
+            .bindPopup(shop.name)
+        } catch (error) {
+          console.error('Failed to initialize floating map:', error)
+        }
+      }
+
+      // Small delay to ensure DOM is ready
+      setTimeout(initializeFloatingMap, 100)
+    }
+  }, [showFloatingMap, shop, mapLoaded])
 
   // Debug logging for image paths
 
@@ -131,7 +184,6 @@ export default function ShopPage() {
     const now = new Date()
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
     const currentDay = days[now.getDay()]
-    const currentTime = now.toTimeString().slice(0, 5)
     
     const dayKey = currentDay
     const hours = businessHours[dayKey]
@@ -139,7 +191,27 @@ export default function ShopPage() {
     if (!hours || hours.closed) return false
     
     const { open, close } = hours
-    return currentTime >= open && currentTime <= close
+    
+    // Convert 12-hour format to 24-hour for comparison
+    const convertTo24Hour = (timeStr) => {
+      const [time, ampm] = timeStr.split(' ')
+      const [hour, minute] = time.split(':')
+      let hour24 = parseInt(hour)
+      
+      if (ampm === 'PM' && hour24 !== 12) {
+        hour24 += 12
+      } else if (ampm === 'AM' && hour24 === 12) {
+        hour24 = 0
+      }
+      
+      return `${hour24.toString().padStart(2, '0')}:${minute}`
+    }
+    
+    const currentTime = now.toTimeString().slice(0, 5)
+    const open24 = convertTo24Hour(open)
+    const close24 = convertTo24Hour(close)
+    
+    return currentTime >= open24 && currentTime <= close24
   }, [businessHours])
 
   // Scroll handler for back to top button - now using optimized hook
@@ -169,6 +241,23 @@ export default function ShopPage() {
         // Handle both array and paginated response
         const productsData = Array.isArray(productsResponse) ? productsResponse : (productsResponse.content || [])
         setProducts(productsData)
+        
+        // Load business hours from shop data
+        if (shopData.businessHoursJson && shopData.businessHoursJson.trim() !== '') {
+          try {
+            console.log('ShopPage - Raw business hours from backend:', shopData.businessHoursJson)
+            const parsedHours = JSON.parse(shopData.businessHoursJson)
+            console.log('ShopPage - Parsed business hours:', parsedHours)
+            setBusinessHours(parsedHours)
+          } catch (error) {
+            console.error('Failed to parse business hours:', error)
+            console.log('ShopPage - Using default business hours due to parsing error')
+          }
+        } else {
+          console.log('ShopPage - No business hours data from backend, using defaults')
+          console.log('ShopPage - businessHoursJson value:', shopData.businessHoursJson)
+          console.log('ShopPage - This shop needs to be updated with business hours')
+        }
       } catch (e) {
         console.error('Failed to load shop data:', e)
         const errorInfo = handleApiError(e)
@@ -612,8 +701,66 @@ export default function ShopPage() {
 
                 </div>
               </div>
-                {/* Social Sharing Section */}
-                <div className="social-sharing-section">
+                {/* Mobile Social Actions Dropdown */}
+                <div className="mobile-social-dropdown">
+                  <button 
+                    className="mobile-dropdown-toggle"
+                    onClick={() => setShowMobileSocials(!showMobileSocials)}
+                  >
+                    <span>Social & Contact</span>
+                    <span className={`dropdown-arrow ${showMobileSocials ? 'rotated' : ''}`}>▼</span>
+                  </button>
+                  {showMobileSocials && (
+                    <div className="mobile-dropdown-content">
+                      <div className="mobile-social-section">
+                        <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>Share This Shop</h3>
+                        <p className="muted" style={{ marginBottom: '0.75rem', fontSize: '0.875rem' }}>
+                          Help others discover {shop.name}
+                        </p>
+                        <SocialSharing
+                          title={`${shop.name} - Local Shop`}
+                          description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products and support local businesses.`}
+                          url={`https://localslocalmarket.com/shops/${shop.id}`}
+                          image={getImageUrl(shop.coverPath)}
+                        />
+                      </div>
+                      {shop.phone && (
+                        <div className="mobile-contact-section">
+                          <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>Contact Info</h3>
+                          <div className="mobile-contact-buttons">
+                            <button 
+                              className="contact-btn phone-btn"
+                              onClick={() => handleCopyToClipboard(shop.phone, 'Phone number copied!')}
+                            >
+                              📞 {shop.phone}
+                            </button>
+                            {shop.email && (
+                              <button 
+                                className="contact-btn email-btn"
+                                onClick={() => handleCopyToClipboard(shop.email, 'Email copied!')}
+                              >
+                                ✉️ {shop.email}
+                              </button>
+                            )}
+                            {shop.website && (
+                              <a 
+                                href={shop.website} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="contact-btn website-btn"
+                              >
+                                🌐 Visit Website
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop Social Sharing Section */}
+                <div className="desktop-social-sharing-section">
                     <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>Share This Shop</h3>
                     <p className="muted" style={{ marginBottom: '0.75rem', fontSize: '0.875rem' }}>
                         Help others discover {shop.name}
@@ -775,38 +922,39 @@ export default function ShopPage() {
                   </div>
                 )}
               </div>
-              
-              {/* Business Hours Dropdown */}
-              <div className="business-hours-dropdown">
-                <button 
-                  className="hours-toggle-btn"
-                  onClick={() => setShowBusinessHours(!showBusinessHours)}
-                >
-                  <span className="hours-icon">🕒</span>
-                  <span className="hours-label">Business Hours</span>
-                  <div className={`status-indicator ${isShopOpen() ? 'open' : 'closed'}`}>
-                    {isShopOpen() ? 'Open' : 'Closed'}
-                  </div>
-                  <span className="dropdown-arrow">{showBusinessHours ? '▲' : '▼'}</span>
-                </button>
-                
-                {showBusinessHours && (
-                  <div className="hours-dropdown-content">
-                    <div className="hours-grid">
-                      {Object.entries(businessHours).map(([day, hours]) => (
-                        <div key={day} className="hours-row">
-                          <span className="day-name">{day.charAt(0).toUpperCase() + day.slice(1)}</span>
-                          <span className="hours-time">
-                            {hours.closed ? 'Closed' : `${hours.open} - ${hours.close}`}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
             </section>
           )}
+          
+          {/* Business Hours Dropdown - Moved outside shop map section */}
+          <div className="business-hours-dropdown">
+            <button 
+              className="hours-toggle-btn"
+              onClick={() => setShowBusinessHours(!showBusinessHours)}
+            >
+              <Clock className="hours-icon" size={16} />
+              <span className="hours-label">Business Hours</span>
+              <div className={`status-indicator ${isShopOpen() ? 'open' : 'closed'}`}>
+                {isShopOpen() ? 'Open' : 'Closed'}
+              </div>
+              <span className="dropdown-arrow">{showBusinessHours ? '▲' : '▼'}</span>
+            </button>
+            
+            {/* Conditional dropdown - now properly positioned */}
+            {showBusinessHours && (
+              <div className="hours-dropdown-content">
+                <div className="hours-grid">
+                  {Object.entries(businessHours).map(([day, hours]) => (
+                    <div key={day} className="hours-row">
+                      <span className="day-name">{day.charAt(0).toUpperCase() + day.slice(1)}</span>
+                      <span className="hours-time">
+                        {hours.closed ? 'Closed' : `${hours.open} - ${hours.close}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1350,6 +1498,24 @@ export default function ShopPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Floating Map */}
+      {showFloatingMap && (
+        <div className="floating-map">
+          <div className="floating-map-header">
+            <span>📍 {shop.name}</span>
+            <button 
+              className="floating-map-close"
+              onClick={() => setShowFloatingMap(false)}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="floating-map-content">
+            <div id="floating-shop-map"></div>
+          </div>
+        </div>
+      )}
 
       {/* Back to Top Button */}
       {showBackToTop && (

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useDebounce } from '../hooks/useDebounce.js'
 import './OptimizedSearch.css'
 
@@ -35,7 +35,7 @@ const OptimizedSearch = ({
   }, [onSearch, minLength])
 
   // Effect to trigger search when debounced term changes
-  React.useEffect(() => {
+  useEffect(() => {
     handleSearch(debouncedSearchTerm)
   }, [debouncedSearchTerm, handleSearch])
 

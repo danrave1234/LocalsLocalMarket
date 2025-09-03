@@ -1,4 +1,4 @@
-/* ShopPage Responsive Styles */
+/* ShopPage Mobile-First Responsive Styles */
 
 .shop-page-container {
   padding: 0.5rem;
@@ -10,6 +10,214 @@
     padding: 1rem 2rem;
     text-align: left;
   }
+}
+
+/* Mobile Social Dropdown */
+.mobile-social-dropdown {
+  display: block;
+  margin: 1rem 0;
+}
+
+@media (min-width: 768px) {
+  .mobile-social-dropdown {
+    display: none;
+  }
+}
+
+.mobile-dropdown-toggle {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.mobile-dropdown-toggle:hover {
+  background: var(--card);
+  border-color: var(--accent);
+}
+
+.dropdown-arrow {
+  transition: transform 0.2s ease;
+}
+
+.dropdown-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.mobile-dropdown-content {
+  margin-top: 0.5rem;
+  padding: 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mobile-social-section,
+.mobile-contact-section {
+  margin-bottom: 1rem;
+}
+
+.mobile-contact-section:last-child {
+  margin-bottom: 0;
+}
+
+.mobile-contact-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contact-btn {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  text-align: center;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.contact-btn:hover {
+  background: var(--card);
+  border-color: var(--accent);
+}
+
+.phone-btn:hover {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
+}
+
+.email-btn:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+}
+
+.website-btn:hover {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: #a855f7;
+}
+
+/* Desktop Social Section */
+.desktop-social-sharing-section {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .desktop-social-sharing-section {
+    display: block;
+  }
+}
+
+/* Floating Map */
+.floating-map {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  width: 280px;
+  height: 200px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
+}
+
+@media (max-width: 480px) {
+  .floating-map {
+    bottom: 0.75rem;
+    right: 0.75rem;
+    width: 260px;
+    height: 180px;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.floating-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px 12px 0 0;
+  height: 50px;
+}
+
+.floating-map-header span {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.floating-map-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  min-width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.floating-map-close:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+.floating-map-content {
+  padding: 0.5rem;
+  height: calc(100% - 60px); /* Subtract header height */
+}
+
+.floating-map-content #floating-shop-map {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
 }
 
 /* Shop Cover Section */
@@ -96,6 +304,59 @@
     flex-direction: row;
     align-items: flex-start;
     gap: 2rem;
+  }
+}
+
+/* Mobile Shop Info Layout */
+.shop-info-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .shop-info-section {
+    flex-direction: row;
+    align-items: flex-start;
+    text-align: left;
+    gap: 1.5rem;
+  }
+}
+
+.shop-logo-container {
+  flex-shrink: 0;
+}
+
+.shop-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: var(--text);
+}
+
+@media (min-width: 768px) {
+  .shop-name {
+    font-size: 2rem;
+  }
+}
+
+.shop-tagline {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 0 0 1rem 0;
+  line-height: 1.4;
+}
+
+@media (min-width: 768px) {
+  .shop-tagline {
+    font-size: 1rem;
   }
 }
 
@@ -1051,9 +1312,54 @@
   background: var(--card-2);
   border-radius: 8px;
   border: 1px solid var(--border);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 10;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 999999 !important;
   animation: slideDown 0.2s ease-out;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+/* Ensure dropdown maintains z-index on hover */
+.hours-dropdown-content:hover {
+  z-index: 999999 !important;
+}
+
+/* Ensure all child elements maintain the high z-index */
+.hours-dropdown-content * {
+  z-index: 999999 !important;
+}
+
+/* Ensure the dropdown container maintains z-index */
+.business-hours-dropdown:hover .hours-dropdown-content {
+  z-index: 999999 !important;
+}
+
+/* Additional z-index protection */
+.hours-dropdown-content,
+.hours-dropdown-content:hover,
+.hours-dropdown-content:focus,
+.hours-dropdown-content:active {
+  z-index: 999999 !important;
+  position: absolute !important;
+}
+
+/* Maximum z-index protection for all states */
+.hours-dropdown-content,
+.hours-dropdown-content:hover,
+.hours-dropdown-content:focus,
+.hours-dropdown-content:active,
+.hours-dropdown-content:visited,
+.hours-dropdown-content:link {
+  z-index: 999999 !important;
+  position: absolute !important;
+}
+
+/* Force highest z-index for any element inside the dropdown */
+.hours-dropdown-content *,
+.hours-dropdown-content *:hover,
+.hours-dropdown-content *:focus,
+.hours-dropdown-content *:active {
+  z-index: 999999 !important;
 }
 
 @keyframes slideDown {
@@ -1420,4 +1726,97 @@
   .submit-btn {
     width: auto;
   }
+}
+
+/* Mobile Products Layout */
+@media (max-width: 768px) {
+  .products-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .add-another-product-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .search-sort-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .search-container,
+  .sort-container {
+    width: 100%;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .sort-select {
+    width: 100%;
+    padding: 0.75rem;
+  }
+  
+  .category-filter {
+    margin-top: 1rem;
+  }
+  
+  .category-buttons {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+  
+  .category-btn {
+    flex: 1 1 auto;
+    min-width: 120px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  .products-grid-full-width {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .products-header h3 {
+    font-size: 1.25rem;
+  }
+  
+  .products-header .muted {
+    font-size: 0.8rem;
+  }
+  
+  .category-btn {
+    min-width: 100px;
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+  }
+  
+  .back-to-top-btn {
+    bottom: 1rem;
+    right: 1rem;
+    width: 45px;
+    height: 45px;
+    font-size: 1.25rem;
+  }
+}
+
+/* Business Hours Section */
+.business-hours-section {
+  margin-top: 1rem;
+  overflow: visible;
+}
+
+/* Business Hours Dropdown */
+.business-hours-dropdown {
+  position: relative;
+  z-index: 1000;
+  overflow: visible;
 }

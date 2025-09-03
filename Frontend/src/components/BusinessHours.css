@@ -1,0 +1,494 @@
+.business-hours-editor {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.business-hours-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.business-hours-icon {
+  color: var(--accent);
+  background: var(--accent-bg);
+  padding: 0.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+  flex-shrink: 0;
+}
+
+.header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.business-hours-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.025em;
+}
+
+.business-hours-subtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.business-hours-grid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.business-hours-day {
+  background: var(--background);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.business-hours-day::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-light));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.business-hours-day.open::before {
+  opacity: 1;
+}
+
+.business-hours-day.closed::before {
+  background: linear-gradient(90deg, var(--error), var(--error-light));
+  opacity: 1;
+}
+
+.business-hours-day:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
+  transform: translateY(-1px);
+}
+
+.business-hours-day.closed:hover {
+  border-color: var(--error);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.15);
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.day-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.day-icon {
+  font-size: 1rem;
+  filter: grayscale(0.3);
+  transition: filter 0.3s ease;
+  flex-shrink: 0;
+}
+
+.business-hours-day.open .day-icon {
+  filter: grayscale(0);
+}
+
+.day-name {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 0.875rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.day-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  padding: 0.375rem 0.75rem;
+  background: var(--card);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.day-toggle:hover {
+  background: var(--card-2);
+  border-color: var(--accent);
+}
+
+.day-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  margin: 0;
+}
+
+.toggle-label {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.time-inputs {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-left: 0;
+  width: 100%;
+}
+
+.time-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.time-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.time-label svg {
+  color: var(--accent);
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+/* 12-hour time input styles */
+.time-input-12h {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.time-input-12h:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 2px 12px rgba(99, 102, 241, 0.15);
+  transform: translateY(-1px);
+}
+
+.time-input-hour,
+.time-input-minute {
+  width: 3rem;
+  padding: 0.375rem;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.time-input-hour:focus,
+.time-input-minute:focus {
+  background: var(--accent-bg);
+}
+
+.time-separator {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 1rem;
+  user-select: none;
+  margin: 0 0.125rem;
+  flex-shrink: 0;
+}
+
+.time-input-ampm {
+  padding: 0.375rem 0.5rem;
+  border: none;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  min-width: 3.5rem;
+  flex-shrink: 0;
+}
+
+.time-input-ampm:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.time-input-ampm:focus {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.time-input-ampm option {
+  background: var(--card);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.closed-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 0;
+  padding: 0.75rem 1rem;
+  background: var(--error-bg);
+  color: var(--error);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid var(--error-border);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.closed-indicator svg {
+  color: var(--error);
+  flex-shrink: 0;
+}
+
+.business-hours-help {
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--accent-bg), var(--accent-bg-light));
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  margin-top: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.help-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.help-content svg {
+  color: var(--accent);
+  margin-top: 0.125rem;
+  flex-shrink: 0;
+}
+
+.help-title {
+  margin: 0 0 0.375rem 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--accent-text);
+}
+
+.help-text {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--accent-text);
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .business-hours-editor {
+    padding: 1rem;
+    margin: 0;
+    border-radius: 12px;
+  }
+  
+  .business-hours-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
+  .business-hours-title {
+    font-size: 1.125rem;
+  }
+  
+  .business-hours-subtitle {
+    font-size: 0.75rem;
+  }
+  
+  .time-inputs {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .business-hours-day {
+    padding: 1rem;
+  }
+  
+  .day-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .time-input-12h {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    padding: 0.375rem;
+  }
+  
+  .time-input-hour,
+  .time-input-minute {
+    width: 2.75rem;
+    font-size: 0.75rem;
+    padding: 0.25rem;
+  }
+  
+  .time-input-ampm {
+    min-width: 3rem;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.375rem;
+  }
+  
+  .time-separator {
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .business-hours-editor {
+    padding: 0.75rem;
+    border-radius: 8px;
+  }
+  
+  .business-hours-day {
+    padding: 0.75rem;
+  }
+  
+  .time-input-12h {
+    padding: 0.25rem;
+  }
+  
+  .time-input-hour,
+  .time-input-minute {
+    width: 2.5rem;
+    padding: 0.25rem;
+    font-size: 0.75rem;
+  }
+  
+  .time-input-ampm {
+    min-width: 2.75rem;
+    padding: 0.25rem 0.375rem;
+    font-size: 0.75rem;
+  }
+  
+  .day-toggle {
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .toggle-label {
+    font-size: 0.75rem;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .business-hours-editor {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+  
+  .time-input-12h {
+    background: var(--card-2);
+  }
+  
+  .business-hours-day:hover {
+    background: var(--card-2);
+  }
+  
+  .day-toggle:hover {
+    background: var(--card-3);
+  }
+}
+
+/* Animation for day cards */
+.business-hours-day {
+  animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger animation for multiple days */
+.business-hours-day:nth-child(1) { animation-delay: 0.05s; }
+.business-hours-day:nth-child(2) { animation-delay: 0.1s; }
+.business-hours-day:nth-child(3) { animation-delay: 0.15s; }
+.business-hours-day:nth-child(4) { animation-delay: 0.2s; }
+.business-hours-day:nth-child(5) { animation-delay: 0.25s; }
+.business-hours-day:nth-child(6) { animation-delay: 0.3s; }
+.business-hours-day:nth-child(7) { animation-delay: 0.35s; }

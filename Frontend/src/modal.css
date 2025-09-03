@@ -316,7 +316,7 @@
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: 1fr 1fr;
   gap: 2rem;
   align-items: start;
 }
@@ -324,6 +324,13 @@
 @media (max-width: 1024px) {
   .form-grid {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1200px) {
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
   }
 }
@@ -449,6 +456,8 @@
   cursor: pointer;
   transition: all 0.2s ease;
   text-decoration: none;
+  min-width: 140px;
+  justify-content: center;
 }
 
 .upload-btn:hover {
@@ -464,6 +473,80 @@
 .upload-btn svg {
   width: 16px;
   height: 16px;
+}
+
+/* Upload Section Styles */
+.logo-upload-section,
+.cover-upload-section {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: flex-start;
+}
+
+.upload-preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.upload-preview img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+}
+
+.upload-preview .default {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  font-size: 2rem;
+  color: var(--muted);
+}
+
+.upload-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.upload-buttons {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.upload-buttons .btn-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--error);
+  color: var(--error);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 140px;
+  justify-content: center;
+  display: inline-flex;
+  align-items: center;
+}
+
+.upload-buttons .btn-danger:hover {
+  background: var(--error);
+  color: white;
 }
 
 /* Map Container Styles */
@@ -592,25 +675,35 @@
   color: var(--muted);
 }
 
-.shop-preview-logo {
+/* Single, isolated selector for shop preview logo */
+.modal-overlay .shop-preview-card .shop-preview-logo {
   position: absolute;
   bottom: -20px;
   left: 16px;
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   border: 3px solid var(--card);
   object-fit: cover;
-  background: var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  color: white;
+  background: var(--card);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 20;
 }
 
 .shop-preview-content {
   padding: 1.5rem 1rem 1rem 1rem;
+  margin-top: 35px;
+}
+
+
+
+/* Isolated img styles for shop preview logo */
+.modal-overlay .shop-preview-card .shop-preview-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 .shop-preview-title {
@@ -676,5 +769,132 @@
     width: 100%;
     min-height: 48px;
     font-size: 0.9rem;
+  }
+}
+
+.upload-info {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Form Row Layout for Logo and Cover Images - Override index.css */
+.create-shop-form .form-row,
+.card .form-row {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 2rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+/* Force 2-column layout for logo/cover sections at all screen sizes */
+.create-shop-form .form-row:has(.logo-upload-section),
+.card .form-row:has(.logo-upload-section) {
+  grid-template-columns: 1fr 1fr !important;
+}
+
+@media (max-width: 768px) {
+  .create-shop-form .form-row,
+  .card .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem !important;
+  }
+  
+  /* Keep logo/cover sections in same row even on mobile */
+  .create-shop-form .form-row:has(.logo-upload-section),
+  .card .form-row:has(.logo-upload-section) {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Force single column only on very small screens */
+  .create-shop-form .form-row:has(.logo-upload-section),
+  .card .form-row:has(.logo-upload-section) {
+    grid-template-columns: 1fr !important;
+  }
+  
+  /* Ensure proper spacing on very small screens */
+  .logo-upload-section,
+  .cover-upload-section {
+    gap: 0.75rem;
+  }
+  
+  .upload-preview img,
+  .upload-preview .default {
+    width: 60px;
+    height: 60px;
+  }
+}
+
+/* Force logo and cover sections to be in the same row */
+.create-shop-form .form-row:has(.logo-upload-section):has(.cover-upload-section),
+.card .form-row:has(.logo-upload-section):has(.cover-upload-section) {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 2rem !important;
+}
+
+/* Additional specificity for the specific form structure */
+form.create-shop-form .form-row:has(.logo-upload-section):has(.cover-upload-section) {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 2rem !important;
+}
+
+/* Ensure form groups in form-row have consistent spacing */
+.create-shop-form .form-row .form-group,
+.card .form-row .form-group {
+  margin-bottom: 0 !important;
+  min-width: 0 !important;
+  display: block !important;
+  flex-direction: unset !important;
+  gap: unset !important;
+}
+
+/* Override any conflicting form-group styles from index.css */
+.create-shop-form .form-row .form-group:has(.logo-upload-section),
+.create-shop-form .form-row .form-group:has(.cover-upload-section),
+.card .form-row .form-group:has(.logo-upload-section),
+.card .form-row .form-group:has(.cover-upload-section) {
+  margin-bottom: 0 !important;
+  min-width: 0 !important;
+  display: block !important;
+  flex-direction: unset !important;
+  gap: unset !important;
+  width: 100% !important;
+  flex: none !important;
+}
+
+/* Ensure consistent button sizing */
+.upload-buttons .upload-btn,
+.upload-buttons .btn-danger {
+  flex: 1;
+  min-width: 140px;
+  max-width: 200px;
+}
+
+/* Responsive adjustments for upload buttons */
+@media (max-width: 768px) {
+  .upload-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .upload-buttons .upload-btn,
+  .upload-buttons .btn-danger {
+    max-width: none;
+  }
+  
+  /* Stack logo/cover sections vertically on mobile */
+  .logo-upload-section,
+  .cover-upload-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .upload-preview {
+    margin-bottom: 1rem;
+    justify-content: center;
   }
 }

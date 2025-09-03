@@ -6,6 +6,7 @@ import { fetchProductsByShopId, createProduct, updateProduct, deleteProduct, upl
 import { SkeletonText, SkeletonForm } from '../components/Skeleton.jsx'
 import { handleApiError } from '../utils/errorHandler.js'
 import { LoadingButton } from '../components/Loading.jsx'
+import BusinessHours from '../components/BusinessHours.jsx'
 
 export default function ShopEditPage(){
   const { id: slug } = useParams()
@@ -20,7 +21,7 @@ export default function ShopEditPage(){
   const [form, setForm] = useState({
     name: '', description: '', category: '', addressLine: '', phone: '', website: '', email: '',
     facebook: '', instagram: '', twitter: '', lat: '', lng: '', logoPath: '', coverPath: '',
-    adsEnabled: false, adsImagePathsJson: '[]'
+    adsEnabled: false, adsImagePathsJson: '[]', businessHoursJson: ''
   })
 
   useEffect(()=>{
@@ -36,7 +37,7 @@ export default function ShopEditPage(){
           name: s.name||'', description: s.description||'', category: s.category||'', addressLine: s.addressLine||'',
           phone: s.phone||'', website: s.website||'', email: s.email||'', facebook: s.facebook||'', instagram: s.instagram||'', twitter: s.twitter||'',
           lat: s.lat ?? '', lng: s.lng ?? '', logoPath: s.logoPath||'', coverPath: s.coverPath||'',
-          adsEnabled: !!s.adsEnabled, adsImagePathsJson: s.adsImagePathsJson || '[]'
+          adsEnabled: !!s.adsEnabled, adsImagePathsJson: s.adsImagePathsJson || '[]', businessHoursJson: s.businessHoursJson || ''
         })
       }catch(e){ 
         console.error('Failed to load shop:', e)
@@ -66,7 +67,7 @@ export default function ShopEditPage(){
         name: form.name, description: form.description, category: form.category, addressLine: form.addressLine,
         phone: form.phone, website: form.website, email: form.email, facebook: form.facebook, instagram: form.instagram, twitter: form.twitter,
         lat: form.lat === ''? null : Number(form.lat), lng: form.lng === ''? null : Number(form.lng), logoPath: form.logoPath, coverPath: form.coverPath,
-        adsEnabled: !!form.adsEnabled, adsImagePathsJson: form.adsImagePathsJson
+        adsEnabled: !!form.adsEnabled, adsImagePathsJson: form.adsImagePathsJson, businessHoursJson: form.businessHoursJson
       }
       await updateShopRequest(slug, payload, token)
       navigate(`/shops/${slug}`)
@@ -91,7 +92,7 @@ export default function ShopEditPage(){
     <main className="container" style={{maxWidth: 900}}>
       <h2>Edit Shop</h2>
       {error && <div style={{background:'var(--error-bg)',color:'var(--error)',padding:'0.75rem',borderRadius:8,marginBottom:12}}>{error}</div>}
-      <form onSubmit={handleSubmit} className="card" style={{padding:16}}>
+      <form onSubmit={handleSubmit} className="create-shop-form card" style={{padding:16}}>
         <div className="form-row">
           <div style={{flex:1}}>
             <label className="muted form-label">Name *</label>
@@ -121,6 +122,15 @@ export default function ShopEditPage(){
             <label className="muted form-label">Longitude</label>
             <input className="input" type="number" step="0.000001" value={form.lng} onChange={e=>setForm({...form,lng:e.target.value})} />
           </div>
+        </div>
+
+        {/* Business Hours */}
+        <div className="form-group">
+          <label className="muted form-label">Business Hours</label>
+          <BusinessHours
+            value={form.businessHoursJson}
+            onChange={(value) => setForm({...form, businessHoursJson: value})}
+          />
         </div>
 
         <div className="form-row">
@@ -154,79 +164,89 @@ export default function ShopEditPage(){
         </div>
 
         <div className="form-row">
-          <div>
+          <div className="form-group">
             <label className="muted form-label">Shop Logo</label>
-            {form.logoPath && (
-              <div style={{marginBottom:8}}>
-                <img src={form.logoPath} alt="Current logo" style={{height:64,borderRadius:8}}/>
-                <div style={{marginTop:4}}>
-                  <button 
-                    type="button" 
-                    className="btn" 
-                    style={{fontSize:'0.8rem', padding:'4px 8px'}}
-                    onClick={() => setForm({...form, logoPath: ''})}
-                  >
-                    Remove Logo
-                  </button>
+            <div className="logo-upload-section">
+              <div className="upload-preview">
+                {form.logoPath ? (
+                  <img src={form.logoPath} alt="Current logo" />
+                ) : (
+                  <div className="default">🏪</div>
+                )}
+              </div>
+              <div className="upload-controls">
+                <div className="upload-buttons">
+                  <label className="upload-btn">
+                    {form.logoPath ? 'Change Logo' : 'Upload Logo'}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      style={{display:'none'}} 
+                      onChange={async (e)=>{ 
+                        const f=e.target.files?.[0]; 
+                        if(!f) return; 
+                        const path = await onUpload(f); 
+                        setForm({...form,logoPath:path})
+                      }} 
+                    />
+                  </label>
+                  {form.logoPath && (
+                    <button 
+                      type="button" 
+                      className="btn-danger" 
+                      onClick={() => setForm({...form, logoPath: ''})}
+                    >
+                      Remove Logo
+                    </button>
+                  )}
+                </div>
+                <div className="upload-info">
+                  Upload your shop logo (max 2MB). Supported formats: JPG, PNG, GIF
                 </div>
               </div>
-            )}
-            <label className="btn" style={{display:'inline-block', marginBottom:8}}>
-              {form.logoPath ? 'Change Logo' : 'Upload Logo'}
-              <input 
-                type="file" 
-                accept="image/*" 
-                style={{display:'none'}} 
-                onChange={async (e)=>{ 
-                  const f=e.target.files?.[0]; 
-                  if(!f) return; 
-                  const path = await onUpload(f); 
-                  setForm({...form,logoPath:path})
-                }} 
-              />
-            </label>
-            {!form.logoPath && (
-              <div className="muted" style={{fontSize:'0.8rem'}}>
-                Upload a square logo image (recommended: 200x200px)
-              </div>
-            )}
+            </div>
           </div>
-          <div>
-                            <label className="muted form-label">Shop View</label>
-            {form.coverPath && (
-              <div style={{marginBottom:8}}>
-                                        <img src={form.coverPath} alt="Current shop view" style={{height:64,borderRadius:8, objectFit:'cover', width:'100%'}}/>
-                <div style={{marginTop:4}}>
-                  <button 
-                    type="button" 
-                    className="btn" 
-                    style={{fontSize:'0.8rem', padding:'4px 8px'}}
-                    onClick={() => setForm({...form, coverPath: ''})}
-                  >
-                    Remove Shop View
-                  </button>
+          <div className="form-group">
+            <label className="muted form-label">Shop Cover Image</label>
+            <div className="cover-upload-section">
+              <div className="upload-preview">
+                {form.coverPath ? (
+                  <img src={form.coverPath} alt="Current shop cover" />
+                ) : (
+                  <div className="default">🖼️</div>
+                )}
+              </div>
+              <div className="upload-controls">
+                <div className="upload-buttons">
+                  <label className="upload-btn">
+                    {form.coverPath ? 'Change Cover' : 'Upload Cover'}
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      style={{display:'none'}} 
+                      onChange={async (e)=>{ 
+                        const f=e.target.files?.[0]; 
+                        if(!f) return; 
+                        const path = await onUpload(f); 
+                        setForm({...form,coverPath:path})
+                      }} 
+                    />
+                  </label>
+                  {form.coverPath && (
+                    <button 
+                      type="button" 
+                      className="btn-danger" 
+                      onClick={() => setForm({...form, coverPath: ''})}
+                    >
+                      Remove Cover
+                    </button>
+                  )}
+                </div>
+                <div className="upload-info">
+                  Upload a cover image for your shop (max 2MB). Supported formats: JPG, PNG, GIF
                 </div>
               </div>
-            )}
-            <label className="btn" style={{display:'inline-block', marginBottom:8}}>
-              {form.coverPath ? 'Change Shop View' : 'Upload Shop View'}
-              <input 
-                type="file" 
-                accept="image/*" 
-                style={{display:'none'}} 
-                onChange={async (e)=>{ 
-                  const f=e.target.files?.[0]; 
-                  if(!f) return; 
-                  const path = await onUpload(f); 
-                  setForm({...form,coverPath:path})
-                }} 
-              />
-            </label>
-            {!form.coverPath && (
-              <div className="muted" style={{fontSize:'0.8rem'}}>
-                Upload a shop view image showing the exterior of your shop (recommended: 1200x400px)
-              </div>
-            )}
+            </div>
           </div>
         </div>
 

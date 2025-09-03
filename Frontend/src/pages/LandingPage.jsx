@@ -54,6 +54,61 @@ function Minimize(props) {
     </svg>
   )
 }
+function UserIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={props.width || 20} height={props.height || 20} fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  )
+}
+function PinIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={props.width || 20} height={props.height || 20} fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    </svg>
+  )
+}
+function StoreIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={props.width || 20} height={props.height || 20} fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M2 3h20v14H2z" />
+      <path d="M2 17h20v4H2z" />
+      <path d="M6 7h4" />
+      <path d="M6 11h4" />
+      <path d="M14 7h4" />
+      <path d="M14 11h4" />
+    </svg>
+  )
+}
+function LightbulbIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={props.width || 20} height={props.height || 20} fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M9 18h6" />
+      <path d="M10 22h4" />
+      <path d="M15.5 2.5c-2.12-2.12-5.66-2.12-7.78 0C6.72 4.34 6 6.82 6 9.3c0 5.4 3.8 9.8 6 9.8 2.2 0 6-4.4 6-9.8 0-2.48-.72-4.96-1.72-6.8z" />
+    </svg>
+  )
+}
+function RefreshIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={props.width || 20} height={props.height || 20} fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+      <path d="M21 3v5h-5"/>
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+      <path d="M3 21v-5h5"/>
+    </svg>
+  )
+}
+function MapIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={props.width || 20} height={props.height || 20} fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7z"/>
+      <path d="M9 4v13"/>
+      <path d="M15 7v13"/>
+    </svg>
+  )
+}
 
 function haversineDistanceKm(a, b) {
   if (!a || !b) return Number.POSITIVE_INFINITY
@@ -338,26 +393,29 @@ export default function LandingPage() {
 
     // Add user location marker
     if (coords) {
-      const userIcon = L.divIcon({
-        className: 'user-marker',
-        html: `
-          <div style="
-            width: 24px;
-            height: 24px;
-            background: #10b981;
-            border: 3px solid white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-          ">
-            👤
-          </div>
-        `,
+              const userIcon = L.divIcon({
+          className: 'user-marker',
+          html: `
+            <div style="
+              width: 24px;
+              height: 24px;
+              background: #10b981;
+              border: 3px solid white;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+              color: white;
+              font-size: 12px;
+              font-weight: bold;
+            ">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </div>
+          `,
         iconSize: [24, 24],
         iconAnchor: [12, 12]
       })
@@ -371,26 +429,28 @@ export default function LandingPage() {
 
     // Add pinned location marker
     if (pinnedLocation) {
-      const pinnedIcon = L.divIcon({
-        className: 'pinned-marker',
-        html: `
-          <div style="
-            width: 28px;
-            height: 28px;
-            background: #f59e0b;
-            border: 3px solid white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-          ">
-            📌
-          </div>
-        `,
+              const pinnedIcon = L.divIcon({
+          className: 'pinned-marker',
+          html: `
+            <div style="
+              width: 28px;
+              height: 28px;
+              background: #f59e0b;
+              border: 3px solid white;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+              color: white;
+              font-size: 14px;
+              font-weight: bold;
+            ">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            </div>
+          `,
         iconSize: [28, 28],
         iconAnchor: [14, 14]
       })
@@ -433,9 +493,9 @@ export default function LandingPage() {
                       object-fit: cover;
                       border-radius: 50%;
                     "
-                    onerror="this.style.display='none'; this.parentElement.innerHTML='🏪'; this.parentElement.style.background='#6366f1';"
+                    onerror="this.style.display='none'; this.parentElement.innerHTML='<svg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" strokeWidth=\\"2\\"><path d=\\"M2 3h20v14H2z\\" /><path d=\\"M2 17h20v4H2z\\" /><path d=\\"M6 7h4\\" /><path d=\\"M6 11h4\\" /><path d=\\"M14 7h4\\" /><path d=\\"M14 11h4\\" /></svg>'; this.parentElement.style.background='#6366f1';"
                   />` : 
-                  '🏪'
+                  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h20v14H2z" /><path d="M2 17h20v4H2z" /><path d="M6 7h4" /><path d="M6 11h4" /><path d="M14 7h4" /><path d="M14 11h4" /></svg>'
                 }
               </div>
             `,
@@ -718,7 +778,9 @@ export default function LandingPage() {
               borderRadius: '12px',
               border: '2px dashed var(--border)'
             }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏪</div>
+              <div style={{ marginBottom: '1rem' }}>
+                <StoreIcon width={48} height={48} style={{ color: "var(--muted)" }} />
+              </div>
               <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No shops found</h3>
               <p className="muted" style={{ margin: 0 }}>
                 {query ? `No shops match "${query}"` : 'No shops available yet'}
@@ -815,7 +877,7 @@ export default function LandingPage() {
                           alignItems: "center", 
                           gap: "0.5rem" 
                         }}>
-                          <div style={{ fontSize: "1.5rem" }}>🏪</div>
+                          <StoreIcon width={24} height={24} style={{ color: "var(--muted)" }} />
                           <span>Shop View</span>
                         </div>
                       )}
@@ -1049,12 +1111,7 @@ export default function LandingPage() {
                 }}
                 title="Refresh Map"
               >
-                <svg width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                  <path d="M21 3v5h-5"/>
-                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-                  <path d="M3 21v-5h5"/>
-                </svg>
+                <RefreshIcon width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} />
               </button>
             </div>
 
@@ -1078,10 +1135,10 @@ export default function LandingPage() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1rem' }}>💡</span>
-                    <strong>Tip:</strong>
-                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <LightbulbIcon width={16} height={16} style={{ color: "var(--muted)" }} />
+                  <strong>Tip:</strong>
+                </div>
                   <button
                     onClick={() => {
                       setShowTip(false)
@@ -1137,7 +1194,7 @@ export default function LandingPage() {
             userSelect: 'none'
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7z"/><path d="M9 4v13"/><path d="M15 7v13"/></svg>
+          <MapIcon width="20" height="20" />
         </button>
 
         {isMapModalOpen && (

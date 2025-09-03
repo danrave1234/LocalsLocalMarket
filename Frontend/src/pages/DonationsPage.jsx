@@ -23,7 +23,40 @@ export default function DonationsPage() {
           </p>
         </div>
 
-        {/* GCash Section with Why Donate Inside - Left Side */}
+        {/* QR Code Section - First in mobile view */}
+        <div className="donation-card qr-section">
+          <h3 className="qr-title">Scan QR Code</h3>
+          <div className="qr-content">
+            <div className="gcash-qr-container">
+              <img
+                src="/gcash.jpg"
+                alt="GCash QR Code for LocalsLocalMarket donations"
+                className="gcash-qr-image"
+                loading="eager"
+                decoding="async"
+              />
+              <button 
+                className="fullscreen-button"
+                onClick={toggleFullscreen}
+                title="View QR code in fullscreen"
+              >
+                ⛶
+              </button>
+            </div>
+            <div className="gcash-info">
+              <p className="gcash-instructions">
+                Scan this QR code with your GCash app to make a donation
+              </p>
+              <div className="gcash-details">
+                <p className="recipient">Recipient: Drave</p>
+                <p className="mobile">Mobile: +63 999 983....</p>
+                <p className="fees">Transfer fees may apply</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* GCash Section with Why Donate - Second in mobile view */}
         <section aria-labelledby="gcash-heading" className="donation-card gcash-section">
           <h2 id="gcash-heading" className="gcash-title">
             💙 GCash Payment
@@ -56,39 +89,6 @@ export default function DonationsPage() {
             </ul>
           </div>
         </section>
-
-        {/* QR Code Section - Right Side (Larger) */}
-        <div className="donation-card qr-section">
-          <h3 className="qr-title">Scan QR Code</h3>
-          <div className="qr-content">
-            <div className="gcash-qr-container">
-              <img
-                src="/gcash.jpg"
-                alt="GCash QR Code for LocalsLocalMarket donations"
-                className="gcash-qr-image"
-                loading="eager"
-                decoding="async"
-              />
-              <button 
-                className="fullscreen-button"
-                onClick={toggleFullscreen}
-                title="View QR code in fullscreen"
-              >
-                ⛶
-              </button>
-            </div>
-            <div className="gcash-info">
-              <p className="gcash-instructions">
-                Scan this QR code with your GCash app to make a donation
-              </p>
-              <div className="gcash-details">
-                <p className="recipient">Recipient: Drave</p>
-                <p className="mobile">Mobile: +63 999 983....</p>
-                <p className="fees">Transfer fees may apply</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Fullscreen QR Code Modal */}

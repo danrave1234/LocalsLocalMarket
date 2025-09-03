@@ -85,6 +85,7 @@ public class ShopController {
             s.setFacebook(validatedFacebook);
             s.setInstagram(validatedInstagram);
             s.setTwitter(validatedTwitter);
+            s.setBusinessHoursJson(req.businessHoursJson());
             
             shops.save(s);
             
@@ -269,6 +270,7 @@ public class ShopController {
                 if(req.twitter() != null) shop.setTwitter(req.twitter());
                 if(req.adsImagePathsJson() != null) shop.setAdsImagePathsJson(req.adsImagePathsJson());
                 if(req.adsEnabled() != null) shop.setAdsEnabled(req.adsEnabled());
+                if(req.businessHoursJson() != null) shop.setBusinessHoursJson(req.businessHoursJson());
                 shops.save(shop);
                 
                 // Log the action

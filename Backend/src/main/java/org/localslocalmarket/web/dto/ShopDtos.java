@@ -20,7 +20,8 @@ public class ShopDtos {
             String email,
             String facebook,
             String instagram,
-            String twitter
+            String twitter,
+            String businessHoursJson
     ){}
 
     // All fields optional for PATCH
@@ -40,7 +41,8 @@ public class ShopDtos {
             String instagram,
             String twitter,
             String adsImagePathsJson,
-            Boolean adsEnabled
+            Boolean adsEnabled,
+            String businessHoursJson
     ){}
     
     public record ShopResponse(
@@ -61,6 +63,7 @@ public class ShopDtos {
             String twitter,
             String adsImagePathsJson,
             Boolean adsEnabled,
+            String businessHoursJson,
             java.time.Instant createdAt,
             Long ownerId
     ){
@@ -83,6 +86,7 @@ public class ShopDtos {
                 shop.getTwitter(),
                 shop.getAdsImagePathsJson(),
                 shop.getAdsEnabled(),
+                shop.getBusinessHoursJson(),
                 shop.getCreatedAt(),
                 shop.getOwner() != null ? shop.getOwner().getId() : null
             );
