@@ -1123,45 +1123,43 @@ export default function LandingPage() {
         )}
       </div>
 
-      {
-        <>
-          <button 
-            className="floating-map-btn" 
-            onClick={openMapModal} 
-            title="Open map"
-            style={{
-              // Mobile-optimized touch target
-              touchAction: 'manipulation',
-              WebkitTapHighlightColor: 'transparent',
-              // Prevent text selection on mobile
-              WebkitUserSelect: 'none',
-              userSelect: 'none'
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7z"/><path d="M9 4v13"/><path d="M15 7v13"/></svg>
-          </button>
+      <>
+        <button 
+          className="floating-map-btn" 
+          onClick={openMapModal} 
+          title="Open map"
+          style={{
+            // Mobile-optimized touch target
+            touchAction: 'manipulation',
+            WebkitTapHighlightColor: 'transparent',
+            // Prevent text selection on mobile
+            WebkitUserSelect: 'none',
+            userSelect: 'none'
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7z"/><path d="M9 4v13"/><path d="M15 7v13"/></svg>
+        </button>
 
-          {isMapModalOpen && (
-            <div className="map-modal-overlay" onClick={closeMapModal}>
-              <div className="map-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="map-modal-header">
-                  <span>Map</span>
-                  <button onClick={closeMapModal} className="map-modal-close">×</button>
-                </div>
-                <div className="map-modal-body">
-                  <div 
-                    ref={(el) => {
-                      mapRef.current = el
-                      if (el) setMapContainerReady(true)
-                    }}
-                    style={{ width: '100%', height: '100%', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}
-                  />
-                </div>
+        {isMapModalOpen && (
+          <div className="map-modal-overlay" onClick={closeMapModal}>
+            <div className="map-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="map-modal-header">
+                <span>Map</span>
+                <button onClick={closeMapModal} className="map-modal-close">×</button>
+              </div>
+              <div className="map-modal-body">
+                <div 
+                  ref={(el) => {
+                    mapRef.current = el
+                    if (el) setMapContainerReady(true)
+                  }}
+                  style={{ width: '100%', height: '100%', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden' }}
+                />
               </div>
             </div>
-          )}
-        </>
-      }
+          </div>
+        )}
+      </>
 
       {/* Bottom Ad - Placed at the very bottom of the page */}
       <div style={{ marginTop: '3rem', padding: '2rem 0', borderTop: '1px solid var(--border)' }}>
