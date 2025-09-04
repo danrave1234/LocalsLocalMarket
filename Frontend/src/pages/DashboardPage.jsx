@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { ArrowUp } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Modal from '../components/Modal.jsx'
 import CategorySelector from '../components/CategorySelector.jsx'
@@ -20,6 +21,20 @@ import ErrorDisplay from '../components/ErrorDisplay.jsx'
 import BusinessHours from '../components/BusinessHours.jsx'
 import '../dashboard.css'
 
+// Inline icon components to match landing page consistency
+function StoreIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={props.width || 20} height={props.height || 20} fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M2 3h20v14H2z" />
+      <path d="M2 17h20v4H2z" />
+      <path d="M6 7h4" />
+      <path d="M6 11h4" />
+      <path d="M14 7h4" />
+      <path d="M14 11h4" />
+    </svg>
+  )
+}
+
 export default function DashboardPage() {
     const { user, token } = useAuth()
     const [shops, setShops] = useState([])
@@ -30,6 +45,7 @@ export default function DashboardPage() {
     const [error, setError] = useState('')
     const [categories, setCategories] = useState([])
     const [uploading, setUploading] = useState(false)
+    const [showBackToTop, setShowBackToTop] = useState(false)
 
     // Shop form state
     const [shopForm, setShopForm] = useState({
@@ -54,6 +70,14 @@ export default function DashboardPage() {
         fetchUserShops()
         fetchCategoriesData()
     }, [])
+
+    useEffect(() => {
+        const onScroll = () => setShowBackToTop(window.scrollY > 300)
+        window.addEventListener('scroll', onScroll)
+        return () => window.removeEventListener('scroll', onScroll)
+    }, [])
+
+    const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
     const fetchCategoriesData = async () => {
         try {
@@ -274,6 +298,7 @@ export default function DashboardPage() {
     }
 
     return (
+        <>
         <main className="container seller-dashboard-container">
             <div className="dashboard-header">
                 <div className="dashboard-header-content">
@@ -285,9 +310,9 @@ export default function DashboardPage() {
                     </div>
                     <button 
                         className="seller-btn seller-btn-primary create-shop-btn"
-                        onClick={() => setShowCreateShop(true)}
+                        onClick={() => window.location.href = '/shops/create'}
                     >
-                        <span className="seller-btn-icon">🏪</span>
+                        <span className="seller-btn-icon"><StoreIcon width={16} height={16} /></span>
                         Create New Shop
                     </button>
                 </div>
@@ -309,7 +334,7 @@ export default function DashboardPage() {
             <div className="shops-grid">
                 {shops.length === 0 ? (
                     <div className="no-shops-state">
-                        <div className="no-shops-icon">🏪</div>
+                        <div className="no-shops-icon"><StoreIcon width={48} height={48} /></div>
                         <h3>No shops yet</h3>
                         <p className="muted">
                             Start selling by creating your first shop
@@ -318,13 +343,15 @@ export default function DashboardPage() {
                             className="seller-btn seller-btn-primary"
                             onClick={() => setShowCreateShop(true)}
                         >
-                            <span className="seller-btn-icon">🏪</span>
+                            <span className="seller-btn-icon"><StoreIcon width={16} height={16} /></span>
                             Create Your First Shop
                         </button>
                     </div>
                 ) : (
                     shops.map((shop) => (
-                        <div key={shop.id} className="shop-card">
+                        <div key={shop.id} className="shop-card" 
+                             style={{ cursor: 'pointer' }}
+                             onClick={() => window.open(generateShopUrl(shop.name, shop.id), '_blank')}>
                             <div className="shop-image">
                                 {shop.coverPath ? (
                                     <img 
@@ -333,14 +360,14 @@ export default function DashboardPage() {
                                         className="shop-cover"
                                     />
                                 ) : (
-                                    <div className="shop-image-placeholder">🏪</div>
+                                    <div className="shop-image-placeholder"><StoreIcon width={24} height={24} /></div>
                                 )}
                                 <img 
                                     src={shop.logoPath ? getImageUrl(shop.logoPath) : '/default-shop-logo.png'} 
                                     alt={`${shop.name} logo`}
                                     className="shop-logo"
                                     onError={(e) => {
-                                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMzAiIGZpbGw9IiMzMzMiLz4KPHN2ZyB4PSIxNSIgeT0iMTUiIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+CjxwYXRoIGQ9Ik0xMiAyTDIgN0wxMiAxMkwyMiA3TDEyIDJaIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPHBhdGggZD0iTTIgMTdMMTIgMjJMMjIgMTciIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cGF0aCBkPSJNMiAxMkwxMiAxN0wyMiAxMiIgc3Ryb2tlPSJjdXJyZW50Q29sb3IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPgo8L3N2Zz4K'
+                                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMzAiIGZpbGw9IiM2MzY2ZjEiLz4KPHN2ZyB4PSIxNSIgeT0iMTUiIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiPgo8cGF0aCBkPSJNMiAzaDIwdjE0SDJ6Ii8+CjxwYXRoIGQ9Ik0yIDE3aDIwdjRIMnoiLz4KPHBhdGggZD0iTTYgN2g0Ii8+CjxwYXRoIGQ9Ik02IDExaDR6Ii8+CjxwYXRoIGQ9Ik0xNCA3aDR6Ii8+CjxwYXRoIGQ9Ik0xNCAxMWg0eiIvPgo8L3N2Zz4KPC9zdmc+'
                                     }}
                                 />
                             </div>
@@ -382,7 +409,7 @@ export default function DashboardPage() {
                                     </button>
                                     <button 
                                         className="seller-btn seller-btn-secondary seller-btn-sm"
-                                        onClick={() => handleEditShop(shop)}
+                                        onClick={() => window.location.href = `/shops/${generateShopSlug(shop.name, shop.id)}/edit`}
                                     >
                                         <svg className="seller-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -548,7 +575,7 @@ export default function DashboardPage() {
                                                 className="shop-preview-cover"
                                             />
                                         ) : (
-                                            <div className="shop-image-placeholder">🏪</div>
+                                            <div className="shop-image-placeholder"><StoreIcon width={24} height={24} /></div>
                                         )}
                                         {shopForm.logoPath && (
                                             <img 
@@ -614,7 +641,7 @@ export default function DashboardPage() {
                                             alt="Current logo" 
                                         />
                                     ) : (
-                                        <div className="default">🏪</div>
+                                        <div className="default"><StoreIcon width={24} height={24} /></div>
                                     )}
                                 </div>
                                 <div className="upload-controls">
@@ -774,7 +801,7 @@ export default function DashboardPage() {
                                                 alt="Shop Logo" 
                                             />
                                         ) : (
-                                            <div className="default">🏪</div>
+                                            <div className="default"><StoreIcon width={24} height={24} /></div>
                                         )}
                                     </div>
                                     <div className="upload-controls">
@@ -1011,7 +1038,7 @@ export default function DashboardPage() {
                                                 className="shop-preview-cover"
                                             />
                                         ) : (
-                                            <div className="shop-image-placeholder">🏪</div>
+                                            <div className="shop-image-placeholder"><StoreIcon width={24} height={24} /></div>
                                         )}
                                         {shopForm.logoPath && (
                                             <img 
@@ -1093,5 +1120,11 @@ export default function DashboardPage() {
                 </form>
             </Modal>
         </main>
+        {showBackToTop && (
+            <button className="back-to-top-btn" onClick={scrollToTop} title="Back to top" aria-label="Back to top">
+                <ArrowUp size={18} aria-hidden />
+            </button>
+        )}
+        </>
     )
 }

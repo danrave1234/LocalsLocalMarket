@@ -39,9 +39,13 @@
   --transition-normal: 250ms;
   --transition-slow: 400ms;
 
-  /* Premium typography with Inter font family */
-  font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  /* Typography */
+  /* Base UI font: Poppins; Heading font: Manrope */
+  --font-sans: "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  --font-serif: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  --font-accent: "Poppins", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  font-family: var(--font-sans);
   line-height: 1.6;
   font-weight: 400;
   color-scheme: dark;
@@ -70,16 +74,16 @@
 .leaflet-container *,
 .leaflet-container *::before,
 .leaflet-container *::after {
-  box-sizing: content-box !important;
+  box-sizing: content-box;
 }
 
 /* Respect users who prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+    scroll-behavior: auto;
   }
 }
 
@@ -105,6 +109,8 @@ h1 {
   font-size: 3.2em;
   line-height: 1.1;
   font-weight: 700;
+  /* Use Manrope for headings */
+  font-family: var(--font-serif);
   /* Added text gradient for premium headings */
   background: linear-gradient(135deg, var(--text) 0%, var(--muted) 100%);
   -webkit-background-clip: text;
@@ -117,6 +123,7 @@ h2 {
   font-size: 1.875rem;
   line-height: 1.25;
   margin: 0;
+  font-family: var(--font-serif);
 }
 
 h3 {
@@ -124,6 +131,7 @@ h3 {
   font-size: 1.25rem;
   line-height: 1.375;
   margin: 0;
+  font-family: var(--font-serif);
 }
 
 /* Enhanced button styles with premium gradients and hover effects */
@@ -231,6 +239,11 @@ h3 {
   min-height: 70px;
 }
 
+/* Keep left and right pinned when center is hidden */
+.header-left { grid-column: 1; }
+.header-center { grid-column: 2; }
+.header-right { grid-column: 3; }
+
 .header-left {
   display: flex;
   align-items: center;
@@ -275,6 +288,17 @@ h3 {
   .nav-icon { width: 15px; height: 15px; }
 }
 
+/* Active nav state */
+.nav-link.active, .register-btn.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--accent);
+}
+
+.register-btn.active {
+  background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent-hover) 100%);
+}
+
 /* Hide header search on small screens and collapse grid */
 @media (max-width: 992px) {
   .header-center {
@@ -300,8 +324,8 @@ h3 {
 
   /* Shrink logo */
   .brand-link img {
-    width: 40px !important;
-    height: 40px !important;
+    width: 40px;
+    height: 40px;
   }
 
   /* Compact right actions: show icons only */
@@ -344,7 +368,7 @@ h3 {
 
 /* Tablet portrait (iPad Mini etc.): slightly larger header icons */
 @media (min-width: 700px) and (max-width: 992px) {
-  .brand-link img { width: 52px !important; height: 52px !important; }
+  .brand-link img { width: 52px; height: 52px; }
 }
 
 /* Desktop-like header (show text labels) for widths >664px and <1000px, but no search bar */
@@ -462,6 +486,13 @@ h3 {
   background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%);
 }
 
+.donate-link.active {
+  color: #fbbf24;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.3) 0%, rgba(245, 158, 11, 0.3) 100%);
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 1px #fbbf24;
+}
+
 .login-link {
   color: var(--muted);
 }
@@ -530,10 +561,10 @@ h3 {
 
 /* Protect register button SVG icon from global styles */
 .register-btn svg {
-  fill: currentColor !important;
-  color: white !important;
-  width: 16px !important;
-  height: 16px !important;
+  fill: currentColor;
+  color: white;
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 
@@ -1045,6 +1076,12 @@ h3 {
   transform: translateX(4px);
 }
 
+.footer-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
 .footer-link.special {
   color: #fbbf24;
   font-weight: 500;
@@ -1169,6 +1206,12 @@ h3 {
   color: var(--accent);
 }
 
+.footer-bottom-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .footer-main {
@@ -1217,18 +1260,18 @@ h3 {
   .social-links { display: none; }
   /* Remove bulky bubbles around email/phone */
   .modern-footer .contact-item {
-    background: transparent !important;
-    border: none !important;
-    padding: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
+    background: transparent;
+    border: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 
 /* Hide social/contact blocks earlier on small tablets too */
 @media (max-width: 900px) {
-  .social-links { display: none !important; }
-  .contact-info { display: none !important; }
+  .social-links { display: none; }
+  .contact-info { display: none; }
 }
 
 @media (max-width: 480px) {
@@ -1243,11 +1286,11 @@ h3 {
   }
   
   .social-links {
-    display: none !important;
+    display: none;
   }
   
   .contact-info {
-    display: none !important;
+    display: none;
   }
 }
 
@@ -1259,7 +1302,7 @@ h3 {
   .footer-links-list { gap: 0.4rem; }
   .footer-link { font-size: 0.9rem; }
   .brand-logo img { display: none; }
-  .social-links { display: none !important; }
+  .social-links { display: none; }
   .brand-description { display: none; }
   /* Show only first links section and lay it out horizontally */
   .footer-links-grid { display: flex; gap: 0.75rem; }
@@ -1267,9 +1310,50 @@ h3 {
   .footer-links-section:first-child { display: block; }
   .footer-section-title { display: none; }
   .footer-links-list { display: flex; flex-direction: row; flex-wrap: wrap; gap: 0.75rem; }
-  .contact-info { display: none !important; }
+  .contact-info { display: none; }
   .footer-bottom { padding: 0.75rem 1rem; }
   .footer-bottom-content { gap: 0.5rem; }
+}
+
+/* Back to Top Button - global utility */
+.back-to-top-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--card) 0%, var(--card-2) 100%);
+  color: var(--text);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.2s ease;
+}
+
+.back-to-top-btn:hover {
+  background: var(--accent);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(99, 102, 241, 0.35);
+}
+
+.back-to-top-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .back-to-top-btn {
+    bottom: 1rem;
+    right: 1rem;
+    width: 46px;
+    height: 46px;
+  }
 }
 
 /* Modern About Page Styles */
@@ -5024,40 +5108,40 @@ h3 {
 
 /* Modal styles */
 .modal-overlay {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  z-index: 99999 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
   padding: 1rem;
   backdrop-filter: blur(4px);
   pointer-events: auto;
-  width: 100vw !important;
-  height: 100vh !important;
-  box-sizing: border-box !important;
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
 }
 
 .modal-content {
-  background: rgba(0, 0, 0, 0.85) !important;
-  border-radius: 12px !important;
-  width: 100% !important;
-  max-width: 380px !important;
-  min-width: 320px !important;
-  max-height: 90vh !important;
-  overflow-y: auto !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
-  animation: modalSlideIn 0.3s ease-out !important;
-  position: relative !important;
-  border: 1px solid var(--border) !important;
-  flex-shrink: 0 !important;
-  box-sizing: border-box !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 380px;
+  min-width: 320px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: modalSlideIn 0.3s ease-out;
+  position: relative;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 @keyframes modalSlideIn {
@@ -5134,23 +5218,23 @@ h3 {
 
 /* Leaflet compatibility: keep styles minimal to avoid breaking map transforms and tile sizing */
 .leaflet-container {
-  background: #fff !important;
+  background: #fff;
 }
 
 /* Prevent global CSS from shrinking map images */
 .leaflet-container img {
-  max-width: none !important;
-  max-height: none !important;
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
+  max-width: none;
+  max-height: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 /* Ensure controls remain clickable */
 .leaflet-control-zoom a,
 .leaflet-control-attribution,
 .leaflet-interactive {
-  pointer-events: auto !important;
+  pointer-events: auto;
 }
 
 /* Use default Leaflet transforms for panning/zooming; do NOT override transform or tile sizes here. */
@@ -5182,19 +5266,19 @@ h3 {
 
 /* Map z-index fixes */
 .form-map .leaflet-container {
-  z-index: 1 !important;
+  z-index: 1;
 }
 
 .form-map .leaflet-control-container {
-  z-index: 2 !important;
+  z-index: 2;
 }
 
 .form-map .leaflet-popup {
-  z-index: 3 !important;
+  z-index: 3;
 }
 
 .form-map .leaflet-marker-icon {
-  z-index: 4 !important;
+  z-index: 4;
 }
 
 /* Create Shop Form Styles */
@@ -5425,14 +5509,14 @@ h3 {
 
 /* Cover Preview Styles */
 .cover-preview {
-  width: 120px !important;
-  height: 120px !important;
-  border-radius: 12px !important;
-  min-width: 120px !important;
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  min-width: 120px;
 }
 
 .cover-preview img {
-  border-radius: 6px !important;
+  border-radius: 6px;
 }
 
 .cover-preview .image-upload-placeholder {
@@ -5497,7 +5581,7 @@ h3 {
 /* Airbnb-style Search Bar Styles */
 .airbnb-search-container {
   position: relative;
-  max-width: 800px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
@@ -5576,6 +5660,8 @@ h3 {
   padding: 12px 20px;
   border-radius: 24px;
   transition: all 0.2s ease;
+  border: none;
+  background: transparent;
 }
 
 .search-input-wrapper:hover {
@@ -5594,6 +5680,8 @@ h3 {
   font-weight: 500;
   outline: none;
   color: inherit;
+  height: 24px;
+  box-shadow: none;
 }
 
 .search-input::placeholder {

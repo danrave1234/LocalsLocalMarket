@@ -1,10 +1,11 @@
 import React from 'react';
+import { HeartHandshake, Home, Store, Info, Mail, HelpCircle, ShieldCheck, Cookie, FileText } from 'lucide-react';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="modern-footer">
+    <footer className="modern-footer" role="contentinfo" aria-label="Site footer">
       <div className="footer-background">
         <div className="footer-pattern"></div>
       </div>
@@ -13,7 +14,7 @@ const Footer = () => {
         {/* Main Footer Content */}
         <div className="footer-main">
           {/* Brand Section */}
-          <div className="footer-brand-section">
+          <div className="footer-brand-section" aria-label="About LocalsLocalMarket">
                           <div className="footer-brand">
                 <div className="brand-logo">
                   <img 
@@ -35,7 +36,7 @@ const Footer = () => {
           </div>
 
           {/* Links Sections */}
-          <div className="footer-links-grid">
+          <div className="footer-links-grid" aria-label="Footer navigation">
             <details className="footer-accordion" open>
               <summary className="footer-section-title">
                 <svg className="section-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -45,11 +46,11 @@ const Footer = () => {
                 Quick Links
               </summary>
               <ul className="footer-links-list">
-                <li><a href="/" className="footer-link">Home</a></li>
-                <li><a href="/shops" className="footer-link">Browse Shops</a></li>
-                <li><a href="/about" className="footer-link">About Us</a></li>
-                <li><a href="/contact" className="footer-link">Contact</a></li>
-                <li><a href="/donate" className="footer-link special">💝 Support Us</a></li>
+                <li><a href="/" className="footer-link"><Home aria-hidden size={16} style={{marginRight: 8}} />Home</a></li>
+                <li><a href="/shops" className="footer-link"><Store aria-hidden size={16} style={{marginRight: 8}} />Browse Shops</a></li>
+                <li><a href="/about" className="footer-link"><Info aria-hidden size={16} style={{marginRight: 8}} />About Us</a></li>
+                <li><a href="/contact" className="footer-link"><Mail aria-hidden size={16} style={{marginRight: 8}} />Contact</a></li>
+                <li><a href="/donate" className="footer-link special"><HeartHandshake aria-hidden size={16} style={{marginRight: 8}} />Support Us</a></li>
               </ul>
             </details>
 
@@ -62,10 +63,10 @@ const Footer = () => {
                 For Businesses
               </summary>
               <ul className="footer-links-list">
-                <li><a href="/register" className="footer-link">Register Shop</a></li>
-                <li><a href="/dashboard" className="footer-link">Seller Dashboard</a></li>
-                <li><a href="/support" className="footer-link">Support</a></li>
-                <li><a href="/help" className="footer-link">Help & FAQ</a></li>
+                <li><a href="/register" className="footer-link"><Store aria-hidden size={16} style={{marginRight: 8}} />Register Shop</a></li>
+                <li><a href="/dashboard" className="footer-link"><FileText aria-hidden size={16} style={{marginRight: 8}} />Seller Dashboard</a></li>
+                <li><a href="/support" className="footer-link"><HelpCircle aria-hidden size={16} style={{marginRight: 8}} />Support</a></li>
+                <li><a href="/help" className="footer-link"><HelpCircle aria-hidden size={16} style={{marginRight: 8}} />Help & FAQ</a></li>
               </ul>
             </details>
 
@@ -78,10 +79,10 @@ const Footer = () => {
                 Legal
               </summary>
               <ul className="footer-links-list">
-                <li><a href="/privacy" className="footer-link">Privacy Policy</a></li>
-                <li><a href="/terms" className="footer-link">Terms of Service</a></li>
-                <li><a href="/cookies" className="footer-link">Cookie Policy</a></li>
-                <li><a href="/gdpr" className="footer-link">GDPR</a></li>
+                <li><a href="/privacy" className="footer-link"><ShieldCheck aria-hidden size={16} style={{marginRight: 8}} />Privacy Policy</a></li>
+                <li><a href="/terms" className="footer-link"><FileText aria-hidden size={16} style={{marginRight: 8}} />Terms of Service</a></li>
+                <li><a href="/cookies" className="footer-link"><Cookie aria-hidden size={16} style={{marginRight: 8}} />Cookie Policy</a></li>
+                <li><a href="/gdpr" className="footer-link"><ShieldCheck aria-hidden size={16} style={{marginRight: 8}} />GDPR</a></li>
               </ul>
             </details>
           </div>
@@ -94,12 +95,12 @@ const Footer = () => {
               <p>© {currentYear} LocalsLocalMarket. All rights reserved.</p>
               <p className="footer-tagline">Empowering local commerce, one shop at a time.</p>
             </div>
-            <div className="footer-bottom-links">
+            <nav className="footer-bottom-links" aria-label="Legal links">
               <a href="/privacy" className="footer-bottom-link">Privacy</a>
               <a href="/terms" className="footer-bottom-link">Terms</a>
               <a href="/cookies" className="footer-bottom-link">Cookies</a>
               <a href="/sitemap" className="footer-bottom-link">Sitemap</a>
-            </div>
+            </nav>
           </div>
         </div>
       </div>

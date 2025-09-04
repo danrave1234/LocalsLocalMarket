@@ -1,71 +1,71 @@
 /* Modal styles */
 .modal-overlay {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background-color: rgba(0, 0, 0, 0.6);
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  z-index: 99999 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
   padding: 1rem;
   backdrop-filter: blur(8px);
   pointer-events: auto;
-  width: 100vw !important;
-  height: 100vh !important;
-  box-sizing: border-box !important;
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
 }
 
 .modal-content {
-  background: var(--surface) !important;
-  border-radius: 16px !important;
-  width: 100% !important;
-  max-width: 380px !important;
-  min-width: 320px !important;
-  max-height: 90vh !important;
-  overflow-y: auto !important;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border) !important;
-  animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  position: relative !important;
-  border: 1px solid var(--border) !important;
-  flex-shrink: 0 !important;
-  box-sizing: border-box !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
+  background: var(--surface);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 380px;
+  min-width: 320px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border);
+  animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Size-specific modal overrides */
 .modal-content.max-w-sm {
-  max-width: 420px !important;
+  max-width: 420px;
 }
 
 .modal-content.max-w-md {
-  max-width: 600px !important;
+  max-width: 600px;
 }
 
 .modal-content.max-w-lg {
-  max-width: 800px !important;
+  max-width: 800px;
 }
 
 .modal-content.max-w-2xl {
-  max-width: 1200px !important;
+  max-width: 1200px;
 }
 
 .modal-content.max-w-4xl {
-  max-width: 1400px !important;
+  max-width: 1400px;
 }
 
 /* Responsive modal sizing */
 @media (max-width: 768px) {
   .modal-content {
-    max-width: 95vw !important;
-    min-width: 280px !important;
-    margin: 0.5rem !important;
-    border-radius: 12px !important;
+    max-width: 95vw;
+    min-width: 280px;
+    margin: 0.5rem;
+    border-radius: 12px;
   }
   
   .modal-content.max-w-sm,
@@ -73,16 +73,16 @@
   .modal-content.max-w-lg,
   .modal-content.max-w-2xl,
   .modal-content.max-w-4xl {
-    max-width: 95vw !important;
+    max-width: 95vw;
   }
 }
 
 @media (max-width: 480px) {
   .modal-content {
-    max-width: 98vw !important;
-    min-width: 260px !important;
-    margin: 0.25rem !important;
-    border-radius: 10px !important;
+    max-width: 98vw;
+    min-width: 260px;
+    margin: 0.25rem;
+    border-radius: 10px;
   }
   
   .modal-content.max-w-sm,
@@ -90,7 +90,7 @@
   .modal-content.max-w-lg,
   .modal-content.max-w-2xl,
   .modal-content.max-w-4xl {
-    max-width: 98vw !important;
+    max-width: 98vw;
   }
 }
 
@@ -102,6 +102,14 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .modal-content {
+    animation: none;
+    transition: none;
   }
 }
 
@@ -151,6 +159,11 @@
   border-color: var(--accent);
 }
 
+.modal-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .modal-close svg {
   width: 20px;
   height: 20px;
@@ -163,6 +176,30 @@
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+}
+
+/* Prevent body scroll when a modal is open: add class 'modal-open' to <body> in JS */
+body.modal-open {
+  overflow: hidden;
+  padding-right: env(safe-area-inset-right, 0);
+  touch-action: none;
+}
+
+/* Improve scrollbars within modal for Windows users */
+.modal-content::-webkit-scrollbar, .modal-body::-webkit-scrollbar {
+  width: 10px;
+}
+.modal-content::-webkit-scrollbar-track, .modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.modal-content::-webkit-scrollbar-thumb, .modal-body::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.modal-content:hover::-webkit-scrollbar-thumb, .modal-body:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
 }
 
 /* Modal Form Styles */
@@ -572,53 +609,53 @@
 
 /* Leaflet Map Styles */
 .leaflet-container {
-  background: var(--surface) !important;
-  font-family: inherit !important;
+  background: var(--surface);
+  font-family: inherit;
 }
 
 .leaflet-container .leaflet-control-attribution {
-  background: rgba(0, 0, 0, 0.8) !important;
-  color: var(--text) !important;
-  font-size: 0.75rem !important;
+  background: rgba(0, 0, 0, 0.8);
+  color: var(--text);
+  font-size: 0.75rem;
 }
 
 .leaflet-container .leaflet-control-attribution a {
-  color: var(--accent) !important;
+  color: var(--accent);
 }
 
 .leaflet-container .leaflet-control-zoom a {
-  background: var(--surface) !important;
-  border: 1px solid var(--border) !important;
-  color: var(--text) !important;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 
 .leaflet-container .leaflet-control-zoom a:hover {
-  background: var(--card) !important;
-  border-color: var(--accent) !important;
+  background: var(--card);
+  border-color: var(--accent);
 }
 
 /* Modal Map Specific Styles */
 .modal-content .leaflet-container {
-  z-index: 1 !important;
+  z-index: 1;
 }
 
 .modal-content .leaflet-control-container {
-  z-index: 2 !important;
+  z-index: 2;
 }
 
 .modal-content .leaflet-popup {
-  z-index: 3 !important;
+  z-index: 3;
 }
 
 .modal-content .leaflet-marker-icon {
-  z-index: 4 !important;
+  z-index: 4;
 }
 
 /* Ensure map controls are clickable in modal */
 .modal-content .leaflet-control-zoom a,
 .modal-content .leaflet-control-attribution,
 .modal-content .leaflet-interactive {
-  pointer-events: auto !important;
+  pointer-events: auto;
 }
 
 /* Map container in modal */
@@ -635,10 +672,10 @@
 
 /* Custom marker styles */
 .custom-marker {
-  background: var(--accent) !important;
-  border: 2px solid white !important;
-  border-radius: 50% !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+  background: var(--accent);
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
 /* Shop Preview Styles */
@@ -781,29 +818,29 @@
 /* Form Row Layout for Logo and Cover Images - Override index.css */
 .create-shop-form .form-row,
 .card .form-row {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: 2rem !important;
-  margin-bottom: 1.5rem !important;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 /* Force 2-column layout for logo/cover sections at all screen sizes */
 .create-shop-form .form-row:has(.logo-upload-section),
 .card .form-row:has(.logo-upload-section) {
-  grid-template-columns: 1fr 1fr !important;
+  grid-template-columns: 1fr 1fr;
 }
 
 @media (max-width: 768px) {
   .create-shop-form .form-row,
   .card .form-row {
-    grid-template-columns: 1fr !important;
-    gap: 1.5rem !important;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
   
   /* Keep logo/cover sections in same row even on mobile */
   .create-shop-form .form-row:has(.logo-upload-section),
   .card .form-row:has(.logo-upload-section) {
-    grid-template-columns: 1fr 1fr !important;
+    grid-template-columns: 1fr 1fr;
   }
 }
 
@@ -811,7 +848,7 @@
   /* Force single column only on very small screens */
   .create-shop-form .form-row:has(.logo-upload-section),
   .card .form-row:has(.logo-upload-section) {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr;
   }
   
   /* Ensure proper spacing on very small screens */
@@ -830,26 +867,26 @@
 /* Force logo and cover sections to be in the same row */
 .create-shop-form .form-row:has(.logo-upload-section):has(.cover-upload-section),
 .card .form-row:has(.logo-upload-section):has(.cover-upload-section) {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: 2rem !important;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
 }
 
 /* Additional specificity for the specific form structure */
 form.create-shop-form .form-row:has(.logo-upload-section):has(.cover-upload-section) {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: 2rem !important;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
 }
 
 /* Ensure form groups in form-row have consistent spacing */
 .create-shop-form .form-row .form-group,
 .card .form-row .form-group {
-  margin-bottom: 0 !important;
-  min-width: 0 !important;
-  display: block !important;
-  flex-direction: unset !important;
-  gap: unset !important;
+  margin-bottom: 0;
+  min-width: 0;
+  display: block;
+  flex-direction: unset;
+  gap: unset;
 }
 
 /* Override any conflicting form-group styles from index.css */
@@ -857,13 +894,13 @@ form.create-shop-form .form-row:has(.logo-upload-section):has(.cover-upload-sect
 .create-shop-form .form-row .form-group:has(.cover-upload-section),
 .card .form-row .form-group:has(.logo-upload-section),
 .card .form-row .form-group:has(.cover-upload-section) {
-  margin-bottom: 0 !important;
-  min-width: 0 !important;
-  display: block !important;
-  flex-direction: unset !important;
-  gap: unset !important;
-  width: 100% !important;
-  flex: none !important;
+  margin-bottom: 0;
+  min-width: 0;
+  display: block;
+  flex-direction: unset;
+  gap: unset;
+  width: 100%;
+  flex: none;
 }
 
 /* Ensure consistent button sizing */

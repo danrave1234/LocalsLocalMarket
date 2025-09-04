@@ -6,6 +6,20 @@ import AdminCategoryManager from '../components/AdminCategoryManager.jsx'
 import { fetchDashboardStats, fetchRecentActivity } from '../api/admin.js'
 import '../components/AdminDashboard.css'
 
+// Inline icon components to match landing page consistency
+function StoreIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={props.width || 20} height={props.height || 20} fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M2 3h20v14H2z" />
+      <path d="M2 17h20v4H2z" />
+      <path d="M6 7h4" />
+      <path d="M6 11h4" />
+      <path d="M14 7h4" />
+      <path d="M14 11h4" />
+    </svg>
+  )
+}
+
 export default function AdminDashboard() {
     const { user } = useAuth()
     const [activeTab, setActiveTab] = useState('overview')
@@ -93,7 +107,7 @@ export default function AdminDashboard() {
     const tabs = [
         { id: 'overview', label: 'Overview', icon: '📊' },
         { id: 'users', label: 'User Management', icon: '👥' },
-        { id: 'shops', label: 'Shop Management', icon: '🏪' },
+        { id: 'shops', label: 'Shop Management', icon: <StoreIcon width={16} height={16} /> },
         { id: 'products', label: 'Product Management', icon: '📦' },
         { id: 'categories', label: 'Category Management', icon: '🏷️' },
         { id: 'reports', label: 'Reports & Analytics', icon: '📈' },
@@ -192,7 +206,7 @@ function OverviewTab({ stats, loading, recentActivity }) {
                         </div>
 
                         <div className="stat-card">
-                            <div className="stat-icon">🏪</div>
+                            <div className="stat-icon"><StoreIcon width={24} height={24} /></div>
                             <div className="stat-content">
                                 <h3>{stats.totalShops.toLocaleString()}</h3>
                                 <p>Total Shops</p>
@@ -252,7 +266,7 @@ function OverviewTab({ stats, loading, recentActivity }) {
                                     👥 Review Pending Users
                                 </button>
                                 <button className="btn btn-secondary">
-                                    🏪 Approve Shops
+                                    <StoreIcon width={16} height={16} /> Approve Shops
                                 </button>
                                 <button className="btn btn-secondary">
                                     📦 Check Low Stock
@@ -333,7 +347,7 @@ function ShopManagementTab() {
                         <option>Suspended</option>
                     </select>
                     <button className="btn btn-primary">
-                        🏪 View All Shops
+                        <StoreIcon width={16} height={16} /> View All Shops
                     </button>
                 </div>
             </div>

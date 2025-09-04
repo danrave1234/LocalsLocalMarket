@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { generateShopSlug } from '../utils/slugUtils.js';
 import './ServiceDetailsPage.css';
 
 const ServiceDetailsPage = () => {
@@ -90,7 +91,7 @@ const ServiceDetailsPage = () => {
           <div className="shop-info">
             <h3>Offered by: {service.shop.name}</h3>
             <p>{service.shop.description}</p>
-            <Link to={`/shop/${service.shop.id}`} className="view-shop-btn">
+            <Link to={`/shops/${generateShopSlug(service.shop.name, service.shop.id)}`} className="view-shop-btn">
               View Shop
             </Link>
           </div>
@@ -105,7 +106,7 @@ const ServiceDetailsPage = () => {
         <div className="service-actions">
           <Link to="/" className="back-btn">← Back to Browse</Link>
           {service.shop && (
-            <Link to={`/shop/${service.shop.id}`} className="browse-shop-btn">
+            <Link to={`/shops/${generateShopSlug(service.shop.name, service.shop.id)}`} className="browse-shop-btn">
               Browse More from This Shop
             </Link>
           )}

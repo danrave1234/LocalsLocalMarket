@@ -1,10 +1,10 @@
 /* About Us Page Styles */
 .about-us-container {
-  padding: 0.5rem !important;
-  max-width: 1200px !important;
-  margin: 0 auto !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
+  padding: 0.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .about-us-container .about-us-header {
@@ -212,7 +212,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .about-us-container {
-    padding: 0.25rem !important;
+    padding: 0.25rem;
   }
   
   .about-us-container .about-us-header {

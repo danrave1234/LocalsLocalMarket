@@ -5,12 +5,14 @@ import SEOHead from "../components/SEOHead.jsx"
 import SocialSharing from "../components/SocialSharing.jsx"
 import FAQ from "../components/FAQ.jsx"
 import SearchOptimization from "../components/SearchOptimization.jsx"
-import { fetchAllShops } from "../api/shops.js"
-import { generateShopUrl } from "../utils/slugUtils.js"
+import { fetchPaginatedShopsWithRatings } from "../api/shops.js"
+import { generateShopUrl, generateShopSlug } from "../utils/slugUtils.js"
 import { InContentAd, ResponsiveAd } from "../components/GoogleAds.jsx"
+import { ArrowUp } from 'lucide-react'
 import { loadLeaflet, isLeafletLoaded } from "../utils/leafletLoader.js"
 import { getImageUrl } from '../utils/imageUtils.js'
 import { handleApiError } from '../utils/errorHandler.js'
+import shopCache from '../utils/shopCache.js'
 import { SkeletonShopCard, SkeletonMap, SkeletonText } from "../components/Skeleton.jsx"
 import ErrorDisplay from "../components/ErrorDisplay.jsx"
 import { LoadingSpinner, LoadingCard, LoadingOverlay } from "../components/Loading.jsx"
@@ -149,11 +151,15 @@ export default function LandingPage() {
   const [mapInstance, setMapInstance] = useState(null)
   const [mapMarkers, setMapMarkers] = useState([])
   const [isMapExpanded, setIsMapExpanded] = useState(false)
+  const [showBackToTop, setShowBackToTop] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isMapModalOpen, setIsMapModalOpen] = useState(false)
   const [mapContainerReady, setMapContainerReady] = useState(false)
   const [showTip, setShowTip] = useState(true)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [hasMoreShops, setHasMoreShops] = useState(true)
   const mapRef = useRef(null)
+  const shopsLoadingRef = useRef(false)
 
   useEffect(() => {
     // Restore persisted tip visibility
@@ -169,27 +175,72 @@ export default function LandingPage() {
     if (saved) setCoords(JSON.parse(saved))
   }, [])
 
-  // Load shops only once on component mount
+  useEffect(() => {
+    const onScroll = () => setShowBackToTop(window.scrollY > 300)
+    window.addEventListener('scroll', onScroll)
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
+
+  // Load shops using paginated endpoint - only on mount and when currentPage changes
   useEffect(() => {
     const loadShops = async () => {
+              // Prevent multiple simultaneous calls
+        if (shopsLoadingRef.current) {
+          return
+        }
+      
+      shopsLoadingRef.current = true
       setLoading(true)
       setError('')
-      try {
-        const response = await fetchAllShops()
-        const shopsData = extractShopsFromResponse(response)
-        setShops(shopsData)
+      
+              try {
+          const response = await fetchPaginatedShopsWithRatings(currentPage, 50) // Fetch 50 shops per page
+          
+          const shopsData = extractShopsFromResponse(response)
+        
+        // Cache all shop data for future use
+        shopsData.forEach(shop => {
+          if (shop.id) {
+            shopCache.set(shop.id, shop)
+          }
+        })
+        
+        if (currentPage === 0) {
+          // First page, replace all shops
+          setShops(shopsData)
+        } else {
+          // Subsequent pages, append shops
+          setShops(prev => [...prev, ...shopsData])
+        }
+        
+        // Check if there are more shops
+        if (response && response.content && response.content.length < 50) {
+          setHasMoreShops(false)
+        }
       } catch (err) {
         console.error('Failed to fetch shops:', err)
         const errorInfo = handleApiError(err)
         setError(errorInfo.message)
-        setShops([])
+        if (currentPage === 0) {
+          setShops([])
+        }
       } finally {
         setLoading(false)
+        shopsLoadingRef.current = false
       }
     }
 
     loadShops()
-  }, [])
+  }, [currentPage])
+
+  // Load more shops function
+  const loadMoreShops = () => {
+    if (!loading && hasMoreShops) {
+      setCurrentPage(prev => prev + 1)
+    }
+  }
 
   // Handle client-side search
   const handleSearchChange = (searchTerm) => {
@@ -305,38 +356,108 @@ export default function LandingPage() {
 
         setMapInstance(map)
 
-        // Force map to invalidate size with multiple attempts
-        const invalidateSize = () => {
-          if (map && map.invalidateSize) {
-            map.invalidateSize()
-            // Try again after a short delay to ensure it works
-            setTimeout(() => {
-              if (map && map.invalidateSize) {
-                map.invalidateSize()
-              }
-            }, 50)
+        // Helper: schedule an invalidate once container has non-zero size
+        const scheduleInvalidate = () => {
+          let attempts = 20
+          const tick = () => {
+            if (!mapRef.current || !map) return
+            const w = mapRef.current.offsetWidth
+            const h = mapRef.current.offsetHeight
+            if (w > 0 && h > 0) {
+              try { map.invalidateSize(true) } catch {}
+              return
+            }
+            if (attempts-- > 0) requestAnimationFrame(tick)
           }
+          requestAnimationFrame(tick)
         }
-        
-        // Call invalidateSize multiple times to ensure it works
-        setTimeout(invalidateSize, 100)
-        setTimeout(invalidateSize, 300)
-        setTimeout(invalidateSize, 500)
+
+        // Initial invalidate cycles
+        ;[80, 180, 380].forEach((d) => setTimeout(() => { try { map.invalidateSize(true) } catch {} }, d))
+
+        // ResizeObserver: container size changes
+        if (mapRef.current && typeof ResizeObserver !== 'undefined') {
+          const ro = new ResizeObserver(() => {
+            scheduleInvalidate()
+          })
+          ro.observe(mapRef.current)
+          map._resizeObserver = ro
+        }
+
+        // IntersectionObserver: when container becomes visible after being hidden
+        if (mapRef.current && typeof IntersectionObserver !== 'undefined') {
+          const io = new IntersectionObserver((entries) => {
+            const entry = entries[0]
+            if (entry && entry.isIntersecting) {
+              scheduleInvalidate()
+            }
+          }, { root: null, threshold: 0.01 })
+          io.observe(mapRef.current)
+          map._intersectionObserver = io
+        }
+
+        // Window resize: debounce and invalidate
+        let resizeTimer
+        const onWinResize = () => {
+          clearTimeout(resizeTimer)
+          resizeTimer = setTimeout(() => scheduleInvalidate(), 120)
+        }
+        window.addEventListener('resize', onWinResize)
+        map._onWinResize = onWinResize
+
+        // CSS transition end on container (if layout animates)
+        const onTransitionEnd = () => scheduleInvalidate()
+        if (mapRef.current) {
+          mapRef.current.addEventListener('transitionend', onTransitionEnd)
+          map._onTransitionEnd = onTransitionEnd
+        }
+
+        // Watchdog: detect unhealthy state and recover
+        const isVisible = () => {
+          const el = mapRef.current
+          if (!el) return false
+          const rect = el.getBoundingClientRect()
+          return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0
+        }
+        let unhealthyTicks = 0
+        const watchdog = setInterval(() => {
+          try {
+            if (!mapRef.current || !map) return
+            const hasTiles = map._container ? map._container.querySelectorAll('.leaflet-tile').length > 0 : false
+            if (isVisible()) {
+              if (!hasTiles || map._size.x === 0 || map._size.y === 0) {
+                unhealthyTicks += 1
+                scheduleInvalidate()
+                if (unhealthyTicks >= 5) {
+                  clearInterval(watchdog)
+                  try { map.remove() } catch {}
+                  setTimeout(initializeMap, 200)
+                }
+              } else {
+                unhealthyTicks = 0
+              }
+            }
+          } catch {}
+        }, 1000)
+        map._watchdog = watchdog
 
       } catch (err) {
         console.error('Error initializing map:', err)
-        // Retry initialization after error
         setTimeout(initializeMap, 1000)
       }
     }
 
-    // Use a delay to ensure DOM is ready
     const timer = setTimeout(initializeMap, 200)
     
     return () => {
       clearTimeout(timer)
       if (mapInstance) {
         try {
+          if (mapInstance._resizeObserver) { try { mapInstance._resizeObserver.disconnect() } catch {} }
+          if (mapInstance._intersectionObserver) { try { mapInstance._intersectionObserver.disconnect() } catch {} }
+          if (mapInstance._watchdog) { try { clearInterval(mapInstance._watchdog) } catch {} }
+          if (mapInstance._onWinResize) { try { window.removeEventListener('resize', mapInstance._onWinResize) } catch {} }
+          if (mapInstance._onTransitionEnd && mapRef.current) { try { mapRef.current.removeEventListener('transitionend', mapInstance._onTransitionEnd) } catch {} }
           mapInstance.remove()
         } catch (error) {
           console.log('Map already removed')
@@ -466,37 +587,14 @@ export default function LandingPage() {
     sortedShops.forEach((shop, index) => {
       if (shop.lat && shop.lng) {
         try {
+          const logoUrl = shop.logoPath ? getImageUrl(shop.logoPath) : ''
           const shopIcon = L.divIcon({
             className: 'shop-marker',
             html: `
-              <div style="
-                width: 40px;
-                height: 40px;
-                background: ${shop.logoPath ? 'white' : '#6366f1'};
-                border: 3px solid white;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                overflow: hidden;
-                color: white;
-                font-size: 18px;
-              ">
-                ${shop.logoPath ? 
-                  `<img 
-                    src="${getImageUrl(shop.logoPath)}" 
-                    alt="${shop.name}" 
-                    style="
-                      width: 100%;
-                      height: 100%;
-                      object-fit: cover;
-                      border-radius: 50%;
-                    "
-                    onerror="this.style.display='none'; this.parentElement.innerHTML='<svg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 24 24\\" fill=\\"none\\" stroke=\\"currentColor\\" strokeWidth=\\"2\\"><path d=\\"M2 3h20v14H2z\\" /><path d=\\"M2 17h20v4H2z\\" /><path d=\\"M6 7h4\\" /><path d=\\"M6 11h4\\" /><path d=\\"M14 7h4\\" /><path d=\\"M14 11h4\\" /></svg>'; this.parentElement.style.background='#6366f1';"
-                  />` : 
-                  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h20v14H2z" /><path d="M2 17h20v4H2z" /><path d="M6 7h4" /><path d="M6 11h4" /><path d="M14 7h4" /><path d="M14 11h4" /></svg>'
-                }
+              <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); overflow: hidden;">
+                ${logoUrl 
+                  ? `<div style=\"position:absolute; top:0; left:0; right:0; bottom:0; background-image:url('${logoUrl}'); background-size:cover; background-position:center;\"></div>`
+                  : '<div style=\"position:absolute; inset:0; background:#6366f1; display:flex; align-items:center; justify-content:center;\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"white\" stroke-width=\"2\"><path d=\"M3 9l1-5h16l1 5\"/><path d=\"M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z\"/><path d=\"M8 13h3v3H8z\"/></svg></div>'}
               </div>
             `,
             iconSize: [40, 40],
@@ -509,7 +607,7 @@ export default function LandingPage() {
               <div style="min-width: ${isMobile ? '280px' : '200px'}; max-width: ${isMobile ? '320px' : '250px'};">
                 <h4 style="margin: 0 0 0.5rem 0; color: #6366f1; font-size: ${isMobile ? '1rem' : '0.875rem'};">${shop.name}</h4>
                 ${shop.addressLine ? `<p style="margin: 0 0 0.5rem 0; font-size: ${isMobile ? '0.9rem' : '0.875rem'}; color: #666; line-height: 1.4;">${shop.addressLine}</p>` : ''}
-                <a href="/shops/${shop.id}" style="
+                <a href="/shops/${generateShopSlug(shop.name, shop.id)}" style="
                   display: inline-block;
                   background: #6366f1;
                   color: white;
@@ -731,7 +829,7 @@ export default function LandingPage() {
               "@type": "LocalBusiness",
               "name": shop.name,
               "description": shop.description || `Local shop: ${shop.name}`,
-              "url": `https://localslocalmarket.com/shops/${shop.id}`,
+                              "url": `https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}`,
               "address": shop.addressLine ? {
                 "@type": "PostalAddress",
                 "streetAddress": shop.addressLine
@@ -741,62 +839,45 @@ export default function LandingPage() {
         }}
       />
       <main className="container landing-page-container">
-        {/* Header */}
+        <div id="landing-hero-sentinel" style={{ height: 1 }} />
+        {/* Header + Search in one row */}
         <section style={{ marginBottom: "2rem" }}>
-        <h2
-          style={{
-            margin: 0,
-            marginBottom: "0.5rem",
-            fontSize: "1.5rem",
-            fontWeight: 600,
-          }}
-        >
-          Explore Local Shops
-        </h2>
-        <p className="muted" style={{ margin: 0 }}>
-          Discover amazing shops from all areas
-        </p>
-      </section>
+          <div style={{ marginTop: '1rem' }}>
+            <SearchOptimization 
+              onClearFilters={clearPinnedLocation} 
+              onSearchChange={handleSearchChange}
+            />
+          </div>
+        </section>
 
-      {/* Search Bar */}
-      <section style={{ marginBottom: "2rem" }}>
-        <SearchOptimization 
-          onClearFilters={clearPinnedLocation} 
-          onSearchChange={handleSearchChange}
-        />
-      </section>
-
-      {/* Main Content - Shops List and Map Side by Side */}
-      <div className={`landing-layout ${isMapExpanded ? 'expanded' : ''}`}>
-        {/* Left Side - Shops List */}
-        <div>
-          {sortedShops.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '2rem',
-              backgroundColor: 'var(--card-2)',
-              borderRadius: '12px',
-              border: '2px dashed var(--border)'
-            }}>
-              <div style={{ marginBottom: '1rem' }}>
-                <StoreIcon width={48} height={48} style={{ color: "var(--muted)" }} />
+        {/* Main Content - Shops List and Map Side by Side */}
+        <div className={`landing-layout ${isMapExpanded ? 'expanded' : ''}`}>
+          {/* Left Side - Shops List */}
+          <div>
+            {sortedShops.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '2rem',
+                backgroundColor: 'var(--card-2)',
+                borderRadius: '12px',
+                border: '2px dashed var(--border)'
+              }}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <StoreIcon width={48} height={48} style={{ color: "var(--muted)" }} />
+                </div>
+                <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No shops found</h3>
+                <p className="muted" style={{ margin: 0 }}>
+                  {query ? `No shops match "${query}"` : 'No shops available yet'}
+                </p>
               </div>
-              <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No shops found</h3>
-              <p className="muted" style={{ margin: 0 }}>
-                {query ? `No shops match "${query}"` : 'No shops available yet'}
-              </p>
-            </div>
-          ) : (
-                          <div>
+            ) : (
+            <div>
+                {/* Page title above the list */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>Explore Local Shops</h2>
+                  <p className="muted" style={{ margin: 0 }}>Discover amazing shops from all areas</p>
+                </div>
                 <div style={{ marginBottom: "1rem" }}>
-                  <h3 style={{ margin: 0, marginBottom: "0.25rem" }}>
-                    {sortedShops.length} shop{sortedShops.length !== 1 ? 's' : ''} found
-                    {(coords || pinnedLocation) && (
-                      <span style={{ color: "var(--primary)", fontSize: "0.875rem", fontWeight: "normal" }}> 
-                        (sorted by distance{pinnedLocation ? ' from pinned location' : ''})
-                      </span>
-                    )}
-                  </h3>
                   <p className="muted" style={{ margin: 0, fontSize: "0.875rem" }}>
                     {clientQuery ? `Showing results for "${clientQuery}"` : 'All available shops'}
                   </p>
@@ -826,10 +907,8 @@ export default function LandingPage() {
                     </div>
                   )}
                 </div>
-
-
               
-              <div className="shops-grid">
+                            <div className="shops-grid">
                 {sortedShops.map((shop) => (
                   <div key={shop.id} className="card" style={{ 
                     padding: 0, 
@@ -840,6 +919,9 @@ export default function LandingPage() {
                   }}
                   onMouseEnter={(e) => e.target.style.transform = "translateY(-2px)"}
                   onMouseLeave={(e) => e.target.style.transform = "translateY(0)"}
+                                    onClick={() => {
+                    window.location.href = generateShopUrl(shop.name, shop.id)
+                  }}
                   >
                     {/* Shop Image */}
                     <div style={{ 
@@ -935,19 +1017,19 @@ export default function LandingPage() {
                             display: "flex",
                             alignItems: "center",
                             gap: "0.5rem",
-                            fontSize: "0.75rem",
-                            color: "var(--muted)",
-                            marginBottom: "0.375rem",
-                          }}
-                        >
-                          <MapPin width={12} height={12} />
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {shop.addressLine}
-                          </span>
-                        </div>
-                      )}
+                          fontSize: "0.75rem",
+                          color: "var(--muted)",
+                          marginBottom: "0.375rem",
+                        }}
+                      >
+                        <MapPin width={12} height={12} />
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {shop.addressLine}
+                        </span>
+                      </div>
+                    )}
 
-                      {/* Rating */}
+                      {/* Rating - Display shop ratings if available */}
                       <div
                         style={{
                           display: "flex",
@@ -959,8 +1041,16 @@ export default function LandingPage() {
                         }}
                       >
                         <Star width={12} height={12} />
-                        <span style={{ fontWeight: 500 }}>4.5</span>
-                        <span>(12 reviews)</span>
+                        <span style={{ fontWeight: 500 }}>
+                          {shop.averageRating && shop.averageRating > 0 
+                            ? shop.averageRating.toFixed(1) 
+                            : '--'}
+                        </span>
+                        <span>
+                          {shop.reviewCount && shop.reviewCount > 0 
+                            ? `(${shop.reviewCount} reviews)` 
+                            : '(No reviews yet)'}
+                        </span>
                       </div>
 
                       {/* Distance */}
@@ -984,8 +1074,7 @@ export default function LandingPage() {
 
                       {/* Category Tags */}
                       <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
-                        <span className="pill" style={{ fontSize: "0.7rem", padding: "0.2rem 0.4rem" }}>#local</span>
-                        <span className="pill" style={{ fontSize: "0.7rem", padding: "0.2rem 0.4rem" }}>#fresh</span>
+                        {shop.category && <span className="pill" style={{ fontSize: "0.7rem", padding: "0.2rem 0.4rem" }}>#{shop.category.toLowerCase()}</span>}
                         {shop.addressLine && <span className="pill" style={{ fontSize: "0.7rem", padding: "0.2rem 0.4rem" }}>#{shop.addressLine.split(',')[0].trim().toLowerCase()}</span>}
                       </div>
 
@@ -997,6 +1086,7 @@ export default function LandingPage() {
                           color: "inherit",
                           display: "block",
                         }}
+
                       >
                         <button
                           className="btn btn-primary"
@@ -1014,6 +1104,31 @@ export default function LandingPage() {
                     </div>
                   </div>
                 ))}
+                
+                {/* Load More Button */}
+                {hasMoreShops && (
+                  <div style={{ 
+                    gridColumn: '1 / -1', 
+                    display: 'flex', 
+                    justifyContent: 'center', 
+                    padding: '2rem 0' 
+                  }}>
+                    <button
+                      onClick={loadMoreShops}
+                      disabled={loading}
+                      className="btn btn-secondary"
+                      style={{
+                        padding: '0.75rem 2rem',
+                        fontSize: '1rem',
+                        fontWeight: 500,
+                        borderRadius: '8px',
+                        minWidth: '200px'
+                      }}
+                    >
+                      {loading ? 'Loading...' : 'Load More Shops'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1179,8 +1294,8 @@ export default function LandingPage() {
         </div>
         )}
       </div>
-
-      <>
+      </main>
+      
         <button 
           className="floating-map-btn" 
           onClick={openMapModal} 
@@ -1216,13 +1331,18 @@ export default function LandingPage() {
             </div>
           </div>
         )}
-      </>
+      
 
       {/* Bottom Ad - Placed at the very bottom of the page */}
       <div style={{ marginTop: '3rem', padding: '2rem 0', borderTop: '1px solid var(--border)' }}>
         <ResponsiveAd />
       </div>
-      </main>
+
+      {showBackToTop && (
+        <button className="back-to-top-btn" onClick={scrollToTop} title="Back to top" aria-label="Back to top">
+          <ArrowUp size={18} aria-hidden />
+        </button>
+      )}
     </>
   )
 }

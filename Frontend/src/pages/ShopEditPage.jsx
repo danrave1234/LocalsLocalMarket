@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { fetchShopById, updateShopRequest, fetchCategories } from '../api/shops.js'
@@ -7,47 +7,88 @@ import { SkeletonText, SkeletonForm } from '../components/Skeleton.jsx'
 import { handleApiError } from '../utils/errorHandler.js'
 import { LoadingButton } from '../components/Loading.jsx'
 import BusinessHours from '../components/BusinessHours.jsx'
+import LocationMap from '../components/LocationMap.jsx'
+import { 
+  Store, 
+  MapPin, 
+  Clock, 
+  Phone, 
+  Mail, 
+  Globe, 
+  Share2, 
+  Image as ImageIcon,
+  Package,
+  Plus,
+  Trash2,
+  Eye,
+  Save,
+  ArrowLeft,
+  AlertCircle,
+  Info
+} from 'lucide-react'
+import './ShopEditPage.css'
 
-export default function ShopEditPage(){
-  const { id: slug } = useParams()
+export default function ShopEditPage() {
+  const { slug } = useParams()
   const navigate = useNavigate()
   const { token, user } = useAuth()
   const [shop, setShop] = useState(null)
   const [categories, setCategories] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [creatingProduct, setCreatingProduct] = useState(false)
-
+  const [activeTab, setActiveTab] = useState('basic')
   const [form, setForm] = useState({
     name: '', description: '', category: '', addressLine: '', phone: '', website: '', email: '',
     facebook: '', instagram: '', twitter: '', lat: '', lng: '', logoPath: '', coverPath: '',
     adsEnabled: false, adsImagePathsJson: '[]', businessHoursJson: ''
   })
+  const [addressLoading, setAddressLoading] = useState(false)
 
-  useEffect(()=>{
-    (async()=>{
-      try{
+  // Memoize the business hours onChange callback to prevent infinite re-renders
+  const handleBusinessHoursChange = useCallback((value) => {
+    setForm(prevForm => ({ ...prevForm, businessHoursJson: value }))
+  }, [])
+
+  // Memoize the location select callback to prevent infinite re-renders
+  const handleLocationSelect = useCallback((location) => {
+    console.log('Location selected:', location)
+    setAddressLoading(true)
+    setForm(prevForm => ({
+      ...prevForm,
+      lat: location.lat?.toString() || '',
+      lng: location.lng?.toString() || '',
+      addressLine: location.addressLine || ''
+    }))
+    // Reset loading after a short delay to ensure UI updates
+    setTimeout(() => setAddressLoading(false), 100)
+  }, [])
+
+  useEffect(() => {
+    (async () => {
+      try {
         const cats = await fetchCategories()
         setCategories(cats.categories || [])
-      }catch{ /* ignore */ }
-      try{
+      } catch { /* ignore */ }
+      try {
         const s = await fetchShopById(slug)
         setShop(s)
         setForm({
-          name: s.name||'', description: s.description||'', category: s.category||'', addressLine: s.addressLine||'',
-          phone: s.phone||'', website: s.website||'', email: s.email||'', facebook: s.facebook||'', instagram: s.instagram||'', twitter: s.twitter||'',
-          lat: s.lat ?? '', lng: s.lng ?? '', logoPath: s.logoPath||'', coverPath: s.coverPath||'',
+          name: s.name || '', description: s.description || '', category: s.category || '', addressLine: s.addressLine || '',
+          phone: s.phone || '', website: s.website || '', email: s.email || '', facebook: s.facebook || '', instagram: s.instagram || '', twitter: s.twitter || '',
+          lat: s.lat ?? '', lng: s.lng ?? '', logoPath: s.logoPath || '', coverPath: s.coverPath || '',
           adsEnabled: !!s.adsEnabled, adsImagePathsJson: s.adsImagePathsJson || '[]', businessHoursJson: s.businessHoursJson || ''
         })
-      }catch(e){ 
+      } catch (e) {
         console.error('Failed to load shop:', e)
         const errorInfo = handleApiError(e)
-        setError(errorInfo.message) 
+        setError(errorInfo.message)
       }
     })()
-  },[slug])
+  }, [slug])
 
-  const isOwner = shop && user && shop.owner && shop.owner.id === user.id
+  const isOwner = shop && user && (shop.owner?.id === user.id || shop.ownerId === user.id || shop.userId === user.id)
+
+
 
   const onUpload = async (file) => {
     const fd = new FormData()
@@ -56,556 +97,652 @@ export default function ShopEditPage(){
     return res.path
   }
 
-  const handleSubmit = async (e)=>{
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if(!token) { setError('You must be logged in.'); return }
-    if(!isOwner){ setError('Forbidden'); return }
+    if (!token) { setError('You must be logged in.'); return }
+    if (!isOwner) { setError('Forbidden'); return }
     setSaving(true)
     setError('')
-    try{
+    try {
       const payload = {
         name: form.name, description: form.description, category: form.category, addressLine: form.addressLine,
         phone: form.phone, website: form.website, email: form.email, facebook: form.facebook, instagram: form.instagram, twitter: form.twitter,
-        lat: form.lat === ''? null : Number(form.lat), lng: form.lng === ''? null : Number(form.lng), logoPath: form.logoPath, coverPath: form.coverPath,
+        lat: form.lat === '' ? null : Number(form.lat), lng: form.lng === '' ? null : Number(form.lng), logoPath: form.logoPath, coverPath: form.coverPath,
         adsEnabled: !!form.adsEnabled, adsImagePathsJson: form.adsImagePathsJson, businessHoursJson: form.businessHoursJson
       }
       await updateShopRequest(slug, payload, token)
       navigate(`/shops/${slug}`)
-    }catch(e){ 
+    } catch (e) {
       console.error('Failed to save shop:', e)
       const errorInfo = handleApiError(e)
-      setError(errorInfo.message || 'Failed to save') 
-    }
-    finally{ setSaving(false) }
+      setError(errorInfo.message || 'Failed to save')
+    } finally { setSaving(false) }
   }
 
-  if(!shop) return (
-    <main className="container" style={{maxWidth: 900}}>
-      <SkeletonText lines={1} height="2rem" style={{ marginBottom: '1rem' }} />
-      <div className="card" style={{padding: 16}}>
+  if (!shop) return (
+    <main className="shop-edit-container">
+      <div className="shop-edit-header">
+        <SkeletonText lines={1} height="2.5rem" style={{ marginBottom: '1rem' }} />
+        <SkeletonText lines={1} height="1.5rem" style={{ marginBottom: '2rem' }} />
+      </div>
+      <div className="shop-edit-content">
         <SkeletonForm fields={8} />
       </div>
     </main>
   )
 
+  const tabs = [
+    { id: 'basic', label: 'Basic Info', icon: Store, description: 'Shop name, description, and category' },
+    { id: 'location', label: 'Location', icon: MapPin, description: 'Pin your shop location on the map' },
+    { id: 'hours', label: 'Business Hours', icon: Clock, description: 'Operating hours and availability' },
+    { id: 'contact', label: 'Contact & Social', icon: Share2, description: 'Phone, email, website, and social media' },
+    { id: 'media', label: 'Media & Branding', icon: ImageIcon, description: 'Logo, cover image, and advertisements' }
+  ]
+
   return (
-    <main className="container" style={{maxWidth: 900}}>
-      <h2>Edit Shop</h2>
-      {error && <div style={{background:'var(--error-bg)',color:'var(--error)',padding:'0.75rem',borderRadius:8,marginBottom:12}}>{error}</div>}
-      <form onSubmit={handleSubmit} className="create-shop-form card" style={{padding:16}}>
-        <div className="form-row">
-          <div style={{flex:1}}>
-            <label className="muted form-label">Name *</label>
-            <input className="input" required value={form.name} onChange={e=>setForm({...form,name:e.target.value})} />
-          </div>
-          <div style={{width:260}}>
-            <label className="muted form-label">Category</label>
-            <select className="input" value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>
-              <option value="">Select category</option>
-              {categories.map(c=> <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <label className="muted form-label">Description</label>
-        <textarea className="input" rows={3} value={form.description} onChange={e=>setForm({...form,description:e.target.value})} />
-
-        <label className="muted form-label">Address</label>
-        <input className="input" value={form.addressLine} onChange={e=>setForm({...form,addressLine:e.target.value})} />
-
-        <div className="form-row">
-          <div>
-            <label className="muted form-label">Latitude</label>
-            <input className="input" type="number" step="0.000001" value={form.lat} onChange={e=>setForm({...form,lat:e.target.value})} />
-          </div>
-          <div>
-            <label className="muted form-label">Longitude</label>
-            <input className="input" type="number" step="0.000001" value={form.lng} onChange={e=>setForm({...form,lng:e.target.value})} />
-          </div>
-        </div>
-
-        {/* Business Hours */}
-        <div className="form-group">
-          <label className="muted form-label">Business Hours</label>
-          <BusinessHours
-            value={form.businessHoursJson}
-            onChange={(value) => setForm({...form, businessHoursJson: value})}
-          />
-        </div>
-
-        <div className="form-row">
-          <div>
-            <label className="muted form-label">Phone</label>
-            <input className="input" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})} />
-          </div>
-          <div>
-            <label className="muted form-label">Email</label>
-            <input className="input" type="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} />
-          </div>
-          <div>
-            <label className="muted form-label">Website</label>
-            <input className="input" value={form.website} onChange={e=>setForm({...form,website:e.target.value})} />
-          </div>
-        </div>
-
-        <div className="form-row">
-          <div>
-            <label className="muted form-label">Facebook</label>
-            <input className="input" value={form.facebook} onChange={e=>setForm({...form,facebook:e.target.value})} />
-          </div>
-          <div>
-            <label className="muted form-label">Instagram</label>
-            <input className="input" value={form.instagram} onChange={e=>setForm({...form,instagram:e.target.value})} />
-          </div>
-          <div>
-            <label className="muted form-label">Twitter</label>
-            <input className="input" value={form.twitter} onChange={e=>setForm({...form,twitter:e.target.value})} />
-          </div>
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
-            <label className="muted form-label">Shop Logo</label>
-            <div className="logo-upload-section">
-              <div className="upload-preview">
-                {form.logoPath ? (
-                  <img src={form.logoPath} alt="Current logo" />
-                ) : (
-                  <div className="default">🏪</div>
-                )}
-              </div>
-              <div className="upload-controls">
-                <div className="upload-buttons">
-                  <label className="upload-btn">
-                    {form.logoPath ? 'Change Logo' : 'Upload Logo'}
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      style={{display:'none'}} 
-                      onChange={async (e)=>{ 
-                        const f=e.target.files?.[0]; 
-                        if(!f) return; 
-                        const path = await onUpload(f); 
-                        setForm({...form,logoPath:path})
-                      }} 
-                    />
-                  </label>
-                  {form.logoPath && (
-                    <button 
-                      type="button" 
-                      className="btn-danger" 
-                      onClick={() => setForm({...form, logoPath: ''})}
-                    >
-                      Remove Logo
-                    </button>
-                  )}
-                </div>
-                <div className="upload-info">
-                  Upload your shop logo (max 2MB). Supported formats: JPG, PNG, GIF
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="muted form-label">Shop Cover Image</label>
-            <div className="cover-upload-section">
-              <div className="upload-preview">
-                {form.coverPath ? (
-                  <img src={form.coverPath} alt="Current shop cover" />
-                ) : (
-                  <div className="default">🖼️</div>
-                )}
-              </div>
-              <div className="upload-controls">
-                <div className="upload-buttons">
-                  <label className="upload-btn">
-                    {form.coverPath ? 'Change Cover' : 'Upload Cover'}
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      style={{display:'none'}} 
-                      onChange={async (e)=>{ 
-                        const f=e.target.files?.[0]; 
-                        if(!f) return; 
-                        const path = await onUpload(f); 
-                        setForm({...form,coverPath:path})
-                      }} 
-                    />
-                  </label>
-                  {form.coverPath && (
-                    <button 
-                      type="button" 
-                      className="btn-danger" 
-                      onClick={() => setForm({...form, coverPath: ''})}
-                    >
-                      Remove Cover
-                    </button>
-                  )}
-                </div>
-                <div className="upload-info">
-                  Upload a cover image for your shop (max 2MB). Supported formats: JPG, PNG, GIF
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="form-actions">
-          <button type="button" className="btn" onClick={()=>navigate(-1)}>Cancel</button>
-          <LoadingButton 
-            type="submit" 
-            className="btn btn-primary" 
-            loading={saving}
-            loadingText="Saving..."
+    <main className="shop-edit-container">
+      {/* Header Section */}
+      <div className="shop-edit-header">
+        <div className="header-content">
+          <button 
+            className="back-button" 
+            onClick={() => navigate(-1)}
+            aria-label="Go back"
           >
-            Save Changes
-          </LoadingButton>
-        </div>
-      </form>
-
-      {/* Shop Preview */}
-      <h3 style={{marginTop:24}}>Shop Preview</h3>
-      <div className="card" style={{padding:16}}>
-        <div style={{display:'flex', gap:16, alignItems:'flex-start'}}>
-          {/* Shop Logo */}
-          <div style={{flexShrink:0}}>
-            {form.logoPath ? (
-              <img 
-                src={form.logoPath} 
-                alt="Shop logo" 
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                  border: '2px solid var(--border)'
-                }}
-              />
-            ) : (
-              <div style={{
-                width: 80,
-                height: 80,
-                borderRadius: '50%',
-                backgroundColor: 'var(--surface)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '2px solid var(--border)',
-                color: 'var(--muted)',
-                fontSize: '2rem'
-              }}>
-                🏪
-              </div>
-            )}
-          </div>
-
-          {/* Shop Details */}
-          <div style={{flex:1}}>
-            <h2 style={{margin: '0 0 8px 0', fontSize: '1.5rem'}}>
-              {form.name || 'Shop Name'}
-            </h2>
-            
-            {form.category && (
-              <div style={{
-                display: 'inline-block',
-                background: 'var(--primary)',
-                color: 'white',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                fontSize: '0.8rem',
-                marginBottom: '8px'
-              }}>
-                {form.category}
-              </div>
-            )}
-
-            {form.description && (
-              <p style={{margin: '0 0 12px 0', color: 'var(--muted)', lineHeight: 1.4}}>
-                {form.description}
-              </p>
-            )}
-
-            {form.addressLine && (
-              <div style={{marginBottom: '8px', fontSize: '0.9rem'}}>
-                <span style={{color: 'var(--muted)'}}>📍</span> {form.addressLine}
-              </div>
-            )}
-
-            {/* Contact Info */}
-            <div style={{display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.9rem'}}>
-              {form.phone && (
-                <div>
-                  <span style={{color: 'var(--muted)'}}>📞</span> {form.phone}
-                </div>
-              )}
-              {form.email && (
-                <div>
-                  <span style={{color: 'var(--muted)'}}>✉️</span> {form.email}
-                </div>
-              )}
-              {form.website && (
-                <div>
-                  <span style={{color: 'var(--muted)'}}>🌐</span> {form.website}
-                </div>
-              )}
-            </div>
-
-            {/* Social Media */}
-            {(form.facebook || form.instagram || form.twitter) && (
-              <div style={{display: 'flex', gap: 8, marginTop: '8px'}}>
-                {form.facebook && (
-                  <a href={form.facebook} target="_blank" rel="noopener noreferrer" style={{color: 'var(--primary)', textDecoration: 'none'}}>
-                    Facebook
-                  </a>
-                )}
-                {form.instagram && (
-                  <a href={form.instagram} target="_blank" rel="noopener noreferrer" style={{color: 'var(--primary)', textDecoration: 'none'}}>
-                    Instagram
-                  </a>
-                )}
-                {form.twitter && (
-                  <a href={form.twitter} target="_blank" rel="noopener noreferrer" style={{color: 'var(--primary)', textDecoration: 'none'}}>
-                    Twitter
-                  </a>
-                )}
-              </div>
-            )}
+            <ArrowLeft size={20} />
+          </button>
+          <div className="header-text">
+            <h1 className="page-title">Edit Shop</h1>
+            <p className="page-subtitle">Update your shop information and settings</p>
           </div>
         </div>
-
-        {/* Shop View Image */}
-        {form.coverPath && (
-          <div style={{marginTop: 16}}>
-            <img 
-              src={form.coverPath} 
-              alt="Shop view" 
-              style={{
-                width: '100%',
-                height: 200,
-                borderRadius: 8,
-                objectFit: 'cover'
-              }}
-            />
+        
+        {error && (
+          <div className="error-banner">
+            <AlertCircle size={20} />
+            <span>{error}</span>
           </div>
         )}
       </div>
 
-      <h3 style={{marginTop:24}}>Advertisements</h3>
-      <AdsManager form={form} setForm={setForm} />
-
-      <h3 style={{marginTop:24}}>Manage Products</h3>
-      <ProductManager shopId={shop.id} />
-    </main>
-  )
-}
-
-function AdsManager({ form, setForm }){
-  const { token } = useAuth()
-  const [uploading, setUploading] = useState(false)
-
-  const upload = async(file)=>{
-    const fd = new FormData(); fd.append('file', file)
-    const res = await uploadImage(fd, token)
-    return res.path
-  }
-
-  let images = []
-  try{ images = JSON.parse(form.adsImagePathsJson || '[]') } catch { images = [] }
-
-  return (
-    <section className="card" style={{padding:16}}>
-      <div className="form-row" style={{alignItems:'center'}}>
-        <label style={{display:'flex', gap:8, alignItems:'center'}}>
-          <input type="checkbox" checked={!!form.adsEnabled} onChange={e=>setForm({...form, adsEnabled: e.target.checked})} />
-          Enable Ads Carousel
-        </label>
-        <label className="btn" style={{marginLeft:'auto'}}>Upload Ad Image
-          <input type="file" accept="image/*" style={{display:'none'}} onChange={async(e)=>{const f=e.target.files?.[0]; if(!f) return; setUploading(true); const path=await upload(f); const arr=[...images, path]; setForm({...form, adsImagePathsJson: JSON.stringify(arr)}); setUploading(false)}} />
-        </label>
-      </div>
-      {uploading && (
-        <div style={{ 
-          padding: '0.5rem', 
-          backgroundColor: 'var(--primary-bg)', 
-          borderRadius: '8px',
-          fontSize: '0.875rem',
-          color: 'var(--primary)',
-          marginBottom: '0.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
-        }}>
-          <div style={{
-            width: '16px',
-            height: '16px',
-            border: '2px solid var(--primary)',
-            borderTop: '2px solid transparent',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          Uploading...
-        </div>
-      )}
-      <div style={{display:'flex', gap:8, flexWrap:'wrap', marginTop:8}}>
-        {images.map((p, i)=> (
-          <div key={i} className="card" style={{padding:4, position:'relative'}}>
-            <img src={p} alt="ad" style={{height:64}}/>
-            <button type="button" className="btn" style={{position:'absolute', top:4, right:4}} onClick={()=>{
-              const arr = images.filter((_,idx)=> idx!==i)
-              setForm({...form, adsImagePathsJson: JSON.stringify(arr)})
-            }}>✕</button>
-          </div>
+      {/* Navigation Tabs */}
+      <div className="tab-navigation">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            <tab.icon size={18} />
+            <span className="tab-label">{tab.label}</span>
+            <span className="tab-description">{tab.description}</span>
+          </button>
         ))}
       </div>
-      <p className="muted" style={{marginTop:8}}>Ads are saved with Save Changes above.</p>
-    </section>
-  )
-}
 
-function ProductManager({ shopId }){
-  const { token } = useAuth()
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [newItem, setNewItem] = useState({ title:'', description:'', price:'', category:'', stockCount:'', images: [] })
-
-  const load = async()=>{
-    setLoading(true)
-    setError('')
-    try{
-      const data = await fetchProductsByShopId(shopId, token)
-      const list = Array.isArray(data) ? data : (data.content||[])
-      setProducts(list)
-    }catch(e){ 
-      console.error('Failed to load products:', e)
-      const errorInfo = handleApiError(e)
-      setError(errorInfo.message)
-    } finally{ setLoading(false)}
-  }
-  useEffect(()=>{ load() },[shopId])
-
-  const upload = async(file)=>{
-    const fd = new FormData(); fd.append('file', file)
-    const res = await uploadImage(fd, token)
-    return res.path
-  }
-  const create = async()=>{
-    try{
-      setCreatingProduct(true)
-      const imagePathsJson = JSON.stringify(newItem.images)
-      await createProduct({ shopId, title:newItem.title, description:newItem.description, price: Number(newItem.price), stockCount: newItem.stockCount===''? 0 : Number(newItem.stockCount), imagePathsJson, category: newItem.category }, token)
-      setNewItem({ title:'', description:'', price:'', category:'', images: [] })
-      await load()
-    }catch(e){ 
-      console.error('Failed to create product:', e)
-      const errorInfo = handleApiError(e)
-      setError(errorInfo.message) 
-    } finally {
-      setCreatingProduct(false)
-    }
-  }
-  const update = async(p, patch)=>{
-    try{
-      const merged = { ...p, ...patch }
-      const body = { title: merged.title, description: merged.description, price: merged.price, imagePathsJson: merged.imagePathsJson, category: merged.category }
-      await updateProduct(p.id, body, token)
-      await load()
-    }catch(e){ 
-      console.error('Failed to update product:', e)
-      const errorInfo = handleApiError(e)
-      setError(errorInfo.message) 
-    }
-  }
-  const remove = async(id)=>{
-    try{
-      await deleteProduct(id, token)
-      await load()
-    }catch(e){ 
-      console.error('Failed to delete product:', e)
-      const errorInfo = handleApiError(e)
-      setError(errorInfo.message) 
-    }
-  }
-
-  return (
-    <section className="card" style={{padding:16}}>
-      {error && <div style={{background:'var(--error-bg)',color:'var(--error)',padding:'0.5rem',borderRadius:8,marginBottom:12}}>{error}</div>}
-      <h4 style={{marginTop:0}}>Add Product</h4>
-      <div className="form-row">
-        <input className="input" placeholder="Title" value={newItem.title} onChange={e=>setNewItem({...newItem,title:e.target.value})} />
-        <input className="input" type="number" step="0.01" placeholder="Price" value={newItem.price} onChange={e=>setNewItem({...newItem,price:e.target.value})} />
-        <input className="input" type="number" step="1" placeholder="Stock" value={newItem.stockCount} onChange={e=>setNewItem({...newItem,stockCount:e.target.value})} />
-        <input className="input" placeholder="Category" value={newItem.category} onChange={e=>setNewItem({...newItem,category:e.target.value})} />
-      </div>
-      <textarea className="input" rows={2} placeholder="Description" value={newItem.description} onChange={e=>setNewItem({...newItem,description:e.target.value})} />
-      <div style={{marginTop:8}}>
-        <label className="btn">Upload Image<input type="file" accept="image/*" onChange={async(e)=>{const f=e.target.files?.[0]; if(!f) return; const path=await upload(f); setNewItem({...newItem, images:[...newItem.images, path]})}} style={{display:'none'}}/></label>
-        <div style={{display:'flex', gap:8, marginTop:8, flexWrap:'wrap'}}>
-          {newItem.images.map((p,i)=> (
-            <div key={i} className="card" style={{padding:4}}>
-              <img src={p} alt="img" style={{height:56}}/>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="form-actions">
-        <LoadingButton 
-          className="btn btn-primary" 
-          onClick={create}
-          loading={creatingProduct}
-          loadingText="Adding..."
-        >
-          Add Product
-        </LoadingButton>
-      </div>
-
-      <h4>Existing Products</h4>
-      {loading ? (
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="card" style={{ padding: '1rem' }}>
-              <SkeletonText lines={1} height="1.2rem" style={{ marginBottom: '0.5rem' }} />
-              <SkeletonText lines={2} height="0.875rem" style={{ marginBottom: '0.5rem' }} />
-              <SkeletonText lines={1} height="1rem" style={{ width: '30%' }} />
-            </div>
-          ))}
-        </div>
-      ) : (
-        products.length===0 ? <div className="muted">No products yet.</div> : (
-          <div style={{display:'grid', gap:12}}>
-            {products.map(p=> (
-              <div key={p.id} className="card" style={{padding:12, display:'grid', gap:8}}>
-                <div className="form-row">
-                  <input className="input" value={p.title||''} onChange={e=>update(p,{ title: e.target.value })} />
-                  <input className="input" type="number" step="0.01" value={p.price??0} onChange={e=>update(p,{ price: Number(e.target.value) })} />
-                  <input className="input" type="number" step="1" value={p.stockCount??0} onChange={e=>update(p,{ stockCount: Number(e.target.value) })} />
-                </div>
-                <textarea className="input" rows={2} value={p.description||''} onChange={e=>update(p,{ description: e.target.value })} />
-                <div className="form-row">
-                  <input className="input" value={p.category||''} onChange={e=>update(p,{ category: e.target.value })} />
-                  <button className="btn" onClick={()=>remove(p.id)}>Delete</button>
-                </div>
+      {/* Content Area */}
+      <div className="shop-edit-content">
+        <form onSubmit={handleSubmit} className="edit-form">
+          {/* Basic Info Tab */}
+          {activeTab === 'basic' && (
+            <div className="tab-content">
+              <div className="section-header">
+                <Store size={24} />
                 <div>
-                  <div className="form-row" style={{alignItems:'center'}}>
-                    <label className="btn">Upload Image<input type="file" accept="image/*" onChange={async(e)=>{const f=e.target.files?.[0]; if(!f) return; const path=await upload(f); const images = Array.isArray(p.imagePathsJson)? p.imagePathsJson : (p.imagePathsJson? JSON.parse(p.imagePathsJson):[]); images.push(path); await update(p,{ imagePathsJson: JSON.stringify(images) })}} style={{display:'none'}}/></label>
-                    <button className="btn" onClick={async()=>{ await decrementProductStock(p.id, 1, token); await load() }}>Reduce Stock -1</button>
-                    <label style={{display:'flex', gap:8, alignItems:'center'}}>
-                      <input type="checkbox" checked={!!p.isActive} onChange={async(e)=>{ await update(p,{ isActive: e.target.checked }) }} /> Active
-                    </label>
-                  </div>
-                  <div style={{display:'flex', gap:8, marginTop:8, flexWrap:'wrap'}}>
-                    {(Array.isArray(p.imagePathsJson)? p.imagePathsJson : (p.imagePathsJson? JSON.parse(p.imagePathsJson):[])).map((path,idx)=> (
-                      <div key={idx} className="card" style={{padding:4}}>
-                        <img src={path} alt="img" style={{height:56}}/>
-                      </div>
-                    ))}
+                  <h2>Basic Information</h2>
+                  <p>Set your shop's name, description, and category</p>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <div className="form-group">
+                  <label className="form-label">
+                    <span className="label-text">Shop Name *</span>
+                    <span className="label-required">Required</span>
+                  </label>
+                  <input
+                    className="form-input"
+                    required
+                    value={form.name}
+                    onChange={e => setForm({ ...form, name: e.target.value })}
+                    placeholder="Enter your shop name"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    <span className="label-text">Category</span>
+                    <span className="label-optional">Optional</span>
+                  </label>
+                  <select
+                    className="form-select"
+                    value={form.category}
+                    onChange={e => setForm({ ...form, category: e.target.value })}
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    <span className="label-text">Description</span>
+                    <span className="label-optional">Optional</span>
+                  </label>
+                  <textarea
+                    className="form-textarea"
+                    rows={4}
+                    value={form.description}
+                    onChange={e => setForm({ ...form, description: e.target.value })}
+                    placeholder="Describe your shop, what you offer, and what makes you unique..."
+                  />
+                  <div className="input-help">
+                    <Info size={16} />
+                    <span>This description will be visible to customers browsing your shop</span>
                   </div>
                 </div>
               </div>
-            ))}
+            </div>
+          )}
+
+                     {/* Location Tab */}
+           {activeTab === 'location' && (
+             <div className="tab-content">
+               <div className="section-header">
+                 <MapPin size={24} />
+                 <div>
+                   <h2>Location & Address</h2>
+                   <p>Pin your shop location on the map below</p>
+                 </div>
+               </div>
+
+               <div className="form-section">
+                 <div className="form-group">
+                   <label className="form-label">
+                     <span className="label-text">Address</span>
+                     <span className="label-optional">Auto-detected from map</span>
+                   </label>
+                                       <div className="address-input-container">
+                      <input
+                        className="form-input"
+                        value={form.addressLine}
+                        disabled={addressLoading}
+                        placeholder={addressLoading ? "Detecting address..." : "Address will be automatically detected from the map"}
+                      />
+                      {addressLoading && (
+                        <div className="address-loading">
+                          <div className="loading-spinner"></div>
+                          <span>Detecting address...</span>
+                        </div>
+                      )}
+                    </div>
+                   <div className="input-help">
+                     <Info size={16} />
+                     <span>Click or drag on the map below to set your shop location. The address will be automatically detected.</span>
+                   </div>
+                 </div>
+
+                 <div className="form-group">
+                   <label className="form-label">
+                     <span className="label-text">Map Location</span>
+                     <span className="label-required">Required</span>
+                   </label>
+                                       <LocationMap
+                      initialLat={form.lat ? parseFloat(form.lat) : 10.3157}
+                      initialLng={form.lng ? parseFloat(form.lng) : 123.8854}
+                      onLocationSelect={handleLocationSelect}
+                    />
+                   <div className="input-help">
+                     <Info size={16} />
+                     <span>Click anywhere on the map to place your shop marker. Drag the marker to adjust the exact location.</span>
+                   </div>
+                 </div>
+               </div>
+             </div>
+           )}
+
+          {/* Business Hours Tab */}
+          {activeTab === 'hours' && (
+            <div className="tab-content">
+              <div className="section-header">
+                <Clock size={24} />
+                <div>
+                  <h2>Business Hours</h2>
+                  <p>Set when your shop is open and closed</p>
+                </div>
+              </div>
+
+              <div className="form-section">
+                <BusinessHours
+                  value={form.businessHoursJson}
+                  onChange={handleBusinessHoursChange}
+                />
+              </div>
+            </div>
+          )}
+
+                     {/* Contact & Social Tab */}
+           {activeTab === 'contact' && (
+             <div className="tab-content">
+               <div className="section-header">
+                 <Share2 size={24} />
+                 <div>
+                   <h2>Contact & Social Media</h2>
+                   <p>Provide ways for customers to reach you</p>
+                 </div>
+               </div>
+
+               <div className="form-section">
+                 <div className="contact-section">
+                   <h3>Contact Information</h3>
+                   <div className="form-row">
+                     <div className="form-group">
+                       <label className="form-label">
+                         <Phone size={16} />
+                         <span>Phone Number</span>
+                       </label>
+                       <input
+                         className="form-input"
+                         value={form.phone}
+                         onChange={e => setForm({ ...form, phone: e.target.value })}
+                         placeholder="Enter phone number"
+                       />
+                     </div>
+                     <div className="form-group">
+                       <label className="form-label">
+                         <Mail size={16} />
+                         <span>Email Address</span>
+                       </label>
+                       <input
+                         className="form-input"
+                         type="email"
+                         value={form.email}
+                         onChange={e => setForm({ ...form, email: e.target.value })}
+                         placeholder="Enter email address"
+                       />
+                     </div>
+                   </div>
+
+                   <div className="form-group">
+                     <label className="form-label">
+                       <Globe size={16} />
+                       <span>Website</span>
+                     </label>
+                     <input
+                       className="form-input"
+                       value={form.website}
+                       onChange={e => setForm({ ...form, website: e.target.value })}
+                       placeholder="https://yourwebsite.com"
+                     />
+                   </div>
+                 </div>
+
+                 <div className="social-section">
+                   <h3>Social Media</h3>
+                   <div className="form-row">
+                     <div className="form-group">
+                       <label className="form-label">
+                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                           <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                         </svg>
+                         <span>Facebook</span>
+                       </label>
+                       <input
+                         className="form-input"
+                         value={form.facebook}
+                         onChange={e => setForm({ ...form, facebook: e.target.value })}
+                         placeholder="Facebook page URL"
+                       />
+                     </div>
+                     <div className="form-group">
+                       <label className="form-label">
+                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                           <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.174-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.746-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24.009 12.017 24.009c6.624 0 11.99-5.367 11.99-11.988C24.007 5.367 18.641.001 12.017.001z"/>
+                         </svg>
+                         <span>Instagram</span>
+                       </label>
+                       <input
+                         className="form-input"
+                         value={form.instagram}
+                         onChange={e => setForm({ ...form, instagram: e.target.value })}
+                         placeholder="Instagram profile URL"
+                       />
+                     </div>
+                   </div>
+
+                   <div className="form-group">
+                                           <label className="form-label">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                        <span>X</span>
+                      </label>
+                     <input
+                       className="form-input"
+                       value={form.twitter}
+                       onChange={e => setForm({ ...form, twitter: e.target.value })}
+                       placeholder="Twitter profile URL"
+                     />
+                   </div>
+                 </div>
+               </div>
+             </div>
+           )}
+
+           {/* Media & Branding Tab */}
+           {activeTab === 'media' && (
+             <div className="tab-content">
+               <div className="section-header">
+                 <ImageIcon size={24} />
+                 <div>
+                   <h2>Media & Branding</h2>
+                   <p>Upload your shop's logo, cover image, and manage advertisements</p>
+                 </div>
+               </div>
+
+               <div className="form-section">
+                 <div className="media-section">
+                   <h3>Shop Images</h3>
+                   
+                   <div className="form-group">
+                     <label className="form-label">
+                       <span className="label-text">Shop Logo</span>
+                       <span className="label-optional">Optional</span>
+                     </label>
+                     <div className="image-upload-container">
+                       {form.logoPath ? (
+                         <div className="image-preview">
+                           <img src={form.logoPath} alt="Shop logo" />
+                           <button
+                             type="button"
+                             className="remove-image-btn"
+                             onClick={() => setForm({ ...form, logoPath: '' })}
+                           >
+                             <Trash2 size={16} />
+                           </button>
+                         </div>
+                       ) : (
+                         <div className="upload-placeholder">
+                           <ImageIcon size={32} />
+                           <span>Click to upload logo</span>
+                           <small>Recommended: 200x200px, PNG or JPG</small>
+                         </div>
+                       )}
+                       <input
+                         type="file"
+                         accept="image/*"
+                         onChange={async (e) => {
+                           const file = e.target.files[0]
+                           if (file) {
+                             try {
+                               const path = await onUpload(file)
+                               setForm({ ...form, logoPath: path })
+                             } catch (error) {
+                               console.error('Upload failed:', error)
+                               setError('Failed to upload logo')
+                             }
+                           }
+                         }}
+                         className="file-input"
+                       />
+                     </div>
+                   </div>
+
+                   <div className="form-group">
+                     <label className="form-label">
+                       <span className="label-text">Cover Image</span>
+                       <span className="label-optional">Optional</span>
+                     </label>
+                     <div className="image-upload-container">
+                       {form.coverPath ? (
+                         <div className="image-preview cover-preview">
+                           <img src={form.coverPath} alt="Shop cover" />
+                           <button
+                             type="button"
+                             className="remove-image-btn"
+                             onClick={() => setForm({ ...form, coverPath: '' })}
+                           >
+                             <Trash2 size={16} />
+                           </button>
+                         </div>
+                       ) : (
+                         <div className="upload-placeholder cover-placeholder">
+                           <ImageIcon size={32} />
+                           <span>Click to upload cover image</span>
+                           <small>Recommended: 1200x400px, PNG or JPG</small>
+                         </div>
+                       )}
+                       <input
+                         type="file"
+                         accept="image/*"
+                         onChange={async (e) => {
+                           const file = e.target.files[0]
+                           if (file) {
+                             try {
+                               const path = await onUpload(file)
+                               setForm({ ...form, coverPath: path })
+                             } catch (error) {
+                               console.error('Upload failed:', error)
+                               setError('Failed to upload cover image')
+                             }
+                           }
+                         }}
+                         className="file-input"
+                       />
+                     </div>
+                   </div>
+                 </div>
+
+                 <div className="ads-section">
+                   <h3>Advertisements</h3>
+                   
+                   <div className="form-group">
+                     <label className="form-label">
+                       <span className="label-text">Enable Advertisements</span>
+                     </label>
+                     <div className="toggle-container">
+                       <input
+                         type="checkbox"
+                         id="adsEnabled"
+                         checked={form.adsEnabled}
+                         onChange={(e) => setForm({ ...form, adsEnabled: e.target.checked })}
+                         className="toggle-input"
+                       />
+                       <label htmlFor="adsEnabled" className="toggle-label">
+                         <span className="toggle-slider"></span>
+                       </label>
+                       <span className="toggle-text">
+                         {form.adsEnabled ? 'Enabled' : 'Disabled'}
+                       </span>
+                     </div>
+                     <div className="input-help">
+                       <Info size={16} />
+                       <span>When enabled, your shop can display promotional advertisements to customers</span>
+                     </div>
+                   </div>
+
+                   {form.adsEnabled && (
+                     <div className="form-group">
+                       <label className="form-label">
+                         <span className="label-text">Advertisement Images</span>
+                         <span className="label-optional">Optional</span>
+                       </label>
+                       <div className="ads-upload-container">
+                         <div className="ads-grid">
+                           {JSON.parse(form.adsImagePathsJson || '[]').map((path, index) => (
+                             <div key={`ad-${path}-${index}`} className="ad-image-item">
+                               <img src={path} alt={`Ad ${index + 1}`} />
+                               <button
+                                 type="button"
+                                 className="remove-ad-btn"
+                                 onClick={() => {
+                                   const ads = JSON.parse(form.adsImagePathsJson || '[]')
+                                   ads.splice(index, 1)
+                                   setForm({ ...form, adsImagePathsJson: JSON.stringify(ads) })
+                                 }}
+                               >
+                                 <Trash2 size={16} />
+                               </button>
+                             </div>
+                           ))}
+                           <div className="add-ad-placeholder">
+                             <Plus size={24} />
+                             <span>Add Ad Image</span>
+                             <small>Upload promotional images</small>
+                           </div>
+                         </div>
+                         <input
+                           type="file"
+                           accept="image/*"
+                           onChange={async (e) => {
+                             const file = e.target.files[0]
+                             if (file) {
+                               try {
+                                 const path = await onUpload(file)
+                                 const ads = JSON.parse(form.adsImagePathsJson || '[]')
+                                 ads.push(path)
+                                 setForm({ ...form, adsImagePathsJson: JSON.stringify(ads) })
+                               } catch (error) {
+                                 console.error('Upload failed:', error)
+                                 setError('Failed to upload advertisement image')
+                               }
+                             }
+                           }}
+                           className="file-input"
+                         />
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               </div>
+             </div>
+           )}
+
+          {/* Form Actions */}
+          <div className="form-actions">
+            <button type="button" className="btn-secondary" onClick={() => navigate(-1)}>
+              <ArrowLeft size={16} />
+              Cancel
+            </button>
+
+            <LoadingButton
+              type="submit"
+              className="btn-primary"
+              loading={saving}
+              loadingText="Saving..."
+            >
+              <Save size={16} />
+              Save Changes
+            </LoadingButton>
           </div>
-        )
-      )}
-    </section>
+        </form>
+
+        {/* Live Preview */}
+        <div className="shop-preview">
+          <div className="preview-header">
+            <Eye size={20} />
+            <h3>Live Preview</h3>
+            <span className="preview-subtitle">See how your shop will appear to customers</span>
+          </div>
+          
+          <div className="preview-card">
+            <div className="preview-cover">
+              {form.coverPath ? (
+                <img src={form.coverPath} alt="Shop cover" />
+              ) : (
+                <div className="preview-cover-placeholder">
+                  <ImageIcon size={48} />
+                  <span>Cover Image</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="preview-content">
+              <div className="preview-logo">
+                {form.logoPath ? (
+                  <img src={form.logoPath} alt="Shop logo" />
+                ) : (
+                  <div className="preview-logo-placeholder">
+                    <Store size={24} />
+                  </div>
+                )}
+              </div>
+              
+              <div className="preview-details">
+                <h2 className="preview-title">
+                  {form.name || 'Shop Name'}
+                </h2>
+                
+                {form.category && (
+                  <div className="preview-category">
+                    {form.category}
+                  </div>
+                )}
+
+                {form.description && (
+                  <p className="preview-description">
+                    {form.description}
+                  </p>
+                )}
+
+                {form.addressLine && (
+                  <div className="preview-address">
+                    <MapPin size={16} />
+                    {form.addressLine}
+                  </div>
+                )}
+
+                <div className="preview-contact">
+                  {form.phone && (
+                    <div className="contact-item">
+                      <Phone size={16} />
+                      {form.phone}
+                    </div>
+                  )}
+                  {form.email && (
+                    <div className="contact-item">
+                      <Mail size={16} />
+                      {form.email}
+                    </div>
+                  )}
+                  {form.website && (
+                    <div className="contact-item">
+                      <Globe size={16} />
+                      {form.website}
+                    </div>
+                  )}
+                </div>
+
+                                 {(form.facebook || form.instagram || form.twitter) && (
+                   <div className="preview-social">
+                     {form.facebook && (
+                       <a href={form.facebook} target="_blank" rel="noopener noreferrer" className="social-link">
+                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                           <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                         </svg>
+                       </a>
+                     )}
+                     {form.instagram && (
+                       <a href={form.instagram} target="_blank" rel="noopener noreferrer" className="social-link">
+                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                           <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.174-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.746-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24.009 12.017 24.009c6.624 0 11.99-5.367 11.99-11.988C24.007 5.367 18.641.001 12.017.001z"/>
+                         </svg>
+                       </a>
+                     )}
+                     {form.twitter && (
+                       <a href={form.twitter} target="_blank" rel="noopener noreferrer" className="social-link">
+                         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                         </svg>
+                       </a>
+                     )}
+                   </div>
+                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   )
 }

@@ -14,9 +14,20 @@ export async function fetchAllShops() {
     return api.get('/shops/all')
 }
 
+// New function to fetch paginated shops with ratings included
+export async function fetchPaginatedShopsWithRatings(page = 0, size = 20) {
+    const params = new URLSearchParams()
+    params.set('page', page)
+    params.set('size', size)
+    
+    return api.get(`/shops/paginated-with-ratings?${params.toString()}`)
+}
+
 export async function fetchShopById(id) {
     return api.get(`/shops/${id}`)
 }
+
+
 
 export async function createShopRequest(shopData, token) {
     return api.post('/shops', shopData, { token })

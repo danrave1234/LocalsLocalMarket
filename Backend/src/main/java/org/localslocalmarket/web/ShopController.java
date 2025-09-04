@@ -4,6 +4,8 @@ import org.localslocalmarket.model.Shop;
 import org.localslocalmarket.model.User;
 import org.localslocalmarket.repo.ShopRepository;
 import org.localslocalmarket.repo.UserRepository;
+import org.localslocalmarket.repo.ShopRatingRepository;
+import org.localslocalmarket.repo.UnauthenticatedShopReviewRepository;
 import org.localslocalmarket.security.AuthorizationService;
 import org.localslocalmarket.security.AuditService;
 import org.localslocalmarket.security.InputValidationService;
@@ -21,6 +23,7 @@ import org.springframework.cache.annotation.Caching;
 import java.util.Map;
 import java.util.Optional;
 
+
 @RestController
 @RequestMapping("/api/shops")
 public class ShopController {
@@ -29,16 +32,22 @@ public class ShopController {
     private final AuthorizationService authorizationService;
     private final AuditService auditService;
     private final InputValidationService inputValidationService;
+    private final ShopRatingRepository shopRatings;
+    private final UnauthenticatedShopReviewRepository unauthReviews;
 
     public ShopController(ShopRepository shops, UserRepository users, 
                          AuthorizationService authorizationService, 
                          AuditService auditService,
-                         InputValidationService inputValidationService){
+                         InputValidationService inputValidationService,
+                         ShopRatingRepository shopRatings,
+                         UnauthenticatedShopReviewRepository unauthReviews){
         this.shops = shops;
         this.users = users;
         this.authorizationService = authorizationService;
         this.auditService = auditService;
         this.inputValidationService = inputValidationService;
+        this.shopRatings = shopRatings;
+        this.unauthReviews = unauthReviews;
     }
 
     @PostMapping
@@ -152,6 +161,8 @@ public class ShopController {
         }
     }
 
+
+
     @Cacheable(cacheNames = "shops_list", key = "'q=' + #q.orElse('') + '&category=' + #category.orElse('') + '&page=' + #page + '&size=' + #size")
     @GetMapping
     public Page<ShopDtos.ShopResponse> list(@RequestParam("q") Optional<String> q,
@@ -175,6 +186,81 @@ public class ShopController {
         }
         Page<Shop> shopPage = shops.findAll(spec, PageRequest.of(page, size));
         return shopPage.map(ShopDtos.ShopResponse::fromShop);
+    }
+
+    // Simple paginated endpoint for landing page
+    @GetMapping("/paginated")
+    public Page<ShopDtos.ShopResponse> getPaginatedShops(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        
+        Page<Shop> shopPage = shops.findAll(PageRequest.of(page, size));
+        return shopPage.map(ShopDtos.ShopResponse::fromShop);
+    }
+
+    // Enhanced paginated endpoint with ratings for landing page
+    @GetMapping("/paginated-with-ratings")
+    public Page<ShopDtos.ShopResponseWithRatings> getPaginatedShopsWithRatings(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size) {
+        
+        Page<Shop> shopPage = shops.findAll(PageRequest.of(page, size));
+        return shopPage.map(shop -> {
+            // Temporarily disable ratings calculation to debug 500 error
+            Double avgRating = 0.0;
+            Long totalReviews = 0L;
+            
+            // TODO: Re-enable ratings calculation once backend is stable
+            /*
+            try {
+                // Get authenticated ratings
+                long authCount = shopRatings.countByShop_Id(shop.getId());
+                Double authAvg = shopRatings.averageStarsByShop(shop.getId());
+                
+                // Get unauthenticated ratings
+                long unauthCount = unauthReviews.countByShopId(shop.getId());
+                Double unauthAvg = unauthReviews.averageStarsByShopId(shop.getId());
+                
+                // Calculate combined totals
+                totalReviews = authCount + unauthCount;
+                
+                if (totalReviews > 0) {
+                    double authTotal = authCount * (authAvg != null ? authAvg : 0.0);
+                    double unauthTotal = unauthCount * (unauthAvg != null ? unauthAvg : 0.0);
+                    avgRating = Math.round(((authTotal + unauthTotal) / totalReviews) * 10.0) / 10.0;
+                }
+            } catch (Exception e) {
+                // If there's any error accessing ratings, set defaults
+                avgRating = 0.0;
+                totalReviews = 0L;
+            }
+            */
+            
+            return new ShopDtos.ShopResponseWithRatings(
+                shop.getId(),
+                shop.getName(),
+                shop.getDescription(),
+                shop.getCategory(),
+                shop.getAddressLine(),
+                shop.getLat(),
+                shop.getLng(),
+                shop.getLogoPath(),
+                shop.getCoverPath(),
+                shop.getPhone(),
+                shop.getWebsite(),
+                shop.getEmail(),
+                shop.getFacebook(),
+                shop.getInstagram(),
+                shop.getTwitter(),
+                shop.getAdsImagePathsJson(),
+                shop.getAdsEnabled(),
+                shop.getBusinessHoursJson(),
+                shop.getCreatedAt(),
+                shop.getOwner() != null ? shop.getOwner().getId() : null,
+                avgRating,
+                totalReviews
+            );
+        });
     }
 
     @Cacheable(cacheNames = "all_shops", key = "'all'")

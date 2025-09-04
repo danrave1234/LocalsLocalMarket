@@ -4,16 +4,24 @@ import { useAuth } from '../auth/AuthContext.jsx'
 import SEOHead from '../components/SEOHead.jsx'
 import SocialSharing from '../components/SocialSharing.jsx'
 import RelatedShops from '../components/RelatedShops.jsx'
+import ShopReviews from '../components/ShopReviews.jsx'
 import CategorySelector from '../components/CategorySelector.jsx'
 import OptimizedSearch from '../components/OptimizedSearch.jsx'
 import OptimizedImage from '../components/OptimizedImage.jsx'
 import ServiceCard from '../components/ServiceCard.jsx'
 import ServiceForm from '../components/ServiceForm.jsx'
 import { fetchShopById } from '../api/shops.js'
+import shopCache from '../utils/shopCache.js'
+
+// Debug: Verify cache is imported and working
+console.log('ShopPage: shopCache imported:', shopCache)
+console.log('ShopPage: shopCache methods:', Object.keys(shopCache))
+console.log('ShopPage: shopCache.get method:', typeof shopCache.get)
+
 import { fetchProducts, createProduct, updateProduct, deleteProduct, updateProductStock } from '../api/products.js'
 import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
-import { extractShopIdFromSlug } from '../utils/slugUtils.js'
+import { extractShopIdFromSlug, generateShopSlug } from '../utils/slugUtils.js'
 import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
 import { getImageUrl } from '../utils/imageUtils.js'
 import { handleApiError } from '../utils/errorHandler.js'
@@ -28,7 +36,7 @@ import './ShopPage.css'
 import { Clock } from 'lucide-react'
 
 export default function ShopPage() {
-  const { id: slug } = useParams()
+  const { slug } = useParams()
   const { user, token } = useAuth()
   
   const shopId = extractShopIdFromSlug(slug)
@@ -53,6 +61,10 @@ export default function ShopPage() {
   })
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('newest')
+  const [priceRange, setPriceRange] = useState({ min: '', max: '' })
+  const [stockFilter, setStockFilter] = useState('all')
+  const [showPriceFilter, setShowPriceFilter] = useState(false)
+  const [showStockFilter, setShowStockFilter] = useState(false)
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [copiedText, setCopiedText] = useState('')
   const [showBusinessHours, setShowBusinessHours] = useState(false)
@@ -73,6 +85,9 @@ export default function ShopPage() {
   const { isScrolled } = useScroll(300)
   const { copyToClipboard } = useClipboard()
   const [recentlyViewedShops, setRecentlyViewedShops] = useLocalStorage('recentlyViewedShops', [])
+  
+  // Prevent duplicate API calls
+  const shopLoadingRef = useRef(false)
 
   // Floating map scroll effect
   useEffect(() => {
@@ -110,8 +125,28 @@ export default function ShopPage() {
             attribution: '© OpenStreetMap contributors'
           }).addTo(floatingMap)
 
-          // Add shop marker
-          window.L.marker([shop.lat, shop.lng])
+          // Add shop marker (custom icon matching main map)
+          const logoUrl = shop.logoPath ? getImageUrl(shop.logoPath) : ''
+          const floatShopIcon = window.L.divIcon({
+            className: 'shop-marker',
+            html: `
+              <div style="
+                position: relative;
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                border: 3px solid white;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                overflow: hidden;
+                color: white;">
+                ${logoUrl ? 
+                  `<div style="position:absolute; top:0; left:0; right:0; bottom:0; background-image:url('${logoUrl}'); background-size:cover; background-position:center;"></div>` : 
+                  '<div style="position:absolute; inset:0; background:#6366f1; display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M3 9l1-5h16l1 5"/><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M8 13h3v3H8z"/></svg></div>'}
+              </div>` ,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+          })
+          window.L.marker([shop.lat, shop.lng], { icon: floatShopIcon })
             .addTo(floatingMap)
             .bindPopup(shop.name)
         } catch (error) {
@@ -129,9 +164,8 @@ export default function ShopPage() {
   // Debug logging for image paths
   useEffect(() => {
     if (shop && process.env.NODE_ENV === 'development') {
-      console.log('Shop data:', shop)
-      console.log('Original logoPath:', shop.logoPath)
-      console.log('Original shopViewPath:', shop.coverPath)
+    
+
     }
   }, [shop])
 
@@ -162,7 +196,18 @@ export default function ShopPage() {
         product.customCategory === selectedCategory ||
         product.category === selectedCategory // Backward compatibility
       
-      return matchesSearch && matchesCategory
+      // Price range filter
+      const matchesPriceRange = !priceRange.min && !priceRange.max || 
+        ((!priceRange.min || (product.price || 0) >= parseFloat(priceRange.min)) &&
+         (!priceRange.max || (product.price || 0) <= parseFloat(priceRange.max)))
+      
+      // Stock status filter
+      const matchesStockFilter = stockFilter === 'all' ||
+        (stockFilter === 'in-stock' && (product.stockCount || 0) > 0) ||
+        (stockFilter === 'out-of-stock' && (product.stockCount || 0) <= 0) ||
+        (stockFilter === 'low-stock' && (product.stockCount || 0) > 0 && (product.stockCount || 0) <= 5)
+      
+      return matchesSearch && matchesCategory && matchesPriceRange && matchesStockFilter
     })
 
     switch (sortBy) {
@@ -170,14 +215,44 @@ export default function ShopPage() {
         return filteredProducts.sort((a, b) => (a.price || 0) - (b.price || 0))
       case 'price-high':
         return filteredProducts.sort((a, b) => (b.price || 0) - (a.price || 0))
-      case 'stock':
-        return filteredProducts.sort((a, b) => (b.stockCount || 0) - (a.stockCount || 0))
+      case 'oldest':
+        return filteredProducts.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+      case 'name-asc':
+        return filteredProducts.sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+      case 'name-desc':
+        return filteredProducts.sort((a, b) => (b.title || '').localeCompare(a.title || ''))
       case 'newest':
-        return filteredProducts.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
       default:
-        return filteredProducts
+        return filteredProducts.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
     }
-  }, [products, debouncedSearchQuery, selectedCategory, sortBy])
+  }, [products, debouncedSearchQuery, selectedCategory, sortBy, priceRange, stockFilter])
+
+  // Format business hours display
+  const formatHoursDisplay = useCallback((hours) => {
+    if (!hours || hours.closed === true || hours.isOpen === false) {
+      console.log('formatHoursDisplay: Closed - no hours or explicitly closed')
+      return 'Closed'
+    }
+    
+    // Check if it's a 24-hour day
+    if (hours.open === '12' && hours.openMinute === '00' && hours.openAMPM === 'AM' &&
+        hours.close === '11' && hours.closeMinute === '59' && hours.closeAMPM === 'PM') {
+      console.log('formatHoursDisplay: 24 Hours - new format')
+      return '24 Hours'
+    }
+    
+    // Check if it's the old 24-hour format
+    if (hours.open === '12' && hours.openMinute === '00' && hours.openAMPM === 'AM' &&
+        hours.close === '12' && hours.closeMinute === '00' && hours.closeAMPM === 'AM') {
+      console.log('formatHoursDisplay: 24 Hours - old format')
+      return '24 Hours'
+    }
+    
+    // Regular time format
+    const display = `${hours.open}:${hours.openMinute || '00'} ${hours.openAMPM || 'AM'} - ${hours.close}:${hours.closeMinute || '00'} ${hours.closeAMPM || 'PM'}`
+    console.log('formatHoursDisplay: Regular hours -', display)
+    return display
+  }, [])
 
   // Check if shop is currently open
   const isShopOpen = useCallback(() => {
@@ -188,9 +263,34 @@ export default function ShopPage() {
     const dayKey = currentDay
     const hours = businessHours[dayKey]
     
-    if (!hours || hours.closed) return false
+    if (!hours || hours.closed === true || hours.isOpen === false) {
+      return false
+    }
     
-    const { open, close } = hours
+    // Check if it's a 24-hour day
+    if (hours.open === '12' && hours.openMinute === '00' && hours.openAMPM === 'AM' &&
+        hours.close === '11' && hours.closeMinute === '59' && hours.closeAMPM === 'PM') {
+      return true // 24-hour days are always open
+    }
+    
+    // Check if it's the old 24-hour format
+    if (hours.open === '12' && hours.openMinute === '00' && hours.openAMPM === 'AM' &&
+        hours.close === '12' && hours.closeMinute === '00' && hours.closeAMPM === 'AM') {
+      return true // Old 24-hour format is always open
+    }
+    
+    // Handle both old format (time strings) and new format (separate fields)
+    let openTime, closeTime
+    
+    if (hours.openMinute !== undefined && hours.openAMPM !== undefined) {
+      // New format: separate fields
+      openTime = `${hours.open}:${hours.openMinute || '00'} ${hours.openAMPM || 'AM'}`
+      closeTime = `${hours.close}:${hours.closeMinute || '00'} ${hours.closeAMPM || 'PM'}`
+    } else {
+      // Old format: time strings
+      openTime = hours.open
+      closeTime = hours.close
+    }
     
     // Convert 12-hour format to 24-hour for comparison
     const convertTo24Hour = (timeStr) => {
@@ -208,8 +308,8 @@ export default function ShopPage() {
     }
     
     const currentTime = now.toTimeString().slice(0, 5)
-    const open24 = convertTo24Hour(open)
-    const close24 = convertTo24Hour(close)
+    const open24 = convertTo24Hour(openTime)
+    const close24 = convertTo24Hour(closeTime)
     
     return currentTime >= open24 && currentTime <= close24
   }, [businessHours])
@@ -230,47 +330,108 @@ export default function ShopPage() {
   const isOwner = shop && user && shop.owner && shop.owner.id === user.id
 
   useEffect(() => {
+    console.log(`ShopPage: useEffect triggered for shopId: ${shopId}`)
+    
     const loadShopData = async () => {
+      // Prevent duplicate API calls
+      if (shopLoadingRef.current) {
+        console.log(`ShopPage: Already loading shop ${shopId}, skipping...`)
+        return
+      }
+      shopLoadingRef.current = true
+      
+      console.log(`ShopPage: loadShopData function called for shopId: ${shopId}`)
       setError('')
       setLoading(true)
       setMapLoaded(false)
+      
       try {
-        const shopData = await fetchShopById(shopId)
-        setShop(shopData)
-        const productsResponse = await fetchProducts({ shopId: shopData.id })
-        // Handle both array and paginated response
-        const productsData = Array.isArray(productsResponse) ? productsResponse : (productsResponse.content || [])
-        setProducts(productsData)
+        console.log(`ShopPage: Loading shop ${shopId}, checking cache first...`)
+        // First, check if we have shop data in the global cache
+        let shopData = shopCache.get(shopId)
         
-        // Load business hours from shop data
-        if (shopData.businessHoursJson && shopData.businessHoursJson.trim() !== '') {
-          try {
-            console.log('ShopPage - Raw business hours from backend:', shopData.businessHoursJson)
-            const parsedHours = JSON.parse(shopData.businessHoursJson)
-            console.log('ShopPage - Parsed business hours:', parsedHours)
-            setBusinessHours(parsedHours)
-          } catch (error) {
-            console.error('Failed to parse business hours:', error)
-            console.log('ShopPage - Using default business hours due to parsing error')
+        if (shopData) {
+          console.log(`ShopPage: Cache HIT! Using cached data for shop ${shopId}`)
+          
+          // Set default values if not present
+          shopData.averageRating = shopData.averageRating || 0
+          shopData.reviewCount = shopData.reviewCount || 0
+          
+          setShop(shopData)
+          
+          // Only fetch products since they're not cached
+          const productsResponse = await fetchProducts({ shopId: shopData.id })
+          const productsData = Array.isArray(productsResponse) ? productsResponse : (productsResponse.content || [])
+          setProducts(productsData)
+          
+          // Load business hours from shop data
+          if (shopData.businessHoursJson && shopData.businessHoursJson.trim() !== '') {
+            try {
+              const parsedHours = JSON.parse(shopData.businessHoursJson)
+              setBusinessHours(parsedHours)
+            } catch (error) {
+              console.error('Failed to parse business hours:', error)
+            }
           }
+          
         } else {
-          console.log('ShopPage - No business hours data from backend, using defaults')
-          console.log('ShopPage - businessHoursJson value:', shopData.businessHoursJson)
-          console.log('ShopPage - This shop needs to be updated with business hours')
+          // No cached data, fetch from API
+          console.log(`ShopPage: Fetching shop ${shopId} from API (cache miss)`)
+          const apiShopData = await fetchShopById(shopId)
+          
+          // Cache the fetched data for future use
+          shopCache.set(shopId, apiShopData)
+          console.log(`ShopPage: Cached shop ${shopId} after API fetch`)
+          
+          // Verify cache was set correctly
+          const verifyCache = shopCache.get(shopId)
+          if (verifyCache) {
+            console.log(`ShopPage: Cache verification successful for shop ${shopId}`)
+          } else {
+            console.log(`ShopPage: Cache verification FAILED for shop ${shopId}`)
+          }
+          
+          // Set default values if not present
+          apiShopData.averageRating = apiShopData.averageRating || 0
+          apiShopData.reviewCount = apiShopData.reviewCount || 0
+          
+          setShop(apiShopData)
+          
+          // Fetch products
+          const productsResponse = await fetchProducts({ shopId: apiShopData.id })
+          const productsData = Array.isArray(productsResponse) ? productsResponse : (productsResponse.content || [])
+          setProducts(productsData)
+          
+          // Load business hours from shop data
+          if (apiShopData.businessHoursJson && apiShopData.businessHoursJson.trim() !== '') {
+            try {
+              const parsedHours = JSON.parse(apiShopData.businessHoursJson)
+              setBusinessHours(parsedHours)
+            } catch (error) {
+              console.error('Failed to parse business hours:', error)
+            }
+          }
         }
+        
       } catch (e) {
         console.error('Failed to load shop data:', e)
         const errorInfo = handleApiError(e)
         setError(errorInfo.message)
-      } finally {
-        setLoading(false)
+              } finally {
+          setLoading(false)
+          shopLoadingRef.current = false
+        }
       }
-    }
 
-    if (shopId) {
-      loadShopData()
-    }
+          if (shopId) {
+        // Small delay to allow cache to be populated from other components
+        setTimeout(() => {
+          loadShopData()
+        }, 100)
+      }
   }, [shopId])
+
+
 
   // Initialize map when shop data is loaded
   useEffect(() => {
@@ -317,8 +478,18 @@ export default function ShopPage() {
             attribution: '© OpenStreetMap contributors'
           }).addTo(mapInstanceRef.current)
 
-          // Add shop marker
-          window.L.marker([shop.lat, shop.lng])
+          // Add shop marker (custom icon with background-image logo)
+          const logoUrl = shop.logoPath ? getImageUrl(shop.logoPath) : ''
+          const mainShopIcon = window.L.divIcon({
+            className: 'shop-marker',
+            html: `
+              <div style="position: relative; width: 44px; height: 44px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); overflow: hidden; color: white;">
+                ${logoUrl ? `<div style=\"position:absolute; top:0; left:0; right:0; bottom:0; background-image:url('${logoUrl}'); background-size:cover; background-position:center;\"></div>` : '<div style=\"position:absolute; inset:0; background:#6366f1; display:flex; align-items:center; justify-content:center;\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"white\" stroke-width=\"2\"><path d=\"M3 9l1-5h16l1 5\"/><path d=\"M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z\"/><path d=\"M8 13h3v3H8z\"/></svg></div>'}
+              </div>` ,
+            iconSize: [44, 44],
+            iconAnchor: [22, 22]
+          })
+          window.L.marker([shop.lat, shop.lng], { icon: mainShopIcon })
             .addTo(mapInstanceRef.current)
             .bindPopup(shop.name)
           
@@ -612,13 +783,13 @@ export default function ShopPage() {
         title={shop.name}
         description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products, contact information, and location. Support local businesses on LocalsLocalMarket.`}
         keywords={`${shop.name}, local shop, ${shop.addressLine ? shop.addressLine.split(',')[0] : 'local business'}, local products, shop local`}
-        url={`https://localslocalmarket.com/shops/${shop.id}`}
+        url={`https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}`}
         structuredData={{
           "@context": "https://schema.org",
           "@type": "LocalBusiness",
           "name": shop.name,
           "description": shop.description || `Local shop: ${shop.name}`,
-          "url": `https://localslocalmarket.com/shops/${shop.id}`,
+          "url": `https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}`,
           "telephone": shop.phone,
           "email": shop.email,
           "address": shop.addressLine ? {
@@ -661,6 +832,28 @@ export default function ShopPage() {
                         {shop.description}
                       </p>
                     )}
+                    
+                    {/* Shop Rating Display */}
+                    <div className="shop-rating-display">
+                      <div className="rating-stars">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <span 
+                            key={star} 
+                            className={`rating-star ${star <= Math.round(shop.averageRating || 0) ? 'filled' : ''}`}
+                          >
+                            ★
+                          </span>
+                        ))}
+                      </div>
+                      <div className="rating-info">
+                        <span className="rating-score">
+                          {shop.averageRating ? shop.averageRating.toFixed(1) : '--'}
+                        </span>
+                        <span className="rating-count">
+                          {shop.reviewCount ? `(${shop.reviewCount} reviews)` : '(No reviews yet)'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                   
                   {shop.addressLine && (
@@ -720,7 +913,7 @@ export default function ShopPage() {
                         <SocialSharing
                           title={`${shop.name} - Local Shop`}
                           description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products and support local businesses.`}
-                          url={`https://localslocalmarket.com/shops/${shop.id}`}
+                          url={`https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}`}
                           image={getImageUrl(shop.coverPath)}
                         />
                       </div>
@@ -768,7 +961,7 @@ export default function ShopPage() {
                     <SocialSharing
                         title={`${shop.name} - Local Shop`}
                         description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products and support local businesses.`}
-                        url={`https://localslocalmarket.com/shops/${shop.id}`}
+                        url={`https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}`}
                         image={getImageUrl(shop.coverPath)} // Shop view image
                     />
                 </div>
@@ -776,7 +969,7 @@ export default function ShopPage() {
                 <div className="shop-owner-actions">
                   <button 
                     className="btn btn-secondary"
-                    onClick={() => window.location.href = `/shops/${slug}/edit`}
+                    onClick={() => window.location.href = `/shops/${generateShopSlug(shop.name, shop.id)}/edit`}
                   >
                     <span className="btn-icon">✏️</span>
                     Edit Shop
@@ -943,14 +1136,18 @@ export default function ShopPage() {
             {showBusinessHours && (
               <div className="hours-dropdown-content">
                 <div className="hours-grid">
-                  {Object.entries(businessHours).map(([day, hours]) => (
-                    <div key={day} className="hours-row">
-                      <span className="day-name">{day.charAt(0).toUpperCase() + day.slice(1)}</span>
-                      <span className="hours-time">
-                        {hours.closed ? 'Closed' : `${hours.open} - ${hours.close}`}
-                      </span>
-                    </div>
-                  ))}
+                  {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
+                    const hours = businessHours[day];
+                    
+                    return (
+                      <div key={day} className="hours-row">
+                        <span className="day-name">{day.charAt(0).toUpperCase() + day.slice(1)}</span>
+                        <span className="hours-time">
+                          {formatHoursDisplay(hours)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -991,31 +1188,192 @@ export default function ShopPage() {
           )}
         </div>
 
-        {/* Search and Sort Controls */}
+
+
+        {/* Enhanced Product Controls */}
         {Array.isArray(products) && products.length > 0 && (
-          <div className="search-sort-controls">
-            <div className="search-container">
-              <OptimizedSearch
-                onSearch={setSearchQuery}
-                placeholder="Search products..."
-                debounceDelay={300}
-                minLength={2}
-                className="search-input"
-              />
+          <div className="product-controls">
+            <div className="controls-left">
+              <div className="search-sort-row">
+                <div className="search-container">
+                  <div className="search-icon">🔍</div>
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="enhanced-search-input"
+                  />
+                  {searchQuery && (
+                    <button
+                      className="clear-search-btn"
+                      onClick={() => setSearchQuery('')}
+                      type="button"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                
+                <div className="sort-container">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="enhanced-sort-select"
+                  >
+                    <option value="newest">Newest</option>
+                    <option value="oldest">Oldest</option>
+                    <option value="price-low">Price ↑</option>
+                    <option value="price-high">Price ↓</option>
+                    <option value="name-asc">Name A-Z</option>
+                    <option value="name-desc">Name Z-A</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            <div className="sort-container">
-              <select 
-                value={sortBy} 
-                onChange={(e) => setSortBy(e.target.value)}
-                className="sort-select"
-              >
-                <option value="newest">Newest First</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="stock">Most Stock</option>
-              </select>
+            
+            <div className="controls-right">
+              <div className="filter-toggles">
+                <button
+                  className={`filter-toggle ${priceRange.min || priceRange.max ? 'active' : ''}`}
+                  onClick={() => setShowPriceFilter(!showPriceFilter)}
+                  type="button"
+                >
+                  <span className="toggle-icon">💰</span>
+                  Price
+                  {(priceRange.min || priceRange.max) && <span className="active-indicator">•</span>}
+                </button>
+                
+                <button
+                  className={`filter-toggle ${stockFilter !== 'all' ? 'active' : ''}`}
+                  onClick={() => setShowStockFilter(!showStockFilter)}
+                  type="button"
+                >
+                  <span className="toggle-icon">📦</span>
+                  Stock
+                  {stockFilter !== 'all' && <span className="active-indicator">•</span>}
+                </button>
+                
+                {(priceRange.min || priceRange.max || stockFilter !== 'all') && (
+                  <button
+                    className="clear-filters-btn"
+                    onClick={() => {
+                      setPriceRange({ min: '', max: '' });
+                      setStockFilter('all');
+                    }}
+                    type="button"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
           </div>
+        )}
+
+        {/* Collapsible Filter Panels */}
+        {Array.isArray(products) && products.length > 0 && (
+          <>
+            {/* Price Filter Panel */}
+            {showPriceFilter && (
+              <div className="filter-panel price-filter-panel">
+                <div className="filter-panel-header">
+                  <h5>Price Range</h5>
+                  <button
+                    className="close-filter-btn"
+                    onClick={() => setShowPriceFilter(false)}
+                    type="button"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="price-range-controls">
+                  <div className="price-input-group">
+                    <label>Min Price</label>
+                    <input
+                      type="number"
+                      placeholder="0.00"
+                      value={priceRange.min}
+                      onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
+                      className="price-range-input"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="price-input-group">
+                    <label>Max Price</label>
+                    <input
+                      type="number"
+                      placeholder="999.99"
+                      value={priceRange.max}
+                      onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
+                      className="price-range-input"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Stock Filter Panel */}
+            {showStockFilter && (
+              <div className="filter-panel stock-filter-panel">
+                <div className="filter-panel-header">
+                  <h5>Stock Status</h5>
+                  <button
+                    className="close-filter-btn"
+                    onClick={() => setShowStockFilter(false)}
+                    type="button"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="stock-options">
+                  <label className="stock-option">
+                    <input
+                      type="radio"
+                      name="stockFilter"
+                      value="all"
+                      checked={stockFilter === 'all'}
+                      onChange={(e) => setStockFilter(e.target.value)}
+                    />
+                    <span className="radio-label">All Products</span>
+                  </label>
+                  <label className="stock-option">
+                    <input
+                      type="radio"
+                      name="stockFilter"
+                      value="in-stock"
+                      checked={stockFilter === 'in-stock'}
+                      onChange={(e) => setStockFilter(e.target.value)}
+                    />
+                    <span className="radio-label">In Stock</span>
+                  </label>
+                  <label className="stock-option">
+                    <input
+                      type="radio"
+                      name="stockFilter"
+                      value="out-of-stock"
+                      checked={stockFilter === 'out-of-stock'}
+                      onChange={(e) => setStockFilter(e.target.value)}
+                    />
+                    <span className="radio-label">Out of Stock</span>
+                  </label>
+                  <label className="stock-option">
+                    <input
+                      type="radio"
+                      name="stockFilter"
+                      value="low-stock"
+                      checked={stockFilter === 'low-stock'}
+                      onChange={(e) => setStockFilter(e.target.value)}
+                    />
+                    <span className="radio-label">Low Stock (≤5)</span>
+                  </label>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Category Filter */}
@@ -1083,14 +1441,6 @@ export default function ShopPage() {
                   }}
                 >
                   <div className="product-image-container">
-                  {/* New Badge - Show for products created in the last 7 days */}
-                  {(() => {
-                    const createdAt = product.createdAt ? new Date(product.createdAt) : null;
-                    const isNew = createdAt && (Date.now() - createdAt.getTime()) < (7 * 24 * 60 * 60 * 1000);
-                    return isNew ? (
-                      <div className="new-badge">NEW</div>
-                    ) : null;
-                  })()}
                   {(() => {
                     let imagePaths = [];
                     try {
@@ -1260,6 +1610,14 @@ export default function ShopPage() {
 
       {/* Related Shops */}
       <RelatedShops currentShop={shop} />
+
+              {/* Shop Reviews */}
+        <ShopReviews 
+          shopId={shop.id} 
+          shopName={shop.name}
+          averageRating={shop.averageRating}
+          reviewCount={shop.reviewCount}
+        />
 
       {/* Add Product Modal */}
       <Modal 

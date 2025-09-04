@@ -1,6 +1,20 @@
 import React, { useState } from 'react';
 import '../support.css';
 
+// Inline icon components to match landing page consistency
+function StoreIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" width={props.width || 20} height={props.height || 20} fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M2 3h20v14H2z" />
+      <path d="M2 17h20v4H2z" />
+      <path d="M6 7h4" />
+      <path d="M6 11h4" />
+      <path d="M14 7h4" />
+      <path d="M14 11h4" />
+    </svg>
+  )
+}
+
 const SupportPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFaq, setActiveFaq] = useState(null);
@@ -79,7 +93,7 @@ const SupportPage = () => {
         </div>
 
         <div className="support-category">
-          <div className="category-icon">🏪</div>
+          <div className="category-icon"><StoreIcon width={24} height={24} /></div>
           <h3 className="category-title">Business Management</h3>
           <p className="category-description">
             Learn how to manage your business listing, update information, and grow your presence.

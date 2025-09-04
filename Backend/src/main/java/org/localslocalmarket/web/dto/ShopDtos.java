@@ -92,4 +92,31 @@ public class ShopDtos {
             );
         }
     }
+
+    public record ShopResponseWithRatings(
+            Long id,
+            String name,
+            String description,
+            String category,
+            String addressLine,
+            Double lat,
+            Double lng,
+            String logoPath,
+            String coverPath,
+            String phone,
+            String website,
+            String email,
+            String facebook,
+            String instagram,
+            String twitter,
+            String adsImagePathsJson,
+            Boolean adsEnabled,
+            String businessHoursJson,
+            java.time.Instant createdAt,
+            Long ownerId,
+            Double averageRating,
+            Long reviewCount
+    ){}
+
+
 }

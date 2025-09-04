@@ -41,6 +41,7 @@ public class CacheConfig {
                 "shops_by_id",
                 "shops_list",
                 "all_shops",
+                "shops_paginated",
                 "products_by_id",
                 "products_list",
                 "categories"

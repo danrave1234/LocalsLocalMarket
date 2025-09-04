@@ -229,8 +229,8 @@
   height: 50vh;
   max-height: 300px;
   min-height: 200px;
-  background-size: cover !important;
-  background-position: center !important;
+  background-size: cover;
+  background-position: center;
   border-radius: 8px;
   position: relative;
   width: 100%;
@@ -271,6 +271,9 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  /* Ensure proper positioning for absolute children */
+  position: relative;
+  z-index: 1;
 }
 
 @media (min-width: 1024px) {
@@ -375,10 +378,10 @@
 }
 
 .shop-info-section .avatar {
-  align-self: center !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (min-width: 768px) {
@@ -389,10 +392,10 @@
   }
   
   .shop-info-section .avatar {
-    align-self: center !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
@@ -426,17 +429,66 @@
 
 .shop-name {
   margin: 0;
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 2.25rem;
+  font-weight: 800;
   color: var(--text);
-  word-break: break-word;
-  line-height: 1.2;
+  line-height: 1.1;
   letter-spacing: -0.02em;
+}
+
+/* Shop Rating Display */
+.shop-rating-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0;
+}
+
+.rating-stars {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.rating-star {
+  font-size: 0.75rem;
+  color: #e5e7eb;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.rating-star.filled {
+  color: #fbbf24;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.3);
+}
+
+.rating-info {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.625rem;
+}
+
+.rating-score {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.rating-count {
+  color: var(--muted);
 }
 
 @media (min-width: 768px) {
   .shop-name {
     font-size: 2.5rem;
+  }
+  
+  .shop-rating-display {
+    margin-top: 0.5rem;
+  }
+  
+  .rating-star {
+    font-size: 0.875rem;
   }
 }
 
@@ -444,16 +496,25 @@
   .shop-name {
     font-size: 3rem;
   }
+  
+  .shop-rating-display {
+    margin-top: 0.75rem;
+  }
+  
+  .rating-star {
+    font-size: 1rem;
+  }
 }
 
 .shop-tagline {
   margin: 0;
-  font-size: 1.1rem;
-  line-height: 1.5;
+  font-size: 1.125rem;
+  line-height: 1.6;
   color: var(--muted);
   word-break: break-word;
-  font-weight: 400;
+  font-weight: 500;
   max-width: 600px;
+  letter-spacing: 0.01em;
 }
 
 @media (min-width: 768px) {
@@ -1241,7 +1302,9 @@
   margin-top: 1rem;
   border-top: 1px solid var(--border);
   padding-top: 1rem;
-  position: relative;
+  position: relative; /* Keep relative for absolute dropdown positioning */
+  z-index: 1000; /* Ensure proper stacking context */
+  overflow: visible; /* Ensure dropdown content is visible */
 }
 
 .hours-toggle-btn {
@@ -1313,25 +1376,29 @@
   border-radius: 8px;
   border: 1px solid var(--border);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  z-index: 999999 !important;
+  z-index: 1000; /* High enough to appear above other content */
   animation: slideDown 0.2s ease-out;
   min-width: 300px;
   max-width: 400px;
+  /* Ensure it overlays content instead of pushing it down */
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Ensure dropdown maintains z-index on hover */
 .hours-dropdown-content:hover {
-  z-index: 999999 !important;
+  z-index: 1000;
 }
 
-/* Ensure all child elements maintain the high z-index */
+/* Ensure all child elements maintain proper z-index */
 .hours-dropdown-content * {
-  z-index: 999999 !important;
+  z-index: inherit;
 }
 
 /* Ensure the dropdown container maintains z-index */
 .business-hours-dropdown:hover .hours-dropdown-content {
-  z-index: 999999 !important;
+  z-index: 1000;
 }
 
 /* Additional z-index protection */
@@ -1339,8 +1406,8 @@
 .hours-dropdown-content:hover,
 .hours-dropdown-content:focus,
 .hours-dropdown-content:active {
-  z-index: 999999 !important;
-  position: absolute !important;
+  z-index: 1000;
+  position: absolute;
 }
 
 /* Maximum z-index protection for all states */
@@ -1350,16 +1417,16 @@
 .hours-dropdown-content:active,
 .hours-dropdown-content:visited,
 .hours-dropdown-content:link {
-  z-index: 999999 !important;
-  position: absolute !important;
+  z-index: 1000;
+  position: absolute;
 }
 
-/* Force highest z-index for any element inside the dropdown */
+/* Ensure proper z-index for any element inside the dropdown */
 .hours-dropdown-content *,
 .hours-dropdown-content *:hover,
 .hours-dropdown-content *:focus,
 .hours-dropdown-content *:active {
-  z-index: 999999 !important;
+  z-index: inherit;
 }
 
 @keyframes slideDown {
@@ -1477,10 +1544,11 @@
   flex-direction: column;
   gap: 1rem;
   margin-bottom: 1rem;
-  padding: 1rem;
-  background: var(--surface);
-  border-radius: 8px;
-  border: 1px solid var(--border);
+  padding: 1.5rem;
+  background: var(--card-2);
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 @media (min-width: 768px) {
@@ -1496,42 +1564,9 @@
   flex: 1;
 }
 
-.search-input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--background);
-  color: var(--text);
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-}
+/* Remove conflicting search-input styles since OptimizedSearch component handles its own styling */
 
-.search-input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
-}
-
-.clear-search-btn {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  transition: all 0.2s ease;
-}
-
-.clear-search-btn:hover {
-  background: var(--surface);
-  color: var(--error);
-}
+/* Clear button is handled by OptimizedSearch component */
 
 .sort-container {
   flex-shrink: 0;
@@ -1541,7 +1576,7 @@
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--background);
+  background: var(--card-2);
   color: var(--text);
   font-size: 0.875rem;
   cursor: pointer;
@@ -1813,10 +1848,393 @@
   margin-top: 1rem;
   overflow: visible;
 }
-
 /* Business Hours Dropdown */
 .business-hours-dropdown {
   position: relative;
   z-index: 1000;
   overflow: visible;
 }
+
+/* Products Search Bar */
+.products-search-container {
+  margin: 1rem 0;
+  padding: 0 0.5rem;
+}
+
+.search-input-wrapper {
+  position: relative;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.products-search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  padding-right: 2.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.products-search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.products-search-input::placeholder {
+  color: var(--muted);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+}
+
+.clear-search-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* Mobile responsive adjustments for search */
+@media (max-width: 768px) {
+  .products-search-container {
+    padding: 0 0.25rem;
+    margin: 0.75rem 0;
+  }
+  
+  .search-input-wrapper {
+    max-width: 100%;
+  }
+  
+  .products-search-input {
+    padding: 0.875rem 1rem;
+    padding-right: 2.5rem;
+    font-size: 1rem;
+  }
+}
+
+/* Enhanced Product Controls */
+.product-controls {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin: 1rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.controls-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.controls-right {
+  flex-shrink: 0;
+}
+
+.search-sort-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+  min-width: 250px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.enhanced-search-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.enhanced-search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.enhanced-search-input::placeholder {
+  color: var(--muted);
+}
+
+.sort-container {
+  flex-shrink: 0;
+}
+
+.enhanced-sort-select {
+  padding: 0.75rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.enhanced-sort-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+.filter-toggles {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.filter-toggle:hover {
+  background: var(--surface);
+  border-color: var(--primary);
+}
+
+.filter-toggle.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.toggle-icon {
+  font-size: 0.875rem;
+}
+
+.active-indicator {
+  color: var(--accent);
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.clear-filters-btn {
+  padding: 0.5rem 0.75rem;
+  background: var(--error);
+  border: 1px solid var(--error);
+  border-radius: 6px;
+  color: white;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-filters-btn:hover {
+  background: var(--error-hover);
+  border-color: var(--error-hover);
+}
+
+/* Filter Panels */
+.filter-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0.5rem 0;
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
+
+.filter-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.filter-panel-header h5 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.close-filter-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.close-filter-btn:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* Price Filter Panel */
+.price-range-controls {
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.price-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.price-input-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.price-range-input {
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.price-range-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+/* Stock Filter Panel */
+.stock-options {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.stock-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.stock-option:hover {
+  background: var(--surface);
+}
+
+.stock-option input[type="radio"] {
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.radio-label {
+  font-size: 0.875rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .product-controls {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem;
+  }
+  
+  .controls-left,
+  .controls-right {
+    width: 100%;
+  }
+  
+  .search-sort-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-container {
+    min-width: 0;
+  }
+  
+  .filter-toggles {
+    justify-content: center;
+  }
+  
+  .price-range-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .product-controls {
+    padding: 0.75rem;
+  }
+  
+  .filter-toggles {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-toggle {
+    justify-content: center;
+  }
+}
+

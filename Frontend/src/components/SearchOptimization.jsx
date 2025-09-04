@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchCategories } from '../api/shops.js'
 import { useDebounce } from '../hooks/useDebounce.js'
+import categoriesCache from '../utils/categoriesCache.js'
 
 const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -11,6 +12,7 @@ const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [activeFilter, setActiveFilter] = useState(null)
   const [localQuery, setLocalQuery] = useState(searchParams.get('q') || '')
+  const categoriesLoadedRef = useRef(false)
 
   const query = searchParams.get('q') || ''
   const category = searchParams.get('category') || ''
@@ -55,15 +57,52 @@ const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
   ]
 
   useEffect(() => {
-    // Fetch categories
+    // Check global cache first
+    const cachedCategories = categoriesCache.get()
+    if (cachedCategories) {
+      console.log('SearchOptimization: Using cached categories')
+      setCategories(cachedCategories)
+      categoriesLoadedRef.current = true
+      return
+    }
+    
+    // Check if already loading to prevent duplicate fetches
+    if (categoriesCache.getLoadingState()) {
+      console.log('SearchOptimization: Categories already loading, waiting...')
+      // Wait for the existing promise
+      categoriesCache.getLoadingPromise()?.then((data) => {
+        setCategories(data.categories || [])
+        categoriesLoadedRef.current = true
+      })
+      return
+    }
+    
+    // Fetch categories if not in cache and not loading
+    if (categoriesLoadedRef.current) return
+    
     const loadCategories = async () => {
       try {
+        console.log('SearchOptimization: Loading categories from API...')
+        categoriesCache.setLoading(true)
+        
         const data = await fetchCategories()
+        console.log('SearchOptimization: Categories loaded from API:', data)
+        
+        // Cache the categories globally
+        categoriesCache.set(data.categories || [])
+        
         setCategories(data.categories || [])
+        categoriesLoadedRef.current = true
       } catch (error) {
         console.error('Failed to fetch categories:', error)
+        // Fallback to popular categories if API fails
+        setCategories(popularCategories)
+        categoriesLoadedRef.current = true
+      } finally {
+        categoriesCache.setLoading(false, null)
       }
     }
+    
     loadCategories()
   }, [])
 
@@ -108,6 +147,14 @@ const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
     if (onClearFilters) {
       onClearFilters()
     }
+  }
+
+  // Function to refresh categories (useful for admin updates)
+  const refreshCategories = () => {
+    categoriesCache.clear()
+    categoriesLoadedRef.current = false
+    // This will trigger the useEffect to fetch fresh categories
+    setCategories([])
   }
 
   return (

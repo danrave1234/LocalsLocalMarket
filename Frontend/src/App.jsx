@@ -26,6 +26,7 @@ const TermsPage = lazy(() => import("./pages/TermsPage.jsx"))
 const CookiesPage = lazy(() => import("./pages/CookiesPage.jsx"))
 const GDPRPage = lazy(() => import("./pages/GDPRPage.jsx"))
 const ShopEditPage = lazy(() => import("./pages/ShopEditPage.jsx"))
+const ShopCreatePage = lazy(() => import("./pages/ShopCreatePage.jsx"))
 const HelpPage = lazy(() => import("./pages/HelpPage.jsx"))
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"))
 const ProductManagementPage = lazy(() => import("./pages/ProductManagementPage.jsx"))
@@ -45,12 +46,17 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/shops/:id" element={<ShopPage />} />
-              <Route path="/shops/:id/edit" element={
+              <Route path="/shops/create" element={
+                <ProtectedRoute>
+                  <ShopCreatePage />
+                </ProtectedRoute>
+              } />
+              <Route path="/shops/:slug/edit" element={
                 <ProtectedRoute>
                   <ShopEditPage />
                 </ProtectedRoute>
               } />
+              <Route path="/shops/:slug" element={<ShopPage />} />
               <Route path="/donate" element={<DonationsPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />

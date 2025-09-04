@@ -55,13 +55,13 @@
 
 /* Auto-filled input styles */
 .landing-page .input-auto-filled {
-  background-color: var(--surface) !important;
-  color: var(--text) !important;
+  background-color: var(--surface);
+  color: var(--text);
 }
 
 .landing-page .input-not-filled {
-  background-color: var(--card-2) !important;
-  color: var(--muted) !important;
+  background-color: var(--card-2);
+  color: var(--muted);
 }
 
 /* Added location selector premium styling */

@@ -1,10 +1,10 @@
 /* GDPR Compliance Page Styles */
 .gdpr-container {
-  padding: 0.5rem !important;
-  max-width: 1000px !important;
-  margin: 0 auto !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
+  padding: 0.5rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .gdpr-container .gdpr-header {
@@ -369,7 +369,7 @@
 /* Responsive Design */
 @media (max-width: 768px) {
   .gdpr-container {
-    padding: 0.25rem !important;
+    padding: 0.25rem;
   }
   
   .gdpr-container .gdpr-header {
