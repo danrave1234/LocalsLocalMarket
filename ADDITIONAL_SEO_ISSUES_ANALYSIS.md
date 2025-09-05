@@ -174,3 +174,4 @@ manualChunks: {
 - [ ] Optimize font loading
 - [ ] Implement better code splitting
 - [ ] Add HTTPS redirects
+

@@ -276,3 +276,4 @@ class CacheInvalidationService {
 const cacheInvalidationService = new CacheInvalidationService()
 
 export default cacheInvalidationService
+

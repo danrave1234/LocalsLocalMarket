@@ -120,3 +120,4 @@ After these fixes, Google should be able to:
 4. ✅ Show your shop pages in search results
 
 The main issue was that Google was trying to crawl `/shops/4` (numeric ID) but your frontend only serves `/shops/shop-name-4` (slug format). Now both the sitemap and frontend use the same URL structure.
+

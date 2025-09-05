@@ -105,3 +105,4 @@ async function generateSitemap() {
 
 // Run the script
 generateSitemap()
+

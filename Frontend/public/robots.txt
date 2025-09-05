@@ -8,7 +8,10 @@ Sitemap: https://localslocalmarket.com/api/sitemap.xml
 Disallow: /dashboard/
 Disallow: /profile/
 Disallow: /settings/
-Disallow: /api/
+
+# Important: allow sitemap endpoint and do not blanket-disallow API
+# If specific API endpoints need blocking, list them explicitly.
+Allow: /api/sitemap.xml
 
 # Allow important pages
 Allow: /
