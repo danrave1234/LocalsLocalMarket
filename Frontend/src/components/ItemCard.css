@@ -1,0 +1,430 @@
+/* Item Card Component Styles - Unified for Products and Services */
+.item-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border-color: var(--accent);
+}
+
+.item-card.unavailable {
+  opacity: 0.7;
+  background: var(--surface);
+}
+
+/* Image Container */
+.item-image-container {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.item-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.item-card:hover .item-image {
+  transform: scale(1.05);
+}
+
+.item-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 2rem;
+}
+
+/* Type Badge */
+.item-type-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(8px);
+}
+
+.item-type-badge.product {
+  background: rgba(59, 130, 246, 0.9);
+  color: white;
+}
+
+.item-type-badge.service {
+  background: rgba(16, 185, 129, 0.9);
+  color: white;
+}
+
+/* Content */
+.item-content {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.75rem;
+}
+
+/* Header */
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.item-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.3;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.item-price {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* Description */
+.item-description {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Meta Information */
+.item-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.item-category,
+.item-duration,
+.item-shop {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-separator {
+  margin: 0 2px;
+}
+
+/* Status Section */
+.item-status-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.item-status {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.item-status.available {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.item-status.out-of-stock,
+.item-status.unavailable {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+/* Stock Management */
+.stock-management {
+  display: flex;
+  align-items: center;
+}
+
+.stock-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stock-input {
+  width: 60px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-align: center;
+  background: var(--card-2);
+  color: var(--foreground);
+}
+
+.stock-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.stock-save-btn,
+.stock-edit-btn {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--card-2);
+  color: var(--foreground);
+}
+
+.stock-save-btn:hover,
+.stock-edit-btn:hover {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.stock-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Actions */
+.item-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  justify-content: center;
+}
+
+.action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.edit-btn {
+  background: var(--warning);
+  color: white;
+}
+
+.edit-btn:hover:not(:disabled) {
+  background: var(--warning-hover);
+}
+
+.delete-btn {
+  background: var(--error);
+  color: white;
+}
+
+.delete-btn:hover:not(:disabled) {
+  background: var(--error-hover);
+}
+
+.view-btn {
+  background: var(--accent);
+  color: white;
+}
+
+.view-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.view-btn.disabled {
+  background: var(--muted);
+  color: var(--text-secondary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .item-image-container {
+    height: 160px;
+  }
+  
+  .item-content {
+    padding: 0.75rem;
+  }
+  
+  .item-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .item-price {
+    font-size: 1rem;
+  }
+  
+  .item-actions {
+    flex-direction: column;
+  }
+  
+  .action-btn {
+    padding: 0.625rem 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .item-image-container {
+    height: 140px;
+  }
+  
+  .item-content {
+    padding: 0.5rem;
+  }
+  
+  .item-title {
+    font-size: 0.9rem;
+  }
+  
+  .item-price {
+    font-size: 0.9rem;
+  }
+  
+  .item-description {
+    font-size: 0.8rem;
+  }
+}
+
+/* Loading States */
+.item-card.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.item-card.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--border);
+  border-top: 2px solid var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Animation for stock updates */
+.stock-input-group {
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Focus states for accessibility */
+.action-btn:focus-visible,
+.stock-edit-btn:focus-visible,
+.stock-save-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .item-card {
+    border-width: 2px;
+  }
+  
+  .item-type-badge {
+    border: 1px solid currentColor;
+  }
+  
+  .item-status {
+    border: 1px solid currentColor;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .item-card,
+  .item-image,
+  .action-btn,
+  .stock-input-group {
+    transition: none;
+    animation: none;
+  }
+  
+  .item-card:hover {
+    transform: none;
+  }
+}

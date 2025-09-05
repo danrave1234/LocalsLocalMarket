@@ -1,5 +1,8 @@
 # LocalsLocalMarket — Backend (Spring Boot)
 
+**Developer:** Danrave Keh  
+**Email:** danrave.keh@localslocalmarket.com
+
 This backend implements most of the MVP described in the project blueprint (project.md) for a Local Marketplace.
 
 ## What’s implemented

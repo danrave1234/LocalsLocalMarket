@@ -36,6 +36,10 @@ public class ProductDtos {
             Boolean isActive
     ){}
     
+    public record UpdateImagesRequest(
+            String imagePathsJson
+    ){}
+    
     public record ProductResponse(
             Long id,
             String title,

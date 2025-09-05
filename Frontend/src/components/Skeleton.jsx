@@ -284,6 +284,130 @@ export const SkeletonPage = ({ className = '', style = {} }) => (
   </div>
 )
 
+// Shop Management Page skeleton
+export const SkeletonShopManagement = ({ className = '', style = {} }) => (
+  <div className={`shop-management-page ${className}`} style={style}>
+    <div className="management-container">
+      {/* Header Section */}
+      <div className="management-header">
+        <div className="header-info">
+          <SkeletonBase style={{ height: '2rem', width: '200px', marginBottom: '0.5rem' }} />
+          <SkeletonBase style={{ height: '1rem', width: '300px' }} />
+        </div>
+        <div className="header-actions" style={{ display: 'flex', gap: '0.75rem' }}>
+          <SkeletonButton width="100px" height="2.5rem" />
+          <SkeletonButton width="140px" height="2.5rem" />
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="tab-navigation">
+        <div className="tab-list" style={{ display: 'flex', gap: '0.5rem' }}>
+          <SkeletonBase style={{ height: '3rem', width: '120px', borderRadius: '8px' }} />
+          <SkeletonBase style={{ height: '3rem', width: '120px', borderRadius: '8px' }} />
+        </div>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="search-filters-section">
+        <div className="search-container">
+          <SkeletonBase style={{ height: '2.5rem', width: '300px', borderRadius: '8px' }} />
+        </div>
+        
+        <div className="filters-container" style={{ display: 'flex', gap: '1rem' }}>
+          <div className="filter-group">
+            <SkeletonBase style={{ height: '1rem', width: '80px', marginBottom: '0.5rem' }} />
+            <SkeletonBase style={{ height: '2.5rem', width: '150px', borderRadius: '6px' }} />
+          </div>
+          <div className="filter-group">
+            <SkeletonBase style={{ height: '1rem', width: '60px', marginBottom: '0.5rem' }} />
+            <SkeletonBase style={{ height: '2.5rem', width: '120px', borderRadius: '6px' }} />
+          </div>
+          <div className="filter-group">
+            <SkeletonBase style={{ height: '1rem', width: '70px', marginBottom: '0.5rem' }} />
+            <SkeletonBase style={{ height: '2.5rem', width: '140px', borderRadius: '6px' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Content Section */}
+      <div className="content-section">
+        {/* Items Header */}
+        <div className="items-header">
+          <div className="items-count" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <SkeletonBase style={{ height: '1.5rem', width: '100px' }} />
+            <SkeletonBase style={{ height: '1.5rem', width: '60px', borderRadius: '12px' }} />
+          </div>
+        </div>
+
+        {/* Items Grid */}
+        <div className="items-grid" style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+          gap: '1.5rem',
+          marginTop: '1.5rem'
+        }}>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="card" style={{ padding: 0, overflow: 'hidden', borderRadius: '12px' }}>
+              {/* Item Image */}
+              <SkeletonBase style={{ height: '200px' }} />
+              
+              {/* Item Details */}
+              <div style={{ padding: '1rem' }}>
+                {/* Item Type Badge */}
+                <SkeletonBase style={{ 
+                  height: '1.5rem', 
+                  width: '80px', 
+                  borderRadius: '12px', 
+                  marginBottom: '0.75rem' 
+                }} />
+                
+                {/* Title */}
+                <SkeletonBase style={{ 
+                  height: '1.25rem', 
+                  width: '80%', 
+                  marginBottom: '0.5rem' 
+                }} />
+                
+                {/* Description */}
+                <SkeletonText lines={2} height="0.875rem" style={{ marginBottom: '0.75rem' }} />
+                
+                {/* Price */}
+                <SkeletonBase style={{ 
+                  height: '1.5rem', 
+                  width: '40%', 
+                  marginBottom: '0.75rem' 
+                }} />
+                
+                {/* Category */}
+                <SkeletonBase style={{ 
+                  height: '1rem', 
+                  width: '60%', 
+                  marginBottom: '0.75rem' 
+                }} />
+                
+                {/* Status */}
+                <SkeletonBase style={{ 
+                  height: '1.5rem', 
+                  width: '100px', 
+                  borderRadius: '12px', 
+                  marginBottom: '1rem' 
+                }} />
+                
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <SkeletonButton width="80px" height="2rem" />
+                  <SkeletonButton width="80px" height="2rem" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
 // Add CSS animation
 const style = document.createElement('style')
 style.textContent = `

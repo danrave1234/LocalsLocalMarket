@@ -12,7 +12,7 @@ const Breadcrumbs = () => {
     'profile': 'Profile',
     'settings': 'Settings',
     'donate': 'Donate',
-    'product-management': 'Product Management',
+    'shop-management': 'Shop Management',
     'about': 'About Us',
     'contact': 'Contact',
     'support': 'Support',
@@ -28,8 +28,8 @@ const Breadcrumbs = () => {
     const isLast = index === pathnames.length - 1
     let displayName = breadcrumbMap[name] || name
 
-    // Handle product-management slug parameter
-    if (pathnames[index - 1] === 'product-management' && name !== 'product-management') {
+    // Handle shop-management slug parameters
+    if (pathnames[index - 1] === 'shop-management' && name !== 'shop-management') {
       // Extract shop name from slug (remove the ID part)
       const slugParts = name.split('-')
       if (slugParts.length > 1) {

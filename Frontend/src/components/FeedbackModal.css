@@ -1,0 +1,431 @@
+/* Feedback Modal Styles */
+.feedback-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 9999; /* Highest z-index to ensure it's on top of everything */
+  padding: 2rem 1rem 1rem 1rem;
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+}
+
+.feedback-modal {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 500px;
+  width: 100%;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  animation: feedbackModalSlideIn 0.3s ease-out;
+  margin-top: 2rem;
+}
+
+@keyframes feedbackModalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.feedback-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.5rem 0 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 1.5rem;
+}
+
+.feedback-modal-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.feedback-modal-title::before {
+  content: "💬";
+  font-size: 1.25rem;
+}
+
+.feedback-modal-close {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feedback-modal-close:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.feedback-modal-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.feedback-modal-close svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Status Messages */
+.feedback-status-message {
+  margin: 0 1.5rem 1rem 1.5rem;
+  padding: 1rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  animation: feedbackStatusSlideIn 0.3s ease-out;
+}
+
+@keyframes feedbackStatusSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feedback-status-success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.feedback-status-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.feedback-status-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.feedback-status-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Form Styles */
+.feedback-form {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.feedback-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.feedback-form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.feedback-form-label.required::after {
+  content: "*";
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.feedback-form-input,
+.feedback-form-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: #111827;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.feedback-form-input:focus,
+.feedback-form-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.feedback-form-input:disabled,
+.feedback-form-textarea:disabled {
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.feedback-form-input::placeholder,
+.feedback-form-textarea::placeholder {
+  color: #9ca3af;
+}
+
+.feedback-form-textarea {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.5;
+}
+
+/* Button Styles */
+.feedback-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 0.5rem;
+}
+
+.feedback-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  min-width: 100px;
+}
+
+.feedback-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.feedback-btn-cancel {
+  background: #ffffff;
+  color: #374151;
+  border: 2px solid #e5e7eb;
+}
+
+.feedback-btn-cancel:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.feedback-btn-submit {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.3);
+}
+
+.feedback-btn-submit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+.feedback-btn-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.feedback-btn-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.feedback-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: feedbackSpinner 1s linear infinite;
+}
+
+@keyframes feedbackSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Header Feedback Button Styles */
+.feedback-link {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.feedback-link:hover {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.feedback-link:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Support Page Contact Buttons */
+.contact-buttons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.contact-buttons .contact-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.contact-buttons .contact-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 640px) {
+  .contact-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .contact-buttons .contact-button {
+    width: 100%;
+    max-width: 300px;
+    justify-content: center;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .feedback-modal-overlay {
+    padding: 1rem 0.5rem 0.5rem 0.5rem;
+  }
+  
+  .feedback-modal {
+    margin: 1rem 0.5rem 0.5rem 0.5rem;
+    max-height: calc(100vh - 2rem);
+  }
+  
+  .feedback-modal-header {
+    padding: 1rem 1rem 0 1rem;
+  }
+  
+  .feedback-form {
+    padding: 0 1rem 1rem 1rem;
+  }
+  
+  .feedback-form-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .feedback-btn {
+    width: 100%;
+  }
+}
+
+/* Dark mode support (if needed) */
+@media (prefers-color-scheme: dark) {
+  .feedback-modal {
+    background: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .feedback-modal-header {
+    border-bottom-color: #374151;
+  }
+  
+  .feedback-modal-title {
+    color: #f9fafb;
+  }
+  
+  .feedback-modal-close {
+    color: #9ca3af;
+  }
+  
+  .feedback-modal-close:hover {
+    background: #374151;
+    color: #d1d5db;
+  }
+  
+  .feedback-form-label {
+    color: #d1d5db;
+  }
+  
+  .feedback-form-input,
+  .feedback-form-textarea {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+  
+  .feedback-form-input:focus,
+  .feedback-form-textarea:focus {
+    border-color: #3b82f6;
+  }
+  
+  .feedback-form-input:disabled,
+  .feedback-form-textarea:disabled {
+    background: #1f2937;
+    color: #6b7280;
+  }
+  
+  .feedback-form-actions {
+    border-top-color: #374151;
+  }
+  
+  .feedback-btn-cancel {
+    background: #374151;
+    color: #d1d5db;
+    border-color: #4b5563;
+  }
+  
+  .feedback-btn-cancel:hover:not(:disabled) {
+    background: #4b5563;
+    border-color: #6b7280;
+  }
+}

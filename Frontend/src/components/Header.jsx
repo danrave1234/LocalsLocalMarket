@@ -1,11 +1,12 @@
 import React from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
-import { Home } from 'lucide-react'
+import { Home, MessageCircle } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Logo from './Logo.jsx'
 import SearchOptimization from './SearchOptimization.jsx'
+import FeedbackButton from './FeedbackButton.jsx'
 
-export default function Header() {
+export default function Header({ onOpenFeedback }) {
   const { token, user, logout, isLoading } = useAuth()
   const location = useLocation()
   const [searchParams] = useSearchParams()
@@ -134,6 +135,17 @@ export default function Header() {
         )}
         
         <nav className="header-right">
+                          <FeedbackButton 
+                  variant="ghost" 
+                  size="md" 
+                  className="nav-link feedback-link"
+                  showIcon={true}
+                  onClick={onOpenFeedback}
+                >
+                  <MessageCircle className="nav-icon" aria-hidden size={18} />
+                  <span>Feedback</span>
+                </FeedbackButton>
+          
           <Link to="/donate" className={`nav-link donate-link${isActive('/donate') ? ' active' : ''}`}>
             <svg className="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 20.02L12 17.77L5.82 20.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="currentColor"/>

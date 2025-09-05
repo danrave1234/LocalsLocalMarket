@@ -69,7 +69,7 @@ export default function ShopCreatePage() {
         adsEnabled: !!form.adsEnabled, adsImagePathsJson: form.adsImagePathsJson, businessHoursJson: form.businessHoursJson
       }
       const createdShop = await createShopRequest(payload, token)
-      navigate(`/shops/${createdShop.id}`)
+      navigate('/dashboard')
     } catch (e) {
       console.error('Failed to create shop:', e)
       const errorInfo = handleApiError(e)

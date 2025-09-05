@@ -1,5 +1,95 @@
 /* ShopPage Mobile-First Responsive Styles */
 
+/* Tab Navigation */
+.items-tab-navigation {
+  display: flex;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+  border-radius: 8px 8px 0 0;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 2px solid transparent;
+  position: relative;
+  flex: 1;
+  justify-content: center;
+}
+
+.tab-btn:hover {
+  color: var(--foreground);
+  background: var(--surface);
+}
+
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: var(--surface);
+}
+
+.tab-btn svg {
+  flex-shrink: 0;
+}
+
+/* Service-specific styles */
+.service-duration {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.available {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.status-badge.unavailable {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+/* Responsive tab navigation */
+@media (max-width: 768px) {
+  .items-tab-navigation {
+    flex-direction: column;
+  }
+  
+  .tab-btn {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    border-right: none;
+    justify-content: flex-start;
+  }
+  
+  .tab-btn.active {
+    border-bottom-color: var(--border);
+    border-left: 3px solid var(--accent);
+  }
+}
+
 .shop-page-container {
   padding: 0.5rem;
   text-align: center;

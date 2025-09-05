@@ -157,4 +157,129 @@ public class SmartCacheService {
             System.err.println("SmartCacheService: Error warming up caches: " + e.getMessage());
         }
     }
+
+    /**
+     * Evict service-related caches based on access patterns
+     */
+    public void evictLeastRecentlyUsedServiceCaches(int maxEntries) {
+        try {
+            String[] serviceCacheNames = {
+                "services_paginated",
+                "services_by_status_paginated",
+                "services_by_shop_paginated",
+                "services_by_shop_status_paginated",
+                "services_by_category_paginated",
+                "services_by_category_status_paginated",
+                "services_filtered_paginated",
+                "services_by_price_paginated",
+                "services_by_shop_price_paginated",
+                "services_by_category_price_paginated"
+            };
+
+            for (String cacheName : serviceCacheNames) {
+                evictLeastRecentlyUsed(cacheName, maxEntries);
+            }
+        } catch (Exception e) {
+            System.err.println("SmartCacheService: Error evicting service caches: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Evict service caches for a specific shop
+     */
+    public void evictShopServiceCaches(Long shopId) {
+        try {
+            String[] shopServiceCacheNames = {
+                "services_by_shop_paginated",
+                "services_by_shop_status_paginated",
+                "services_by_shop_price_paginated"
+            };
+
+            for (String cacheName : shopServiceCacheNames) {
+                Cache cache = cacheManager.getCache(cacheName);
+                if (cache != null) {
+                    // Evict all entries that contain the shop ID
+                    cacheAccessTimes.entrySet().removeIf(entry -> {
+                        if (entry.getKey().startsWith(cacheName + ":") && entry.getKey().contains(shopId.toString())) {
+                            String[] parts = entry.getKey().split(":", 2);
+                            if (parts.length == 2) {
+                                cache.evict(parts[1]);
+                            }
+                            cacheAccessCounts.remove(entry.getKey());
+                            return true;
+                        }
+                        return false;
+                    });
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("SmartCacheService: Error evicting shop service caches: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Evict service caches for a specific category
+     */
+    public void evictCategoryServiceCaches(String category) {
+        try {
+            String[] categoryServiceCacheNames = {
+                "services_by_category_paginated",
+                "services_by_category_status_paginated",
+                "services_by_category_price_paginated"
+            };
+
+            for (String cacheName : categoryServiceCacheNames) {
+                Cache cache = cacheManager.getCache(cacheName);
+                if (cache != null) {
+                    // Evict all entries that contain the category
+                    cacheAccessTimes.entrySet().removeIf(entry -> {
+                        if (entry.getKey().startsWith(cacheName + ":") && entry.getKey().contains(category)) {
+                            String[] parts = entry.getKey().split(":", 2);
+                            if (parts.length == 2) {
+                                cache.evict(parts[1]);
+                            }
+                            cacheAccessCounts.remove(entry.getKey());
+                            return true;
+                        }
+                        return false;
+                    });
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("SmartCacheService: Error evicting category service caches: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Get service cache statistics
+     */
+    public void logServiceCacheStats() {
+        try {
+            System.out.println("=== Service Cache Statistics ===");
+            String[] serviceCacheNames = {
+                "services_paginated",
+                "services_by_status_paginated",
+                "services_by_shop_paginated",
+                "services_by_shop_status_paginated",
+                "services_by_category_paginated",
+                "services_by_category_status_paginated",
+                "services_filtered_paginated",
+                "services_by_price_paginated",
+                "services_by_shop_price_paginated",
+                "services_by_category_price_paginated"
+            };
+
+            for (String cacheName : serviceCacheNames) {
+                Cache cache = cacheManager.getCache(cacheName);
+                if (cache != null) {
+                    long accessCount = cacheAccessTimes.entrySet().stream()
+                        .filter(entry -> entry.getKey().startsWith(cacheName + ":"))
+                        .count();
+                    System.out.println("Service Cache: " + cacheName + " - Access Count: " + accessCount);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("SmartCacheService: Error logging service cache stats: " + e.getMessage());
+        }
+    }
 }

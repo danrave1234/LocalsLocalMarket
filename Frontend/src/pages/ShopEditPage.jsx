@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { fetchShopById, updateShopRequest, fetchCategories } from '../api/shops.js'
-import { fetchProductsByShopId, createProduct, updateProduct, deleteProduct, uploadImage, decrementProductStock } from '../api/products.js'
+import { fetchProductsByShopId, createProduct, updateProduct, deleteProduct, uploadImage, deleteImage, decrementProductStock } from '../api/products.js'
 import { SkeletonText, SkeletonForm } from '../components/Skeleton.jsx'
 import { handleApiError } from '../utils/errorHandler.js'
 import { LoadingButton } from '../components/Loading.jsx'
@@ -90,10 +90,21 @@ export default function ShopEditPage() {
 
 
 
-  const onUpload = async (file) => {
+  const onUpload = async (file, type = 'shops', oldImageUrl = null) => {
     const fd = new FormData()
     fd.append('file', file)
-    const res = await uploadImage(fd, token)
+    const res = await uploadImage(fd, token, type)
+    
+    // Delete old image if it exists and is different from new one
+    if (oldImageUrl && oldImageUrl !== res.path) {
+      try {
+        await deleteImage(oldImageUrl, token)
+      } catch (deleteError) {
+        console.warn('Failed to delete old image:', deleteError)
+        // Don't throw error here, just log it
+      }
+    }
+    
     return res.path
   }
 
@@ -111,7 +122,7 @@ export default function ShopEditPage() {
         adsEnabled: !!form.adsEnabled, adsImagePathsJson: form.adsImagePathsJson, businessHoursJson: form.businessHoursJson
       }
       await updateShopRequest(slug, payload, token)
-      navigate(`/shops/${slug}`)
+      navigate('/dashboard')
     } catch (e) {
       console.error('Failed to save shop:', e)
       const errorInfo = handleApiError(e)
@@ -455,11 +466,22 @@ export default function ShopEditPage() {
                            <img src={form.logoPath} alt="Shop logo" />
                            <button
                              type="button"
-                             className="remove-image-btn"
-                             onClick={() => setForm({ ...form, logoPath: '' })}
-                           >
-                             <Trash2 size={16} />
-                           </button>
+                             className="image-delete-btn"
+                             onClick={async () => {
+                               const oldLogoPath = form.logoPath
+                               setForm({ ...form, logoPath: '' })
+                               
+                               // Delete from cloud storage
+                               if (oldLogoPath && oldLogoPath.startsWith('https://storage.googleapis.com/')) {
+                                 try {
+                                   await deleteImage(oldLogoPath, token)
+                                 } catch (error) {
+                                   console.error('Failed to delete logo from cloud storage:', error)
+                                 }
+                               }
+                             }}
+                             title="Remove logo"
+                           />
                          </div>
                        ) : (
                          <div className="upload-placeholder">
@@ -475,7 +497,7 @@ export default function ShopEditPage() {
                            const file = e.target.files[0]
                            if (file) {
                              try {
-                               const path = await onUpload(file)
+                               const path = await onUpload(file, 'shops', form.logoPath)
                                setForm({ ...form, logoPath: path })
                              } catch (error) {
                                console.error('Upload failed:', error)
@@ -499,11 +521,22 @@ export default function ShopEditPage() {
                            <img src={form.coverPath} alt="Shop cover" />
                            <button
                              type="button"
-                             className="remove-image-btn"
-                             onClick={() => setForm({ ...form, coverPath: '' })}
-                           >
-                             <Trash2 size={16} />
-                           </button>
+                             className="image-delete-btn"
+                             onClick={async () => {
+                               const oldCoverPath = form.coverPath
+                               setForm({ ...form, coverPath: '' })
+                               
+                               // Delete from cloud storage
+                               if (oldCoverPath && oldCoverPath.startsWith('https://storage.googleapis.com/')) {
+                                 try {
+                                   await deleteImage(oldCoverPath, token)
+                                 } catch (error) {
+                                   console.error('Failed to delete cover from cloud storage:', error)
+                                 }
+                               }
+                             }}
+                             title="Remove cover image"
+                           />
                          </div>
                        ) : (
                          <div className="upload-placeholder cover-placeholder">
@@ -519,7 +552,7 @@ export default function ShopEditPage() {
                            const file = e.target.files[0]
                            if (file) {
                              try {
-                               const path = await onUpload(file)
+                               const path = await onUpload(file, 'shops', form.coverPath)
                                setForm({ ...form, coverPath: path })
                              } catch (error) {
                                console.error('Upload failed:', error)

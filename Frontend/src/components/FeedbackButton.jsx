@@ -1,17 +1,13 @@
-import React, { useState } from 'react';
-import FeedbackModal from './FeedbackModal';
+import React from 'react';
 
 const FeedbackButton = ({ 
   variant = 'default', 
   size = 'md', 
   className = '',
   children,
-  showIcon = true 
+  showIcon = true,
+  onClick
 }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
 
   const getButtonClasses = () => {
     const baseClasses = 'inline-flex items-center justify-center font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200';
@@ -43,21 +39,14 @@ const FeedbackButton = ({
   };
 
   return (
-    <>
-      <button
-        onClick={openModal}
-        className={getButtonClasses()}
-        aria-label="Send feedback"
-      >
-        {renderIcon()}
-        {children || 'Feedback'}
-      </button>
-
-      <FeedbackModal 
-        isOpen={isModalOpen} 
-        onClose={closeModal} 
-      />
-    </>
+    <button
+      onClick={onClick}
+      className={getButtonClasses()}
+      aria-label="Send feedback"
+    >
+      {renderIcon()}
+      {children || 'Feedback'}
+    </button>
   );
 };
 

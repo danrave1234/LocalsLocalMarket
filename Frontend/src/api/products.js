@@ -29,6 +29,14 @@ export async function updateProduct(productId, productData, token) {
   })
 }
 
+export async function updateProductImages(productId, imagePathsJson, token) {
+  return api.patch(`/products/${productId}/images`, { imagePathsJson }, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+}
+
 export async function deleteProduct(productId, token) {
   return api.delete(`/products/${productId}`, {
     headers: {
@@ -52,7 +60,12 @@ export async function decrementProductStock(productId, amount = 1, token) {
 export async function uploadImage(formData, token, type = 'general') {
   // Add type parameter to the URL
   const url = `/uploads/image?type=${encodeURIComponent(type)}`;
-  return api.post(url, formData, { headers: { 'Authorization': `Bearer ${token}` } })
+  return api.post(url, formData, { token })
+}
+
+export async function deleteImage(imageUrl, token) {
+  const url = `/uploads/image?url=${encodeURIComponent(imageUrl)}`;
+  return api.delete(url, { token })
 }
 
 export async function fetchProductsByShopId(shopId, token) {

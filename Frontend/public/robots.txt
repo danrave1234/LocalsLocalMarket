@@ -8,17 +8,47 @@ Sitemap: https://localslocalmarket.com/api/sitemap.xml
 Disallow: /dashboard/
 Disallow: /profile/
 Disallow: /settings/
+Disallow: /shop-management/
+Disallow: /product-management/
 
-# Important: allow sitemap endpoint and do not blanket-disallow API
-# If specific API endpoints need blocking, list them explicitly.
+# Disallow API endpoints (except sitemap)
+Disallow: /api/
 Allow: /api/sitemap.xml
 
-# Allow important pages
+# Disallow search parameters and filters
+Disallow: /*?*
+Disallow: /*&*
+
+# Allow important pages and directories
 Allow: /
 Allow: /shops/
 Allow: /login
 Allow: /register
 Allow: /donate
+Allow: /about
+Allow: /contact
+Allow: /support
+Allow: /help
+Allow: /privacy
+Allow: /terms
+Allow: /cookies
+Allow: /gdpr
+
+# Allow static assets
+Allow: /images/
+Allow: /css/
+Allow: /js/
+Allow: /assets/
 
 # Crawl delay to be respectful to the server
 Crawl-delay: 1
+
+# Special instructions for major search engines
+User-agent: Googlebot
+Crawl-delay: 1
+
+User-agent: Bingbot
+Crawl-delay: 2
+
+User-agent: Slurp
+Crawl-delay: 2

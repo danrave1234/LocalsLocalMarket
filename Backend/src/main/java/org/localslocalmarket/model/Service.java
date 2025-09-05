@@ -43,6 +43,9 @@ public class Service {
     @Column(columnDefinition = "TEXT")
     private String description;
     
+    @Column(length = 500)
+    private String imageUrl; // Single image URL for services
+    
     private BigDecimal price;
     private String mainCategory;
     private String subcategory;
@@ -106,6 +109,14 @@ public class Service {
     
     public void setDescription(String description) {
         this.description = description;
+    }
+    
+    public String getImageUrl() {
+        return imageUrl;
+    }
+    
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
     
     public BigDecimal getPrice() {

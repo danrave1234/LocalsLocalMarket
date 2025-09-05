@@ -12,10 +12,6 @@ import { ArrowUp } from 'lucide-react'
 import { loadLeaflet, isLeafletLoaded } from "../utils/leafletLoader.js"
 import { getImageUrl } from '../utils/imageUtils.js'
 import { handleApiError } from '../utils/errorHandler.js'
-import shopCache from '../utils/shopCache.js'
-import landingPageCache from '../utils/landingPageCache.js'
-import categoriesCache from '../utils/categoriesCache.js'
-import cacheInvalidationService from '../utils/cacheInvalidationService.js'
 import { SkeletonShopCard, SkeletonMap, SkeletonText } from "../components/Skeleton.jsx"
 import ErrorDisplay from "../components/ErrorDisplay.jsx"
 import { LoadingSpinner, LoadingCard, LoadingOverlay } from "../components/Loading.jsx"
@@ -229,52 +225,17 @@ export default function LandingPage() {
       setError('')
       
       try {
-        // Check cache first for page 0 (initial load)
-        if (currentPage === 0) {
-          const cachedData = landingPageCache.get()
-          if (cachedData && cachedData.shops.length > 0) {
-            console.log('LandingPage: Using cached data for initial load')
-            setShops(cachedData.shops)
-            setHasMoreShops(cachedData.totalPages ? currentPage < cachedData.totalPages - 1 : true)
-            setLoading(false)
-            shopsLoadingRef.current = false
-            
-            // Cache individual shops for future use
-            cachedData.shops.forEach(shop => {
-              if (shop.id) {
-                shopCache.set(shop.id, shop)
-              }
-            })
-            return
-          }
-        }
-        
-        // Fetch from API if no cache or not page 0
         console.log(`LandingPage: Fetching page ${currentPage} from API`)
         const response = await fetchPaginatedShopsWithRatings(currentPage, 50) // Fetch 50 shops per page
         
         const shopsData = extractShopsFromResponse(response)
         
-        // Cache all shop data for future use
-        shopsData.forEach(shop => {
-          if (shop.id) {
-            shopCache.set(shop.id, shop)
-          }
-        })
-        
         if (currentPage === 0) {
-          // First page, replace all shops and cache the data
+          // First page, replace all shops
           setShops(shopsData)
-          
-          // Cache the landing page data for future page refreshes
-          const totalPages = response.totalPages || Math.ceil((response.totalElements || shopsData.length) / 50)
-          landingPageCache.set(shopsData, currentPage, totalPages)
         } else {
           // Subsequent pages, append shops
           setShops(prev => [...prev, ...shopsData])
-          
-          // Update cache with new shops
-          landingPageCache.appendShops(shopsData, currentPage)
         }
         
         // Check if there are more shops
@@ -800,42 +761,7 @@ export default function LandingPage() {
     }
   }
 
-  const refreshCache = () => {
-    console.log('LandingPage: Manually refreshing all caches')
-    cacheInvalidationService.clearAllCaches()
-    setCurrentPage(0)
-    setShops([])
-    setHasMoreShops(true)
-    // The useEffect will trigger and fetch fresh data
-  }
 
-  // Initialize cache invalidation service and debug functions
-  useEffect(() => {
-    // Register cache services with the invalidation service
-    cacheInvalidationService.registerCacheService('shopCache', shopCache)
-    cacheInvalidationService.registerCacheService('landingPageCache', landingPageCache)
-    cacheInvalidationService.registerCacheService('categoriesCache', categoriesCache)
-    
-    // Debug function to log cache stats (can be called from browser console)
-    window.landingPageCacheStats = () => {
-      const landingStats = landingPageCache.getStats()
-      const shopStats = shopCache.getStats()
-      const categoriesStats = categoriesCache.getStats()
-      const invalidationStats = cacheInvalidationService.getCacheStats()
-      console.log('=== Cache Statistics ===')
-      console.log('Landing Page Cache:', landingStats)
-      console.log('Shop Cache:', shopStats)
-      console.log('Categories Cache:', categoriesStats)
-      console.log('Cache Invalidation Service:', invalidationStats)
-      return { landing: landingStats, shop: shopStats, categories: categoriesStats, invalidation: invalidationStats }
-    }
-    
-    // Debug function to simulate data changes (for testing)
-    window.simulateDataChange = (dataType, operation, data = {}) => {
-      console.log(`Simulating ${dataType} ${operation}:`, data)
-      cacheInvalidationService.onDataChanged(dataType, operation, data)
-    }
-  }, [])
 
   if (loading) {
     return (
@@ -1315,33 +1241,6 @@ export default function LandingPage() {
                 <RefreshIcon width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} />
               </button>
               
-              <button
-                onClick={refreshCache}
-                className="btn"
-                style={{
-                  width: isMobile ? '48px' : '40px', // Larger touch target on mobile
-                  height: isMobile ? '48px' : '40px',
-                  padding: '0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'var(--card)',
-                  border: '1px solid var(--border)',
-                  borderRadius: isMobile ? '12px' : '8px', // Larger radius on mobile
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  // Mobile-optimized touch feedback
-                  touchAction: 'manipulation',
-                  WebkitTapHighlightColor: 'transparent'
-                }}
-                title="Refresh Data Cache"
-              >
-                <svg width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                  <path d="M21 3v5h-5"/>
-                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-                  <path d="M3 21v-5h5"/>
-                </svg>
-              </button>
             </div>
 
             {/* Map Instructions */}

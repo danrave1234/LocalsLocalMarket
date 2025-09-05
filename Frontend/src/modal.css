@@ -26,6 +26,7 @@
   min-width: 320px;
   max-height: 90vh;
   overflow-y: auto;
+  overflow-x: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border);
   animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -175,6 +176,7 @@
   box-sizing: border-box;
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   min-height: 0;
 }
 

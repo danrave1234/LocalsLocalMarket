@@ -1,5 +1,8 @@
 Local Marketplace MVP — React + Spring Boot
 
+**Developer:** Danrave Keh  
+**Email:** danrave.keh@localslocalmarket.com
+
 A lightweight local marketplace where sellers manage shops (with logos, addresses, schedules, products) and buyers browse & chat. Payments happen off‑platform (links, COD, in‑store). This doc gives you a production‑ready blueprint + starter code you can paste into a monorepo.
 
 1) Feature scope (Lite)

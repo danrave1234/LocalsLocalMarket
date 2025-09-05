@@ -1,7 +1,8 @@
 import React from 'react';
-import { HeartHandshake, Home, Store, Info, HelpCircle, ShieldCheck, Cookie, FileText } from 'lucide-react';
+import { HeartHandshake, Home, Store, Info, HelpCircle, ShieldCheck, Cookie, FileText, MessageCircle } from 'lucide-react';
+import FeedbackButton from './FeedbackButton.jsx';
 
-const Footer = () => {
+const Footer = ({ onOpenFeedback }) => {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -50,6 +51,7 @@ const Footer = () => {
                 <li><a href="/shops" className="footer-link"><Store aria-hidden />Browse Shops</a></li>
                 <li><a href="/about" className="footer-link"><Info aria-hidden />About Us</a></li>
                 <li><a href="/donate" className="footer-link special"><HeartHandshake aria-hidden />Support Us</a></li>
+                <li><FeedbackButton variant="ghost" size="sm" className="footer-link" showIcon={true} onClick={onOpenFeedback}><MessageCircle aria-hidden />Feedback</FeedbackButton></li>
               </ul>
             </details>
 

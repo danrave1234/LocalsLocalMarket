@@ -46,7 +46,7 @@ const PrivacyPage = () => {
               <li>Business details and descriptions</li>
               <li>Photos and media you upload</li>
               <li>Payment and billing information</li>
-              <li>Communications with our support team</li>
+              <li>Communications with the developer</li>
             </ul>
             <p>
               We also automatically collect certain information when you use our platform, including:
@@ -189,9 +189,7 @@ const PrivacyPage = () => {
             <div className="privacy-highlight">
               <h3 className="highlight-title">Contact Information</h3>
               <p className="highlight-content">
-                Email: privacy@localslocalmarket.com<br />
-                Phone: +1 (555) 123-4567<br />
-                Address: 123 Main Street, City, State 12345
+                Email: danrave.keh@localslocalmarket.com
               </p>
             </div>
           </div>
@@ -202,10 +200,10 @@ const PrivacyPage = () => {
       <section className="privacy-contact">
         <h2 className="contact-title">Questions About Privacy?</h2>
         <p className="contact-description">
-          We're here to help. Contact our privacy team for any questions or concerns.
+          We're here to help. Contact the developer for any questions or concerns.
         </p>
         <a href="/contact" className="contact-button">
-          Contact Privacy Team
+          Contact Developer
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>

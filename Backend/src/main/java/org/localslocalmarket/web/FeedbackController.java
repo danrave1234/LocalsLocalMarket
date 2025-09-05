@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.localslocalmarket.service.EmailService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +16,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/feedback")
 @CrossOrigin(origins = "*")
 public class FeedbackController {
+
+    private final EmailService emailService;
+
+    public FeedbackController(EmailService emailService) {
+        this.emailService = emailService;
+    }
 
     @PostMapping("/send")
     public ResponseEntity<Map<String, Object>> sendFeedback(@RequestBody FeedbackRequest request) {
@@ -40,6 +47,20 @@ public class FeedbackController {
             System.out.println("Message: " + request.getMessage());
             System.out.println("Received at: " + LocalDateTime.now());
             System.out.println("=============================");
+
+            // Send email notification
+            try {
+                emailService.sendFeedbackEmail(
+                    request.getEmail(),
+                    request.getName(),
+                    request.getSubject(),
+                    request.getMessage(),
+                    request.getEmail()
+                );
+            } catch (Exception e) {
+                System.err.println("Failed to send feedback email: " + e.getMessage());
+                // Continue anyway - don't fail the request if email fails
+            }
 
             // Return success response
             Map<String, Object> response = new HashMap<>();

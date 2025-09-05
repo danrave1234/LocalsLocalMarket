@@ -10,6 +10,7 @@ import org.localslocalmarket.security.AuthorizationService;
 import org.localslocalmarket.security.AuditService;
 import org.localslocalmarket.security.InputValidationService;
 import org.localslocalmarket.service.CacheInvalidationService;
+import org.localslocalmarket.service.SearchEngineNotificationService;
 import org.localslocalmarket.web.dto.ShopDtos;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -36,6 +37,7 @@ public class ShopController {
     private final ShopRatingRepository shopRatings;
     private final UnauthenticatedShopReviewRepository unauthReviews;
     private final CacheInvalidationService cacheInvalidationService;
+    private final SearchEngineNotificationService searchEngineNotificationService;
 
     public ShopController(ShopRepository shops, UserRepository users, 
                          AuthorizationService authorizationService, 
@@ -43,7 +45,8 @@ public class ShopController {
                          InputValidationService inputValidationService,
                          ShopRatingRepository shopRatings,
                          UnauthenticatedShopReviewRepository unauthReviews,
-                         CacheInvalidationService cacheInvalidationService){
+                         CacheInvalidationService cacheInvalidationService,
+                         SearchEngineNotificationService searchEngineNotificationService){
         this.shops = shops;
         this.users = users;
         this.authorizationService = authorizationService;
@@ -52,6 +55,7 @@ public class ShopController {
         this.shopRatings = shopRatings;
         this.unauthReviews = unauthReviews;
         this.cacheInvalidationService = cacheInvalidationService;
+        this.searchEngineNotificationService = searchEngineNotificationService;
     }
 
     @PostMapping
@@ -99,6 +103,9 @@ public class ShopController {
             
             // Smart cache invalidation
             cacheInvalidationService.onShopDataChanged();
+            
+            // Notify search engines about new content
+            searchEngineNotificationService.notifySitemapUpdated();
             
             // Log the action
             auditService.logUserAction(AuditService.AuditEventType.SHOP_CREATE, 
@@ -345,8 +352,8 @@ public class ShopController {
                 if(req.addressLine() != null) shop.setAddressLine(req.addressLine());
                 if(req.lat() != null) shop.setLat(req.lat());
                 if(req.lng() != null) shop.setLng(req.lng());
-                if(req.logoPath() != null) shop.setLogoPath(req.logoPath());
-                if(req.coverPath() != null) shop.setCoverPath(req.coverPath());
+                if(req.logoPath() != null) shop.setLogoPath(req.logoPath().trim().isEmpty() ? null : req.logoPath());
+                if(req.coverPath() != null) shop.setCoverPath(req.coverPath().trim().isEmpty() ? null : req.coverPath());
                 if(req.phone() != null) shop.setPhone(req.phone());
                 if(req.website() != null) shop.setWebsite(req.website());
                 if(req.email() != null) shop.setEmail(req.email());

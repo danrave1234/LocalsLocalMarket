@@ -12,10 +12,11 @@ import ServiceCard from '../components/ServiceCard.jsx'
 import ServiceForm from '../components/ServiceForm.jsx'
 import { fetchShopById } from '../api/shops.js'
 import shopCache from '../utils/shopCache.js'
-import { Store, MapPin, Check, Copy, Phone, Globe, BarChart3, Package, Search, DollarSign, Camera, Trash2, ShoppingCart, Plus, Info, Star, ThumbsUp, ThumbsDown, Crosshair } from 'lucide-react'
+import { Store, MapPin, Check, Copy, Phone, Globe, BarChart3, Package, Search, DollarSign, Camera, Trash2, ShoppingCart, Plus, Info, Star, ThumbsUp, ThumbsDown, Crosshair, Wrench } from 'lucide-react'
 
 
 import { fetchProducts, fetchProductsByShopIdPaginated, createProduct, updateProduct, deleteProduct, updateProductStock } from '../api/products.js'
+import { fetchServicesByShopId, fetchServicesByShopIdLegacy, createService, updateService, deleteService } from '../api/services.js'
 import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
 import { extractShopIdFromSlug, extractShopNameFromSlug, generateShopSlug } from '../utils/slugUtils.js'
@@ -39,6 +40,19 @@ export default function ShopPage() {
   const shopId = extractShopIdFromSlug(slug)
   const [shop, setShop] = useState(null)
   const [products, setProducts] = useState([])
+  const [services, setServices] = useState([])
+  const [selectedCategory, setSelectedCategory] = useState(null)
+  
+  // Debug products state
+  useEffect(() => {
+    console.log('Products state changed:', products)
+  }, [products])
+  
+  // Debug services state
+  useEffect(() => {
+    console.log('Services state changed:', services)
+  }, [services])
+  
   const [pagination, setPagination] = useState(null)
   const [currentPage, setCurrentPage] = useState(0)
   const [pageSize] = useState(12) // Fixed page size for shop products
@@ -47,9 +61,12 @@ export default function ShopPage() {
   const [showAddProduct, setShowAddProduct] = useState(false)
   const [showEditProduct, setShowEditProduct] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
+  const [showAddService, setShowAddService] = useState(false)
+  const [showEditService, setShowEditService] = useState(false)
+  const [editingService, setEditingService] = useState(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState(null)
   const [savingStock, setSavingStock] = useState({})
+  const [activeTab, setActiveTab] = useState('products') // 'products' or 'services'
 
   // Function to fetch products with pagination
   const fetchProductsWithPagination = useCallback(async (page = 0, shopId = null) => {
@@ -62,6 +79,7 @@ export default function ShopPage() {
       const response = await fetchProductsByShopIdPaginated(targetShopId, page, pageSize)
       
       if (response && response.content && response.pagination) {
+        console.log('Setting products from paginated response:', response.content)
         setProducts(response.content)
         setPagination(response.pagination)
         setCurrentPage(page)
@@ -79,6 +97,56 @@ export default function ShopPage() {
     }
   }, [shop?.id, pageSize])
 
+  // Function to fetch services
+  const fetchServices = useCallback(async (shopId = null) => {
+    const targetShopId = shopId || shop?.id
+    if (!targetShopId) {
+      return
+    }
+    
+    try {
+      console.log('Fetching services for shop ID:', targetShopId)
+      
+      // Try paginated API first
+      const response = await fetchServicesByShopId(targetShopId, { page: 0, size: 100 })
+      console.log('Services API response:', response)
+      
+      // Handle paginated response format
+      if (response && response.content && Array.isArray(response.content)) {
+        console.log('Setting services from paginated response:', response.content)
+        setServices(response.content)
+      } else if (Array.isArray(response)) {
+        // Fallback for non-paginated response
+        console.log('Setting services from non-paginated response:', response)
+        setServices(response)
+      } else {
+        console.log('No services found or invalid response format, trying legacy API')
+        // Try legacy non-paginated API as fallback
+        try {
+          const legacyResponse = await fetchServicesByShopIdLegacy(targetShopId)
+          console.log('Legacy services API response:', legacyResponse)
+          setServices(Array.isArray(legacyResponse) ? legacyResponse : [])
+        } catch (legacyError) {
+          console.error('Legacy API also failed:', legacyError)
+          setServices([])
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch services:', error)
+      // Try legacy API as fallback
+      try {
+        console.log('Trying legacy API as fallback...')
+        const legacyResponse = await fetchServicesByShopIdLegacy(targetShopId)
+        console.log('Legacy services API response:', legacyResponse)
+        setServices(Array.isArray(legacyResponse) ? legacyResponse : [])
+      } catch (legacyError) {
+        console.error('Both APIs failed:', legacyError)
+        setError('Failed to load services: ' + error.message)
+        setServices([])
+      }
+    }
+  }, [shop?.id])
+
   const [productForm, setProductForm] = useState({
     title: '',
     description: '',
@@ -87,6 +155,16 @@ export default function ShopPage() {
     subcategory: '',
     customCategory: '',
     stockCount: ''
+  })
+  const [serviceForm, setServiceForm] = useState({
+    title: '',
+    description: '',
+    price: '',
+    mainCategory: '',
+    subcategory: '',
+    customCategory: '',
+    status: 'AVAILABLE',
+    durationMinutes: ''
   })
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('newest')
@@ -139,26 +217,38 @@ export default function ShopPage() {
 
   // Sort products function with memoization
   const getSortedProducts = useCallback(() => {
-    if (!Array.isArray(products)) return []
+    console.log('getSortedProducts called, products:', products)
+    if (!Array.isArray(products)) {
+      console.log('Products is not an array:', products)
+      return []
+    }
+    
+    // Temporary bypass for debugging - return all products without filtering
+    if (products.length > 0) {
+      console.log('TEMP: Returning all products without filtering for debugging')
+      return products
+    }
     
     let filteredProducts = products.filter(product => {
-      const matchesSearch = !debouncedSearchQuery || 
+      // Search filter - only apply if there's a search query
+      const matchesSearch = !debouncedSearchQuery || debouncedSearchQuery.trim() === '' || 
         product.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
         (product.description && product.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase())) ||
         (product.mainCategory && product.mainCategory.toLowerCase().includes(debouncedSearchQuery.toLowerCase())) ||
         (product.subcategory && product.subcategory.toLowerCase().includes(debouncedSearchQuery.toLowerCase())) ||
         (product.customCategory && product.customCategory.toLowerCase().includes(debouncedSearchQuery.toLowerCase()))
       
-      const matchesCategory = !selectedCategory || 
+      // Category filter - only apply if a specific category is selected
+      const matchesCategory = !selectedCategory || selectedCategory === 'all' || selectedCategory === 'All Categories' ||
         product.mainCategory === selectedCategory ||
         product.subcategory === selectedCategory ||
         product.customCategory === selectedCategory ||
         product.category === selectedCategory // Backward compatibility
       
-      // Price range filter
-      const matchesPriceRange = !priceRange.min && !priceRange.max || 
-        ((!priceRange.min || (product.price || 0) >= parseFloat(priceRange.min)) &&
-         (!priceRange.max || (product.price || 0) <= parseFloat(priceRange.max)))
+      // Price range filter - only apply if price range is set
+      const matchesPriceRange = (!priceRange.min || priceRange.min === '') && (!priceRange.max || priceRange.max === '') || 
+        ((!priceRange.min || priceRange.min === '' || (product.price || 0) >= parseFloat(priceRange.min)) &&
+         (!priceRange.max || priceRange.max === '' || (product.price || 0) <= parseFloat(priceRange.max)))
       
       // Stock status filter
       const matchesStockFilter = stockFilter === 'all' ||
@@ -166,7 +256,24 @@ export default function ShopPage() {
         (stockFilter === 'out-of-stock' && (product.stockCount || 0) <= 0) ||
         (stockFilter === 'low-stock' && (product.stockCount || 0) > 0 && (product.stockCount || 0) <= 5)
       
-      return matchesSearch && matchesCategory && matchesPriceRange && matchesStockFilter
+      const result = matchesSearch && matchesCategory && matchesPriceRange && matchesStockFilter
+      
+      // Debug logging for first product
+      if (product.id === products[0]?.id) {
+        console.log('Filtering product:', product.title, {
+          matchesSearch,
+          matchesCategory,
+          matchesPriceRange,
+          matchesStockFilter,
+          result,
+          selectedCategory,
+          debouncedSearchQuery,
+          priceRange,
+          stockFilter
+        })
+      }
+      
+      return result
     })
 
     switch (sortBy) {
@@ -185,6 +292,82 @@ export default function ShopPage() {
         return filteredProducts.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
     }
   }, [products, debouncedSearchQuery, selectedCategory, sortBy, priceRange, stockFilter])
+
+  // Sort services function with memoization
+  const getSortedServices = useCallback(() => {
+    console.log('getSortedServices called with services:', services)
+    if (!Array.isArray(services)) {
+      console.log('Services is not an array:', services)
+      return []
+    }
+    
+    let filteredServices = services.filter(service => {
+      const matchesSearch = !debouncedSearchQuery || 
+        service.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        (service.description && service.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase())) ||
+        (service.mainCategory && service.mainCategory.toLowerCase().includes(debouncedSearchQuery.toLowerCase())) ||
+        (service.subcategory && service.subcategory.toLowerCase().includes(debouncedSearchQuery.toLowerCase())) ||
+        (service.customCategory && service.customCategory.toLowerCase().includes(debouncedSearchQuery.toLowerCase()))
+      
+      const matchesCategory = !selectedCategory || 
+        service.mainCategory === selectedCategory ||
+        service.subcategory === selectedCategory ||
+        service.customCategory === selectedCategory ||
+        service.category === selectedCategory // Backward compatibility
+      
+      // Price range filter
+      const matchesPriceRange = (!priceRange.min || priceRange.min === '') && (!priceRange.max || priceRange.max === '') || 
+        ((!priceRange.min || priceRange.min === '' || (service.price || 0) >= parseFloat(priceRange.min)) &&
+         (!priceRange.max || priceRange.max === '' || (service.price || 0) <= parseFloat(priceRange.max)))
+      
+      // Status filter (for services)
+      const matchesStatusFilter = stockFilter === 'all' ||
+        (stockFilter === 'in-stock' && service.status === 'AVAILABLE') ||
+        (stockFilter === 'out-of-stock' && service.status === 'NOT_AVAILABLE')
+      
+      const result = matchesSearch && matchesCategory && matchesPriceRange && matchesStatusFilter
+      console.log(`Service "${service.title}" filters:`, {
+        matchesSearch,
+        matchesCategory,
+        matchesPriceRange,
+        matchesStatusFilter,
+        result,
+        selectedCategory,
+        debouncedSearchQuery,
+        priceRange,
+        stockFilter
+      })
+      return result
+    })
+
+    console.log('Filtered services before sorting:', filteredServices)
+    
+    let sortedServices;
+    switch (sortBy) {
+      case 'price-low':
+        sortedServices = filteredServices.sort((a, b) => (a.price || 0) - (b.price || 0))
+        break
+      case 'price-high':
+        sortedServices = filteredServices.sort((a, b) => (b.price || 0) - (a.price || 0))
+        break
+      case 'oldest':
+        sortedServices = filteredServices.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+        break
+      case 'name-asc':
+        sortedServices = filteredServices.sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+        break
+      case 'name-desc':
+        sortedServices = filteredServices.sort((a, b) => (b.title || '').localeCompare(a.title || ''))
+        break
+      case 'newest':
+      default:
+        sortedServices = filteredServices.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        break
+    }
+    
+    console.log('Final sorted services:', sortedServices)
+    return sortedServices
+  }, [services, debouncedSearchQuery, selectedCategory, sortBy, priceRange, stockFilter])
 
   // Format business hours display
   const formatHoursDisplay = useCallback((hours) => {
@@ -316,8 +499,11 @@ export default function ShopPage() {
           
           setShop(shopData)
           
-          // Only fetch products since they're not cached
-          await fetchProductsWithPagination(0, shopId)
+          // Only fetch products and services since they're not cached
+          await Promise.all([
+            fetchProductsWithPagination(0, shopId),
+            fetchServices(shopId)
+          ])
           
           // Load business hours from shop data
           if (shopData.businessHoursJson && shopData.businessHoursJson.trim() !== '') {
@@ -342,8 +528,11 @@ export default function ShopPage() {
           
           setShop(apiShopData)
           
-          // Fetch products
-          await fetchProductsWithPagination(0, shopId)
+          // Fetch products and services
+          await Promise.all([
+            fetchProductsWithPagination(0, shopId),
+            fetchServices(shopId)
+          ])
           
           // Load business hours from shop data
           if (apiShopData.businessHoursJson && apiShopData.businessHoursJson.trim() !== '') {
@@ -580,6 +769,127 @@ export default function ShopPage() {
     } catch (error) {
       console.error('Failed to update product:', error)
       setError('Failed to update product: ' + error.message)
+    }
+  }
+
+  // Service management functions
+  const handleAddService = async (e) => {
+    e.preventDefault()
+    
+    // Validate required fields
+    if (!serviceForm.title || !serviceForm.title.trim()) {
+      setError('Service title is required')
+      return
+    }
+
+    if (!serviceForm.price || parseFloat(serviceForm.price) <= 0) {
+      setError('Service price must be greater than 0')
+      return
+    }
+    
+    try {
+      // Only send service-relevant fields, exclude durationMinutes which is not in the DTO
+      const serviceData = {
+        title: serviceForm.title,
+        description: serviceForm.description,
+        price: serviceForm.price ? parseFloat(serviceForm.price) : 0,
+        mainCategory: serviceForm.mainCategory,
+        subcategory: serviceForm.subcategory,
+        customCategory: serviceForm.customCategory,
+        status: serviceForm.status,
+        shopId: shop.id
+      }
+      const newService = await createService(serviceData, token)
+      
+      // Validate the response
+      if (!newService || !newService.id) {
+        setError('Invalid service response from server')
+        return
+      }
+      setServices([...services, newService])
+      setShowAddService(false)
+      setServiceForm({
+        title: '',
+        description: '',
+        price: '',
+        mainCategory: '',
+        subcategory: '',
+        customCategory: '',
+        status: 'AVAILABLE',
+        durationMinutes: ''
+      })
+    } catch (error) {
+      console.error('Failed to create service:', error)
+      setError('Failed to create service: ' + error.message)
+    }
+  }
+
+  const handleDeleteService = async (serviceId) => {
+    if (!confirm('Are you sure you want to delete this service?')) {
+      return
+    }
+    
+    try {
+      await deleteService(serviceId, token)
+      setServices(services.filter(s => s.id !== serviceId))
+    } catch (error) {
+      console.error('Failed to delete service:', error)
+      setError('Failed to delete service: ' + error.message)
+    }
+  }
+
+  const handleEditService = (service) => {
+    setEditingService(service)
+    setServiceForm({
+      title: service.title,
+      description: service.description || '',
+      price: service.price,
+      mainCategory: service.mainCategory || '',
+      subcategory: service.subcategory || '',
+      customCategory: service.customCategory || '',
+      status: service.status || 'AVAILABLE',
+      durationMinutes: service.durationMinutes || ''
+    })
+    setShowEditService(true)
+  }
+
+  const handleUpdateService = async (e) => {
+    e.preventDefault()
+    try {
+      // Only send service-relevant fields, exclude durationMinutes which is not in the DTO
+      const serviceData = {
+        title: serviceForm.title,
+        description: serviceForm.description,
+        price: serviceForm.price,
+        mainCategory: serviceForm.mainCategory,
+        subcategory: serviceForm.subcategory,
+        customCategory: serviceForm.customCategory,
+        status: serviceForm.status
+      }
+      const updatedService = await updateService(editingService.id, serviceData, token)
+      
+      // Validate the response
+      if (!updatedService || !updatedService.id) {
+        setError('Invalid service response from server')
+        return
+      }
+      
+      setServices(services.map(s => s.id === editingService.id ? updatedService : s))
+      setShowEditService(false)
+      setEditingService(null)
+      setServiceForm({
+        title: '',
+        description: '',
+        price: '',
+        mainCategory: '',
+        subcategory: '',
+        customCategory: '',
+        status: 'AVAILABLE',
+        durationMinutes: ''
+      })
+    } catch (error) {
+      console.error('Failed to update service:', error)
+      setError('Failed to update service: ' + error.message)
     }
   }
 
@@ -1116,43 +1426,71 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {/* Products Section - Full Width */}
+      {/* Products & Services Section - Full Width */}
       <section className="products-section-full-width">
+        {/* Tab Navigation */}
+        <div className="items-tab-navigation">
+          <button
+            className={`tab-btn ${activeTab === 'products' ? 'active' : ''}`}
+            onClick={() => setActiveTab('products')}
+          >
+            <Package size={16} />
+            Products ({products.length})
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'services' ? 'active' : ''}`}
+            onClick={() => setActiveTab('services')}
+          >
+            <Wrench size={16} />
+            Services ({services.length})
+          </button>
+        </div>
+
         <div className="products-header">
           <div>
-            <h3 style={{ margin: 0 }}>Products</h3>
+            <h3 style={{ margin: 0 }}>
+              {activeTab === 'products' ? 'Products' : 'Services'}
+            </h3>
             <p className="muted" style={{ marginTop: 4 }}>
               {(() => {
-                const sortedProducts = getSortedProducts();
-                const totalProducts = products.length;
-                const filteredCount = sortedProducts.length;
+                const currentItems = activeTab === 'products' ? products : services;
+                const sortedItems = activeTab === 'products' ? getSortedProducts() : getSortedServices();
+                const totalItems = currentItems.length;
+                const filteredCount = sortedItems.length;
                 
-                if (!Array.isArray(products) || products.length === 0) {
-                  return 'No products yet';
+                if (!Array.isArray(currentItems) || currentItems.length === 0) {
+                  return `No ${activeTab} yet`;
                 }
                 
                 if (searchQuery || selectedCategory) {
-                  return `${filteredCount} of ${totalProducts} product${totalProducts !== 1 ? 's' : ''} found`;
+                  return `${filteredCount} of ${totalItems} ${activeTab.slice(0, -1)}${totalItems !== 1 ? 's' : ''} found`;
                 }
                 
-                return `${totalProducts} product${totalProducts !== 1 ? 's' : ''} available`;
+                return `${totalItems} ${activeTab.slice(0, -1)}${totalItems !== 1 ? 's' : ''} available`;
               })()}
             </p>
           </div>
-          {isOwner && Array.isArray(products) && products.length > 0 && (
+          {isOwner && (
             <button 
               className="btn add-another-product-btn"
-              onClick={() => setShowAddProduct(true)}
+              onClick={() => {
+                if (activeTab === 'products') {
+                  setShowAddProduct(true);
+                } else {
+                  setShowAddService(true);
+                }
+              }}
             >
-              Add Another Product
+              Add {activeTab === 'products' ? 'Product' : 'Service'}
             </button>
           )}
         </div>
 
 
 
-        {/* Enhanced Product Controls */}
-        {Array.isArray(products) && products.length > 0 && (
+        {/* Enhanced Item Controls */}
+        {((activeTab === 'products' && Array.isArray(products) && products.length > 0) || 
+          (activeTab === 'services' && Array.isArray(services) && services.length > 0)) && (
           <div className="product-controls">
             <div className="controls-left">
               <div className="search-sort-row">
@@ -1160,7 +1498,7 @@ export default function ShopPage() {
                   <div className="search-icon"><Search size={16} /></div>
                   <input
                     type="text"
-                    placeholder="Search products..."
+                    placeholder={`Search ${activeTab}...`}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="enhanced-search-input"
@@ -1205,15 +1543,17 @@ export default function ShopPage() {
                   {(priceRange.min || priceRange.max) && <span className="active-indicator">•</span>}
                 </button>
                 
-                <button
-                  className={`filter-toggle ${stockFilter !== 'all' ? 'active' : ''}`}
-                  onClick={() => setShowStockFilter(!showStockFilter)}
-                  type="button"
-                >
-                  <span className="toggle-icon"><Package size={16} /></span>
-                  Stock
-                  {stockFilter !== 'all' && <span className="active-indicator">•</span>}
-                </button>
+                {activeTab === 'products' && (
+                  <button
+                    className={`filter-toggle ${stockFilter !== 'all' ? 'active' : ''}`}
+                    onClick={() => setShowStockFilter(!showStockFilter)}
+                    type="button"
+                  >
+                    <span className="toggle-icon"><Package size={16} /></span>
+                    Stock
+                    {stockFilter !== 'all' && <span className="active-indicator">•</span>}
+                  </button>
+                )}
                 
                 {(priceRange.min || priceRange.max || stockFilter !== 'all') && (
                   <button
@@ -1338,59 +1678,84 @@ export default function ShopPage() {
         )}
 
         {/* Category Filter */}
-        {Array.isArray(products) && products.length > 0 && (() => {
-          const categories = [...new Set([
-            ...products.map(p => p.mainCategory).filter(Boolean),
-            ...products.map(p => p.subcategory).filter(Boolean),
-            ...products.map(p => p.customCategory).filter(Boolean),
-            ...products.map(p => p.category).filter(Boolean) // Backward compatibility
-          ])];
-          if (categories.length > 1) {
-            return (
-              <div className="category-filter">
-                <div className="filter-label">Filter by Category:</div>
-                <div className="category-buttons">
-                  <button 
-                    className={`category-btn ${!selectedCategory ? 'active' : ''}`}
-                    onClick={() => setSelectedCategory(null)}
-                  >
-                    All
-                  </button>
-                  {categories.map(category => (
+        {(() => {
+          const currentItems = activeTab === 'products' ? products : services;
+          if (Array.isArray(currentItems) && currentItems.length > 0) {
+            const categories = [...new Set([
+              ...currentItems.map(item => item.mainCategory).filter(Boolean),
+              ...currentItems.map(item => item.subcategory).filter(Boolean),
+              ...currentItems.map(item => item.customCategory).filter(Boolean),
+              ...currentItems.map(item => item.category).filter(Boolean) // Backward compatibility
+            ])];
+            if (categories.length > 1) {
+              return (
+                <div className="category-filter">
+                  <div className="filter-label">Filter by Category:</div>
+                  <div className="category-buttons">
                     <button 
-                      key={category}
-                      className={`category-btn ${selectedCategory === category ? 'active' : ''}`}
-                      onClick={() => setSelectedCategory(category)}
+                      className={`category-btn ${!selectedCategory ? 'active' : ''}`}
+                      onClick={() => setSelectedCategory(null)}
                     >
-                      {category}
+                      All
                     </button>
-                  ))}
+                    {categories.map(category => (
+                      <button 
+                        key={category}
+                        className={`category-btn ${selectedCategory === category ? 'active' : ''}`}
+                        onClick={() => setSelectedCategory(category)}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
+              );
+            }
           }
           return null;
         })()}
 
-        {(!Array.isArray(products) || products.length === 0) ? (
-          <div className="card no-products-card">
-            <div className="no-products-icon"><Package size={48} /></div>
-            <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No products yet</h3>
-            <p className="muted" style={{ marginBottom: '1rem' }}>
-              {isOwner ? 'Start selling by adding your first product' : 'This shop hasn\'t added any products yet'}
-            </p>
-            {isOwner && (
-              <button 
-                className="btn btn-primary add-first-product-btn"
-                onClick={() => setShowAddProduct(true)}
-              >
-                Add Your First Product
-              </button>
-            )}
-          </div>
-        ) : (
+        {(() => {
+          const currentItems = activeTab === 'products' ? products : services;
+          const hasItems = Array.isArray(currentItems) && currentItems.length > 0;
+          
+          if (!hasItems) {
+            return (
+              <div className="card no-products-card">
+                <div className="no-products-icon">
+                  {activeTab === 'products' ? <Package size={48} /> : <Wrench size={48} />}
+                </div>
+                <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>
+                  No {activeTab} yet
+                </h3>
+                <p className="muted" style={{ marginBottom: '1rem' }}>
+                  {isOwner ? 
+                    `Start ${activeTab === 'products' ? 'selling' : 'offering services'} by adding your first ${activeTab.slice(0, -1)}` : 
+                    `This shop hasn't added any ${activeTab} yet`
+                  }
+                </p>
+                {isOwner && (
+                  <button 
+                    className="btn btn-primary add-first-product-btn"
+                    onClick={() => {
+                      if (activeTab === 'products') {
+                        setShowAddProduct(true);
+                      } else {
+                        setShowAddService(true);
+                      }
+                    }}
+                  >
+                    Add Your First {activeTab === 'products' ? 'Product' : 'Service'}
+                  </button>
+                )}
+              </div>
+            );
+          }
+          
+          return (
           <div className="products-grid-full-width">
-            {getSortedProducts().map((product) => (
+            {activeTab === 'products' ? 
+              getSortedProducts().map((product) => (
                 <article 
                   key={product.id} 
                   className="card product-card"
@@ -1565,9 +1930,78 @@ export default function ShopPage() {
                   </div>
                                   </div>
                 </article>
-            ))}
+              )) :
+              getSortedServices().map((service) => (
+                <article 
+                  key={service.id} 
+                  className="card product-card"
+                >
+                  <div className="product-image-container">
+                    <div className="product-image-placeholder">
+                      <Wrench size={24} />
+                    </div>
+                  </div>
+                  
+                  <div className="product-content">
+                    <h4 className="product-title">{service.title}</h4>
+                    <p className="product-description">{service.description}</p>
+                    
+                    <div className="product-meta">
+                      <div className="product-price">₱{service.price}</div>
+                      <div className="product-category">
+                        {service.mainCategory}
+                        {service.subcategory && ` • ${service.subcategory}`}
+                      </div>
+                      {service.durationMinutes && (
+                        <div className="service-duration">
+                          <Clock size={14} />
+                          {service.durationMinutes} min
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="product-status">
+                      <span className={`status-badge ${service.status === 'AVAILABLE' ? 'available' : 'unavailable'}`}>
+                        {service.status === 'AVAILABLE' ? 'Available' : 'Not Available'}
+                      </span>
+                    </div>
+                    
+                    <div className="product-actions">
+                      {isOwner ? (
+                        <>
+                          <button 
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleEditService(service)}
+                          >
+                            <span className="btn-icon">✏️</span>
+                            Edit
+                          </button>
+                          <button 
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDeleteService(service.id)}
+                          >
+                            <span className="btn-icon"><Trash2 size={16} /></span>
+                            Delete
+                          </button>
+                        </>
+                      ) : (
+                        <button 
+                          className={`btn btn-primary btn-sm ${service.status !== 'AVAILABLE' ? 'disabled' : ''}`}
+                          onClick={() => service.status === 'AVAILABLE' && console.log('View service:', service)}
+                          disabled={service.status !== 'AVAILABLE'}
+                        >
+                          <Info size={20} />
+                          {service.status === 'AVAILABLE' ? 'View Details' : 'Unavailable'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))
+            }
           </div>
-        )}
+          );
+        })()}
 
         {/* Pagination Controls */}
         {pagination && pagination.totalPages > 1 && (
@@ -1870,6 +2304,278 @@ export default function ShopPage() {
             </button>
             <button type="submit" className="btn btn-primary submit-btn">
               Update Product
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add Service Modal */}
+      <Modal 
+        isOpen={showAddService} 
+        onClose={() => setShowAddService(false)}
+        title="Add New Service"
+        size="xlarge"
+      >
+        <form onSubmit={handleAddService} className="add-product-form">
+          <div>
+            <label htmlFor="serviceTitle" className="muted form-label">
+              Service Title *
+            </label>
+            <input
+              type="text"
+              id="serviceTitle"
+              className="input"
+              value={serviceForm.title}
+              onChange={(e) => setServiceForm({...serviceForm, title: e.target.value})}
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="serviceDescription" className="muted form-label">
+              Description
+            </label>
+            <textarea
+              id="serviceDescription"
+              className="input"
+              value={serviceForm.description}
+              onChange={(e) => setServiceForm({...serviceForm, description: e.target.value})}
+              rows={3}
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+
+          <div className="form-row">
+            <div>
+              <label htmlFor="servicePrice" className="muted form-label">
+                Price *
+              </label>
+              <input
+                type="number"
+                id="servicePrice"
+                className="input"
+                value={serviceForm.price}
+                onChange={(e) => setServiceForm({...serviceForm, price: e.target.value})}
+                min="0"
+                step="0.01"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="serviceDuration" className="muted form-label">
+                Duration (minutes)
+              </label>
+              <input
+                type="number"
+                id="serviceDuration"
+                className="input"
+                value={serviceForm.durationMinutes}
+                onChange={(e) => setServiceForm({...serviceForm, durationMinutes: e.target.value})}
+                min="1"
+                placeholder="60"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="serviceCategory" className="muted form-label">
+              Service Category
+            </label>
+            <CategorySelector
+              value={{
+                mainCategory: serviceForm.mainCategory,
+                subcategory: serviceForm.subcategory,
+                customCategory: serviceForm.customCategory
+              }}
+              onChange={(categoryData) => {
+                setServiceForm({
+                  ...serviceForm,
+                  mainCategory: categoryData.mainCategory || '',
+                  subcategory: categoryData.subcategory || '',
+                  customCategory: categoryData.customCategory || ''
+                })
+              }}
+              placeholder="Select a category"
+              showSubcategories={true}
+              allowCustom={true}
+              required={false}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="serviceStatus" className="muted form-label">
+              Status
+            </label>
+            <select
+              id="serviceStatus"
+              className="input"
+              value={serviceForm.status}
+              onChange={(e) => setServiceForm({...serviceForm, status: e.target.value})}
+            >
+              <option value="AVAILABLE">Available</option>
+              <option value="NOT_AVAILABLE">Not Available</option>
+            </select>
+          </div>
+
+          <div className="form-actions">
+            <button 
+              type="button" 
+              className="btn cancel-btn" 
+              onClick={() => setShowAddService(false)}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary submit-btn">
+              Add Service
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Service Modal */}
+      <Modal 
+        isOpen={showEditService} 
+        onClose={() => {
+          setShowEditService(false)
+          setEditingService(null)
+          setServiceForm({
+            title: '',
+            description: '',
+            price: '',
+            mainCategory: '',
+            subcategory: '',
+            customCategory: '',
+            status: 'AVAILABLE',
+            durationMinutes: ''
+          })
+        }}
+        title={`Edit Service - ${editingService?.title || ''}`}
+        size="xlarge"
+      >
+        <form onSubmit={handleUpdateService} className="add-product-form">
+          <div>
+            <label htmlFor="editServiceTitle" className="muted form-label">
+              Service Title *
+            </label>
+            <input
+              type="text"
+              id="editServiceTitle"
+              className="input"
+              value={serviceForm.title}
+              onChange={(e) => setServiceForm({...serviceForm, title: e.target.value})}
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="editServiceDescription" className="muted form-label">
+              Description
+            </label>
+            <textarea
+              id="editServiceDescription"
+              className="input"
+              value={serviceForm.description}
+              onChange={(e) => setServiceForm({...serviceForm, description: e.target.value})}
+              rows={3}
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+
+          <div className="form-row">
+            <div>
+              <label htmlFor="editServicePrice" className="muted form-label">
+                Price *
+              </label>
+              <input
+                type="number"
+                id="editServicePrice"
+                className="input"
+                value={serviceForm.price}
+                onChange={(e) => setServiceForm({...serviceForm, price: e.target.value})}
+                min="0"
+                step="0.01"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="editServiceDuration" className="muted form-label">
+                Duration (minutes)
+              </label>
+              <input
+                type="number"
+                id="editServiceDuration"
+                className="input"
+                value={serviceForm.durationMinutes}
+                onChange={(e) => setServiceForm({...serviceForm, durationMinutes: e.target.value})}
+                min="1"
+                placeholder="60"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="editServiceCategory" className="muted form-label">
+              Service Category
+            </label>
+            <CategorySelector
+              value={{
+                mainCategory: serviceForm.mainCategory,
+                subcategory: serviceForm.subcategory,
+                customCategory: serviceForm.customCategory
+              }}
+              onChange={(categoryData) => {
+                setServiceForm({
+                  ...serviceForm,
+                  mainCategory: categoryData.mainCategory || '',
+                  subcategory: categoryData.subcategory || '',
+                  customCategory: categoryData.customCategory || ''
+                })
+              }}
+              placeholder="Select a category"
+              showSubcategories={true}
+              allowCustom={true}
+              required={false}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="editServiceStatus" className="muted form-label">
+              Status
+            </label>
+            <select
+              id="editServiceStatus"
+              className="input"
+              value={serviceForm.status}
+              onChange={(e) => setServiceForm({...serviceForm, status: e.target.value})}
+            >
+              <option value="AVAILABLE">Available</option>
+              <option value="NOT_AVAILABLE">Not Available</option>
+            </select>
+          </div>
+
+          <div className="form-actions">
+            <button 
+              type="button" 
+              className="btn cancel-btn" 
+              onClick={() => {
+                setShowEditService(false)
+                setEditingService(null)
+                setServiceForm({
+                  title: '',
+                  description: '',
+                  price: '',
+                  mainCategory: '',
+                  subcategory: '',
+                  customCategory: '',
+                  status: 'AVAILABLE',
+                  durationMinutes: ''
+                })
+              }}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary submit-btn">
+              Update Service
             </button>
           </div>
         </form>

@@ -7,6 +7,7 @@ import java.util.List;
 import org.localslocalmarket.model.Shop;
 import org.localslocalmarket.repo.ShopRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +21,7 @@ public class SitemapController {
     @Autowired
     private ShopRepository shopRepository;
 
+    @Cacheable(cacheNames = "sitemap", key = "'main_sitemap'")
     @GetMapping(value = "/sitemap.xml", produces = MediaType.APPLICATION_XML_VALUE)
     public ResponseEntity<String> generateSitemap() {
         try {

@@ -84,27 +84,13 @@ const AboutPage = () => {
       <section className="about-us-team">
         <h2 className="about-us-section-title">Our Team</h2>
         <div className="team-member">
-          <div className="team-member-avatar"><User size={32} /></div>
-          <h3 className="team-member-name">John Smith</h3>
-          <p className="team-member-role">CEO & Founder</p>
-          <p className="team-member-bio">
-            Passionate about connecting local businesses with their communities through technology.
-          </p>
-        </div>
-        <div className="team-member">
           <div className="team-member-avatar"><Code size={32} /></div>
-          <h3 className="team-member-name">Sarah Johnson</h3>
-          <p className="team-member-role">CTO</p>
+          <h3 className="team-member-name">Danrave Keh</h3>
+          <p className="team-member-role">Founder & Developer</p>
           <p className="team-member-bio">
-            Leading our technical vision to create seamless experiences for users and businesses.
-          </p>
-        </div>
-        <div className="team-member">
-          <div className="team-member-avatar"><Palette size={32} /></div>
-          <h3 className="team-member-name">Mike Chen</h3>
-          <p className="team-member-role">Head of Design</p>
-          <p className="team-member-bio">
-            Creating beautiful, intuitive interfaces that make local commerce delightful.
+            The sole developer behind LocalsLocalMarket, passionate about connecting local businesses 
+            with their communities through innovative technology solutions. Building the entire platform 
+            from frontend to backend with a focus on user experience and community impact.
           </p>
         </div>
       </section>

@@ -18,7 +18,15 @@
         <license/>
     </licenses>
     <developers>
-        <developer/>
+        <developer>
+            <id>danrave-keh</id>
+            <name>Danrave Keh</name>
+            <email>danrave.keh@localslocalmarket.com</email>
+            <roles>
+                <role>Developer</role>
+                <role>Architect</role>
+            </roles>
+        </developer>
     </developers>
     <scm>
         <connection/>

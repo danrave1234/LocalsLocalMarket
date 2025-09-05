@@ -488,11 +488,11 @@ function SettingsTab() {
                     <h3>General Settings</h3>
                     <div className="setting-item">
                         <label>Site Name</label>
-                        <input type="text" className="input" defaultValue="Locals Local Market" />
+                        <input type="text" className="input" defaultValue="Locals Local Market" readOnly />
                     </div>
                     <div className="setting-item">
                         <label>Contact Email</label>
-                        <input type="email" className="input" defaultValue="admin@localslocalmarket.com" />
+                        <input type="email" className="input" defaultValue="admin@localslocalmarket.com" readOnly />
                     </div>
                     <div className="setting-item">
                         <label>Maintenance Mode</label>
@@ -504,7 +504,7 @@ function SettingsTab() {
                     <h3>Security Settings</h3>
                     <div className="setting-item">
                         <label>Session Timeout (minutes)</label>
-                        <input type="number" className="input" defaultValue="30" />
+                        <input type="number" className="input" defaultValue="30" readOnly />
                     </div>
                     <div className="setting-item">
                         <label>Require Email Verification</label>

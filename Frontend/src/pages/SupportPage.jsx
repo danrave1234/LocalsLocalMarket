@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import SEOHead from '../components/SEOHead.jsx';
+import FeedbackButton from '../components/FeedbackButton.jsx';
 import '../support.css';
 import { BookOpen, DollarSign, Wrench, Smartphone, Lock, FileText, Video, MessageCircle } from 'lucide-react';
 
@@ -17,7 +18,7 @@ function StoreIcon(props) {
   )
 }
 
-const SupportPage = () => {
+const SupportPage = ({ onOpenFeedback }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFaq, setActiveFaq] = useState(null);
 
@@ -32,15 +33,15 @@ const SupportPage = () => {
     },
     {
       question: "How do I list my business?",
-      answer: "After creating an account, go to your dashboard and click 'Add Business'. Fill in your business details, upload photos, and submit for review. We'll approve your listing within 24-48 hours."
+      answer: "After creating an account, go to your dashboard and click 'Create Shop'. Fill in your shop details, upload photos, and your listing will be live immediately."
     },
     {
       question: "How do I contact customer support?",
-      answer: "You can contact our support team through the contact form on our Contact page, email us at support@localslocalmarket.com, or call us at +1 (555) 123-4567 during business hours."
+      answer: "You can contact the developer through the contact form on our Contact page or email danrave.keh@localslocalmarket.com directly."
     },
     {
       question: "What payment methods do you accept?",
-      answer: "We accept all major credit cards (Visa, MasterCard, American Express), PayPal, and bank transfers. All payments are processed securely through our trusted payment partners."
+      answer: "Currently, payments are handled off-platform. Sellers can provide their own payment methods such as cash on delivery, bank transfers, or other local payment solutions."
     },
     {
       question: "How do I update my business information?",
@@ -131,7 +132,7 @@ const SupportPage = () => {
           <p className="category-description">
             New to LocalsLocalMarket? Learn the basics and get up and running quickly.
           </p>
-          <div className="category-count">5 articles</div>
+          <div className="category-count">Basic guides</div>
         </div>
 
         <div className="support-category">
@@ -140,7 +141,7 @@ const SupportPage = () => {
           <p className="category-description">
             Learn how to manage your business listing, update information, and grow your presence.
           </p>
-          <div className="category-count">8 articles</div>
+          <div className="category-count">Shop management</div>
         </div>
 
         <div className="support-category">
@@ -149,7 +150,7 @@ const SupportPage = () => {
           <p className="category-description">
             Everything you need to know about payments, billing, and subscription management.
           </p>
-          <div className="category-count">6 articles</div>
+          <div className="category-count">Payment info</div>
         </div>
 
         <div className="support-category">
@@ -158,7 +159,7 @@ const SupportPage = () => {
           <p className="category-description">
             Technical issues, troubleshooting, and platform-related questions.
           </p>
-          <div className="category-count">4 articles</div>
+          <div className="category-count">Technical help</div>
         </div>
 
         <div className="support-category">
@@ -167,7 +168,7 @@ const SupportPage = () => {
           <p className="category-description">
             Using our mobile app? Find guides and tips for mobile users.
           </p>
-          <div className="category-count">3 articles</div>
+          <div className="category-count">Coming soon</div>
         </div>
 
         <div className="support-category">
@@ -176,7 +177,7 @@ const SupportPage = () => {
           <p className="category-description">
             Learn about our privacy policies, data protection, and security measures.
           </p>
-          <div className="category-count">7 articles</div>
+          <div className="category-count">Privacy info</div>
         </div>
       </section>
 
@@ -209,44 +210,13 @@ const SupportPage = () => {
       <section className="help-resources">
         <div className="resource-card">
           <div className="resource-icon"><FileText size={24} /></div>
-          <h3 className="resource-title">User Guide</h3>
+          <h3 className="resource-title">Platform Documentation</h3>
           <p className="resource-description">
-            Comprehensive guide covering all features and functionality.
+            Basic documentation for using the LocalsLocalMarket platform.
           </p>
-          <a href="#" className="resource-link">
-            Read Guide
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </a>
-        </div>
-
-        <div className="resource-card">
-          <div className="resource-icon"><Video size={24} /></div>
-          <h3 className="resource-title">Video Tutorials</h3>
-          <p className="resource-description">
-            Step-by-step video tutorials for visual learners.
+          <p className="resource-note">
+            <em>Note: This is a personal project. Documentation is limited but growing.</em>
           </p>
-          <a href="#" className="resource-link">
-            Watch Videos
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </a>
-        </div>
-
-        <div className="resource-card">
-          <div className="resource-icon"><MessageCircle size={24} /></div>
-          <h3 className="resource-title">Community Forum</h3>
-          <p className="resource-description">
-            Connect with other users and share tips and experiences.
-          </p>
-          <a href="#" className="resource-link">
-            Join Forum
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </a>
         </div>
       </section>
 
@@ -256,12 +226,18 @@ const SupportPage = () => {
         <p className="contact-description">
           Can't find what you're looking for? Our support team is here to help.
         </p>
-                   <a href="/contact" className="contact-button">
-             Contact Support
-             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-               <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-             </svg>
-           </a>
+        <div className="contact-buttons">
+          <a href="/contact" className="contact-button">
+            Contact Support
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </a>
+          <FeedbackButton variant="outline" size="md" className="contact-button" onClick={onOpenFeedback}>
+            <MessageCircle size={16} />
+            Send Feedback
+          </FeedbackButton>
+        </div>
         </section>
       </main>
     </>

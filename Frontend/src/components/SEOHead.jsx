@@ -11,7 +11,7 @@ const SEOHead = ({
 }) => {
   const defaultTitle = 'LocalsLocalMarket - Connect with Local Businesses'
   const defaultDescription = 'Discover and connect with local businesses in your community. Find products, services, and support local entrepreneurs on LocalsLocalMarket.'
-  const defaultImage = 'https://localslocalmarket.com/og-image.jpg'
+  const defaultImage = 'https://localslocalmarket.com/og-image.svg'
   const defaultUrl = 'https://localslocalmarket.com'
   
   const finalTitle = title ? `${title} | LocalsLocalMarket` : defaultTitle

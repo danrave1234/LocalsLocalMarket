@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom"
-import { Suspense, lazy } from "react"
+import { Suspense, lazy, useState } from "react"
 import "./App.css"
 import { AuthProvider } from "./auth/AuthContext.jsx"
 import ProtectedRoute from "./auth/ProtectedRoute.jsx"
@@ -8,6 +8,8 @@ import Header from "./components/Header.jsx"
 import Footer from "./components/Footer.jsx"
 import Breadcrumbs from "./components/Breadcrumbs.jsx"
 import ErrorBoundary from "./components/ErrorBoundary.jsx"
+import FloatingFeedbackButton from "./components/FloatingFeedbackButton.jsx"
+import FeedbackModal from "./components/FeedbackModal.jsx"
 
 // Route-based code splitting
 const LandingPage = lazy(() => import("./pages/LandingPage.jsx"))
@@ -29,15 +31,20 @@ const ShopEditPage = lazy(() => import("./pages/ShopEditPage.jsx"))
 const ShopCreatePage = lazy(() => import("./pages/ShopCreatePage.jsx"))
 const HelpPage = lazy(() => import("./pages/HelpPage.jsx"))
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"))
-const ProductManagementPage = lazy(() => import("./pages/ProductManagementPage.jsx"))
+const ShopManagementPage = lazy(() => import("./pages/ShopManagementPage.jsx"))
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage.jsx"))
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage.jsx"))
 
 function App() {
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+
+  const openFeedbackModal = () => setIsFeedbackModalOpen(true);
+  const closeFeedbackModal = () => setIsFeedbackModalOpen(false);
+
   return (
     <AuthProvider>
       <div className="app-container">
-        <Header />
+        <Header onOpenFeedback={openFeedbackModal} />
         <main className="main-content">
           <Breadcrumbs />
           <ErrorBoundary>
@@ -61,7 +68,7 @@ function App() {
               <Route path="/donate" element={<DonationsPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
-              <Route path="/support" element={<SupportPage />} />
+              <Route path="/support" element={<SupportPage onOpenFeedback={openFeedbackModal} />} />
               <Route path="/help" element={<HelpPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />
@@ -100,10 +107,10 @@ function App() {
                 }
               />
               <Route
-                path="/product-management/:shopId"
+                path="/shop-management/:shopId"
                 element={
                   <ProtectedRoute>
-                    <ProductManagementPage />
+                    <ShopManagementPage />
                   </ProtectedRoute>
                 }
               />
@@ -112,7 +119,9 @@ function App() {
           </Suspense>
           </ErrorBoundary>
         </main>
-        <Footer />
+        <Footer onOpenFeedback={openFeedbackModal} />
+        <FloatingFeedbackButton onOpenFeedback={openFeedbackModal} />
+        <FeedbackModal isOpen={isFeedbackModalOpen} onClose={closeFeedbackModal} />
       </div>
     </AuthProvider>
   )

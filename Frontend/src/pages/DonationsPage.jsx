@@ -20,7 +20,8 @@ export default function DonationsPage() {
             Support LocalsLocalMarket
           </h1>
           <p className="donation-description">
-            Help us build a stronger local community by supporting our platform. Your donations help us maintain and improve our services for local businesses and customers.
+            This is a personal project developed by Danrave Keh. If you find this platform useful and would like to support its development, 
+            donations are appreciated but not required. Your support helps with server costs and continued development.
           </p>
         </div>
 
@@ -69,7 +70,7 @@ export default function DonationsPage() {
             <ul className="why-donate-list">
               <li className="why-donate-item">
                 <span className="why-donate-check">✓</span>
-                <span>Support local businesses</span>
+                <span>Server hosting costs</span>
               </li>
               <li className="why-donate-item">
                 <span className="why-donate-check">✓</span>
@@ -77,15 +78,15 @@ export default function DonationsPage() {
               </li>
               <li className="why-donate-item">
                 <span className="why-donate-check">✓</span>
-                <span>Community features</span>
+                <span>Feature improvements</span>
               </li>
               <li className="why-donate-item">
                 <span className="why-donate-check">✓</span>
-                <span>Server maintenance</span>
+                <span>Bug fixes and maintenance</span>
               </li>
               <li className="why-donate-item">
                 <span className="why-donate-check">✓</span>
-                <span>Customer support</span>
+                <span>Supporting a personal project</span>
               </li>
             </ul>
           </div>

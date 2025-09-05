@@ -33,9 +33,6 @@ public class CloudStorageService {
      * @return The public URL of the uploaded file
      */
     public String uploadFile(MultipartFile file, String folder) throws IOException {
-        if (!gcsEnabled) {
-            throw new IllegalStateException("Google Cloud Storage is not enabled");
-        }
 
         // Generate unique filename
         String originalFilename = file.getOriginalFilename();
@@ -65,7 +62,7 @@ public class CloudStorageService {
      * Upload a file to the root of the bucket (backward compatibility)
      */
     public String uploadFile(MultipartFile file) throws IOException {
-        return uploadFile(file, "uploads");
+        return uploadFile(file, "general");
     }
 
     /**
@@ -73,10 +70,6 @@ public class CloudStorageService {
      * @param filePath The full path to the file (including folder)
      */
     public void deleteFile(String filePath) {
-        if (!gcsEnabled) {
-            return;
-        }
-
         BlobId blobId = BlobId.of(bucketName, filePath);
         storage.delete(blobId);
     }
@@ -86,15 +79,13 @@ public class CloudStorageService {
      * @param fullUrl The full GCS URL
      */
     public void deleteFileByUrl(String fullUrl) {
-        if (!gcsEnabled) {
-            return;
-        }
-
         // Extract path from URL like: https://storage.googleapis.com/bucket-name/folder/filename.jpg
         String prefix = "https://storage.googleapis.com/" + bucketName + "/";
         if (fullUrl.startsWith(prefix)) {
             String filePath = fullUrl.substring(prefix.length());
             deleteFile(filePath);
+        } else {
+            throw new IllegalArgumentException("Invalid GCS URL format: " + fullUrl);
         }
     }
 

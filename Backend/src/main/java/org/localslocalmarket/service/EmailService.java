@@ -96,6 +96,30 @@ public class EmailService {
         }
     }
 
+    public void sendFeedbackEmail(String fromEmail, String fromName, String subject, String message, String userEmail) {
+        if (!emailEnabled) {
+            System.out.println("Email disabled - would send feedback email from: " + fromEmail + " to: Danravekeh123@gmail.com");
+            return;
+        }
+
+        try {
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            // Send to your email
+            helper.setFrom("no-reply@localslocalmarket.com");
+            helper.setTo("Danravekeh123@gmail.com");
+            helper.setSubject("New Feedback: " + (subject != null && !subject.trim().isEmpty() ? subject : "No Subject"));
+
+            String htmlContent = createFeedbackHtml(fromName, fromEmail, subject, message, userEmail);
+            helper.setText(htmlContent, true);
+
+            mailSender.send(mimeMessage);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send feedback email", e);
+        }
+    }
+
     private String createPasswordResetHtml(String userName, String resetToken) {
         return "<!DOCTYPE html>" +
             "<html>" +
@@ -231,6 +255,56 @@ public class EmailService {
                     "</div>" +
                     "<div class=\"footer\">" +
                         "<p>Thank you for being part of LocalsLocalMarket!</p>" +
+                    "</div>" +
+                "</div>" +
+            "</body>" +
+            "</html>";
+    }
+
+    private String createFeedbackHtml(String fromName, String fromEmail, String subject, String message, String userEmail) {
+        return "<!DOCTYPE html>" +
+            "<html>" +
+            "<head>" +
+                "<meta charset=\"UTF-8\">" +
+                "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">" +
+                "<title>New Feedback Received</title>" +
+                "<style>" +
+                    "body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; background: #f8fafc; margin: 0; padding: 20px; }" +
+                    ".container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); }" +
+                    ".header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white; }" +
+                    ".header h1 { margin: 0; font-size: 1.8rem; font-weight: 600; }" +
+                    ".content { padding: 30px; }" +
+                    ".feedback-item { margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #667eea; }" +
+                    ".feedback-label { font-weight: 600; color: #4a5568; margin-bottom: 5px; }" +
+                    ".feedback-value { color: #2d3748; }" +
+                    ".message-content { background: #f7fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 10px; white-space: pre-wrap; }" +
+                    ".footer { background: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0; color: #718096; font-size: 0.9rem; }" +
+                "</style>" +
+            "</head>" +
+            "<body>" +
+                "<div class=\"container\">" +
+                    "<div class=\"header\">" +
+                        "<h1>💬 New Feedback Received</h1>" +
+                        "<p>LocalsLocalMarket Platform</p>" +
+                    "</div>" +
+                    "<div class=\"content\">" +
+                        "<div class=\"feedback-item\">" +
+                            "<div class=\"feedback-label\">From:</div>" +
+                            "<div class=\"feedback-value\">" + fromName + " (" + fromEmail + ")</div>" +
+                        "</div>" +
+                        (subject != null && !subject.trim().isEmpty() ? 
+                            "<div class=\"feedback-item\">" +
+                                "<div class=\"feedback-label\">Subject:</div>" +
+                                "<div class=\"feedback-value\">" + subject + "</div>" +
+                            "</div>" : "") +
+                        "<div class=\"feedback-item\">" +
+                            "<div class=\"feedback-label\">Message:</div>" +
+                            "<div class=\"message-content\">" + message + "</div>" +
+                        "</div>" +
+                    "</div>" +
+                    "<div class=\"footer\">" +
+                        "<p>This feedback was sent through the LocalsLocalMarket platform</p>" +
+                        "<p>Reply directly to: " + fromEmail + "</p>" +
                     "</div>" +
                 "</div>" +
             "</body>" +

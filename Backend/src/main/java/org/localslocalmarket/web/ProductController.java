@@ -1,5 +1,6 @@
 package org.localslocalmarket.web;
 
+import java.util.Map;
 import java.util.Optional;
 
 import org.localslocalmarket.model.Product;
@@ -252,6 +253,35 @@ public class ProductController {
             
             return ResponseEntity.ok(ProductDtos.ProductResponse.fromProduct(p));
         }).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}/images")
+    public ResponseEntity<?> updateImages(@PathVariable("id") Long id,
+                                         @RequestBody ProductDtos.UpdateImagesRequest req){
+        try {
+            User actor = authorizationService.getCurrentUserOrThrow();
+            
+            return products.findByIdWithShopAndOwner(id).<ResponseEntity<?>>map(p -> {
+                boolean isOwner = p.getShop() != null && p.getShop().getOwner() != null && p.getShop().getOwner().getId().equals(actor.getId());
+                boolean isAdmin = actor.getRole() == User.Role.ADMIN;
+                if(!(isOwner || isAdmin)){
+                    return ResponseEntity.status(403).body("Forbidden");
+                }
+                
+                // Update images immediately (allow null to clear all images)
+                p.setImagePathsJson(req.imagePathsJson()); // This can be null to clear all images
+                products.save(p);
+                
+                // Smart cache invalidation
+                cacheInvalidationService.onProductDataChanged();
+                
+                return ResponseEntity.ok(Map.of("message", "Images updated successfully"));
+            }).orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (SecurityException e) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Internal server error");
+        }
     }
 
     @Cacheable(cacheNames = "products_by_id", key = "#id")

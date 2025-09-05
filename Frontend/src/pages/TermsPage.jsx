@@ -241,9 +241,7 @@ const TermsPage = () => {
             <div className="terms-highlight">
               <h3 className="highlight-title">Contact Details</h3>
               <p className="highlight-content">
-                Email: legal@localslocalmarket.com<br />
-                Phone: +1 (555) 123-4567<br />
-                Address: 123 Main Street, City, State 12345
+                Email: danrave.keh@localslocalmarket.com
               </p>
             </div>
           </div>
@@ -254,10 +252,10 @@ const TermsPage = () => {
       <section className="terms-contact">
         <h2 className="contact-title">Questions About Terms?</h2>
         <p className="contact-description">
-          Our legal team is here to help clarify any questions about our terms of service.
+          The developer is here to help clarify any questions about our terms of service.
         </p>
         <a href="/contact" className="contact-button">
-          Contact Legal Team
+          Contact Developer
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>

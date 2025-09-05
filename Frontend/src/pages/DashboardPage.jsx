@@ -14,7 +14,7 @@ import {
     fetchCategories
 } from '../api/shops.js'
 import categoriesCache from '../utils/categoriesCache.js'
-import { uploadImage } from '../api/products.js'
+import { uploadImage, deleteImage } from '../api/products.js'
 import { getImageUrl } from '../utils/imageUtils.js'
 import { handleApiError } from '../utils/errorHandler.js'
 import { generateShopUrl, generateShopSlug } from '../utils/slugUtils.js'
@@ -103,7 +103,7 @@ export default function DashboardPage() {
         }
     }
 
-    const onUpload = async (file, type = 'general') => {
+    const onUpload = async (file, type = 'general', oldImageUrl = null) => {
         if (!file) {
             throw new Error('No file selected')
         }
@@ -124,6 +124,17 @@ export default function DashboardPage() {
             fd.append('file', file, file.name)
             
             const res = await uploadImage(fd, token, type)
+            
+            // Delete old image if it exists and is different from new one
+            if (oldImageUrl && oldImageUrl !== res.path) {
+                try {
+                    await deleteImage(oldImageUrl, token)
+                } catch (deleteError) {
+                    console.warn('Failed to delete old image:', deleteError)
+                    // Don't throw error here, just log it
+                }
+            }
+            
             return res.path
         } catch (error) {
             console.error('Upload error:', error)
@@ -175,6 +186,19 @@ export default function DashboardPage() {
         e.preventDefault()
         
         try {
+            // Clean up old images that are being replaced
+            const oldImageUrls = []
+            
+            // Check if logo was changed
+            if (editingShop.logoPath && editingShop.logoPath !== shopForm.logoPath) {
+                oldImageUrls.push(editingShop.logoPath)
+            }
+            
+            // Check if cover was changed
+            if (editingShop.coverPath && editingShop.coverPath !== shopForm.coverPath) {
+                oldImageUrls.push(editingShop.coverPath)
+            }
+            
             const shopData = {
                 ...shopForm,
                 ...formatCategoryData({
@@ -189,6 +213,18 @@ export default function DashboardPage() {
             setShowEditShop(false)
             setEditingShop(null)
             resetShopForm()
+            
+            // Delete old images from cloud storage after successful update
+            for (const oldImageUrl of oldImageUrls) {
+                if (oldImageUrl && oldImageUrl.startsWith('https://storage.googleapis.com/')) {
+                    try {
+                        await deleteImage(oldImageUrl, token)
+                    } catch (error) {
+                        console.error('Failed to delete old shop image from cloud storage:', error)
+                        // Continue even if deletion fails
+                    }
+                }
+            }
         } catch (error) {
             console.error('Failed to update shop:', error)
             const errorInfo = handleApiError(error)
@@ -274,11 +310,11 @@ export default function DashboardPage() {
         return { category: '' }
     }
 
-    // Product Management Functions - Now handled in ProductManagementPage
-    const openManageProducts = async (shop) => {
-        // Navigate to the dedicated product management page using slug
+    // Shop Management Functions - Now handled in ShopManagementPage
+    const openManageShop = async (shop) => {
+        // Navigate to the unified shop management page using slug
         const shopSlug = generateShopSlug(shop.name, shop.id)
-        window.location.href = `/product-management/${shopSlug}`
+        window.location.href = `/shop-management/${shopSlug}`
     }
 
     if (loading) {
@@ -414,13 +450,13 @@ export default function DashboardPage() {
                                     </button>
                                     <button 
                                         className="seller-btn seller-btn-primary seller-btn-sm"
-                                        onClick={() => openManageProducts(shop)}
+                                        onClick={() => openManageShop(shop)}
                                     >
                                         <svg className="seller-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
                                             <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
                                         </svg>
-                                        Products
+                                        Manage Shop
                                     </button>
                                     <button 
                                         className="seller-btn seller-btn-secondary seller-btn-sm"
@@ -651,10 +687,30 @@ export default function DashboardPage() {
                             <div className="logo-upload-section">
                                 <div className="upload-preview">
                                     {shopForm.logoPath ? (
-                                        <img 
-                                            src={getImageUrl(shopForm.logoPath)} 
-                                            alt="Current logo" 
-                                        />
+                                        <>
+                                            <img 
+                                                src={getImageUrl(shopForm.logoPath)} 
+                                                alt="Current logo" 
+                                            />
+                                            <button 
+                                                type="button" 
+                                                className="image-delete-btn"
+                                                onClick={async () => {
+                                                    const oldLogoPath = shopForm.logoPath
+                                                    setShopForm({...shopForm, logoPath: ''})
+                                                    
+                                                    // Delete from cloud storage
+                                                    if (oldLogoPath && oldLogoPath.startsWith('https://storage.googleapis.com/')) {
+                                                        try {
+                                                            await deleteImage(oldLogoPath, token)
+                                                        } catch (error) {
+                                                            console.error('Failed to delete logo from cloud storage:', error)
+                                                        }
+                                                    }
+                                                }}
+                                                title="Remove logo"
+                                            />
+                                        </>
                                     ) : (
                                         <div className="default"><StoreIcon width={24} height={24} /></div>
                                     )}
@@ -675,7 +731,7 @@ export default function DashboardPage() {
                                                 onChange={async (e) => {
                                                     if (e.target.files[0]) {
                                                         try {
-                                                            const path = await onUpload(e.target.files[0], 'logos')
+                                                            const path = await onUpload(e.target.files[0], 'shops', shopForm.logoPath)
                                                             setShopForm({...shopForm, logoPath: path})
                                                         } catch (error) {
                                                             setError(error.message)
@@ -685,15 +741,6 @@ export default function DashboardPage() {
                                                 disabled={uploading}
                                             />
                                         </label>
-                                        {shopForm.logoPath && (
-                                            <button 
-                                                type="button" 
-                                                className="btn-danger" 
-                                                onClick={() => setShopForm({...shopForm, logoPath: ''})}
-                                            >
-                                                Remove Logo
-                                            </button>
-                                        )}
                                     </div>
                                     <div className="upload-info">
                                         Upload your shop logo (max 2MB). Supported formats: JPG, PNG, GIF
@@ -708,10 +755,30 @@ export default function DashboardPage() {
                             <div className="cover-upload-section">
                                 <div className="upload-preview">
                                     {shopForm.coverPath ? (
-                                        <img 
-                                            src={getImageUrl(shopForm.coverPath)} 
-                                            alt="Current cover" 
-                                        />
+                                        <>
+                                            <img 
+                                                src={getImageUrl(shopForm.coverPath)} 
+                                                alt="Current cover" 
+                                            />
+                                            <button 
+                                                type="button" 
+                                                className="image-delete-btn"
+                                                onClick={async () => {
+                                                    const oldCoverPath = shopForm.coverPath
+                                                    setShopForm({...shopForm, coverPath: ''})
+                                                    
+                                                    // Delete from cloud storage
+                                                    if (oldCoverPath && oldCoverPath.startsWith('https://storage.googleapis.com/')) {
+                                                        try {
+                                                            await deleteImage(oldCoverPath, token)
+                                                        } catch (error) {
+                                                            console.error('Failed to delete cover from cloud storage:', error)
+                                                        }
+                                                    }
+                                                }}
+                                                title="Remove cover image"
+                                            />
+                                        </>
                                     ) : (
                                         <div className="default"><Image size={24} /></div>
                                     )}
@@ -732,7 +799,7 @@ export default function DashboardPage() {
                                                 onChange={async (e) => {
                                                     if (e.target.files[0]) {
                                                         try {
-                                                            const path = await onUpload(e.target.files[0], 'covers')
+                                                            const path = await onUpload(e.target.files[0], 'shops', shopForm.coverPath)
                                                             setShopForm({...shopForm, coverPath: path})
                                                         } catch (error) {
                                                             setError(error.message)
@@ -742,15 +809,6 @@ export default function DashboardPage() {
                                                 disabled={uploading}
                                             />
                                         </label>
-                                        {shopForm.coverPath && (
-                                            <button 
-                                                type="button" 
-                                                className="btn-danger" 
-                                                onClick={() => setShopForm({...shopForm, coverPath: ''})}
-                                            >
-                                                Remove Cover
-                                            </button>
-                                        )}
                                     </div>
                                     <div className="upload-info">
                                         Upload a cover image for your shop (max 2MB). Supported formats: JPG, PNG, GIF
@@ -811,10 +869,30 @@ export default function DashboardPage() {
                                 <div className="logo-upload-section">
                                     <div className="upload-preview">
                                         {shopForm.logoPath ? (
-                                            <img 
-                                                src={getImageUrl(shopForm.logoPath)} 
-                                                alt="Shop Logo" 
-                                            />
+                                            <>
+                                                <img 
+                                                    src={getImageUrl(shopForm.logoPath)} 
+                                                    alt="Shop Logo" 
+                                                />
+                                                <button 
+                                                    type="button" 
+                                                    className="image-delete-btn"
+                                                    onClick={async () => {
+                                                        const oldLogoPath = shopForm.logoPath
+                                                        setShopForm({...shopForm, logoPath: ''})
+                                                        
+                                                        // Delete from cloud storage
+                                                        if (oldLogoPath && oldLogoPath.startsWith('https://storage.googleapis.com/')) {
+                                                            try {
+                                                                await deleteImage(oldLogoPath, token)
+                                                            } catch (error) {
+                                                                console.error('Failed to delete logo from cloud storage:', error)
+                                                            }
+                                                        }
+                                                    }}
+                                                    title="Remove logo"
+                                                />
+                                            </>
                                         ) : (
                                             <div className="default"><StoreIcon width={24} height={24} /></div>
                                         )}
@@ -835,7 +913,7 @@ export default function DashboardPage() {
                                                     onChange={async (e) => {
                                                         if (e.target.files[0]) {
                                                             try {
-                                                                const path = await onUpload(e.target.files[0], 'logos')
+                                                                const path = await onUpload(e.target.files[0], 'shops', shopForm.logoPath)
                                                                 setShopForm({...shopForm, logoPath: path})
                                                             } catch (error) {
                                                                 setError(error.message)
@@ -849,7 +927,19 @@ export default function DashboardPage() {
                                                 <button 
                                                     type="button" 
                                                     className="btn-danger"
-                                                    onClick={() => setShopForm({...shopForm, logoPath: ''})}
+                                                    onClick={async () => {
+                                                        const oldLogoPath = shopForm.logoPath
+                                                        setShopForm({...shopForm, logoPath: ''})
+                                                        
+                                                        // Delete from cloud storage
+                                                        if (oldLogoPath && oldLogoPath.startsWith('https://storage.googleapis.com/')) {
+                                                            try {
+                                                                await deleteImage(oldLogoPath, token)
+                                                            } catch (error) {
+                                                                console.error('Failed to delete logo from cloud storage:', error)
+                                                            }
+                                                        }
+                                                    }}
                                                 >
                                                     Remove Logo
                                                 </button>
@@ -869,10 +959,30 @@ export default function DashboardPage() {
                                 <div className="cover-upload-section">
                                     <div className="upload-preview">
                                         {shopForm.coverPath ? (
-                                            <img 
-                                                src={getImageUrl(shopForm.coverPath)} 
-                                                alt="Shop Cover" 
-                                            />
+                                            <>
+                                                <img 
+                                                    src={getImageUrl(shopForm.coverPath)} 
+                                                    alt="Shop Cover" 
+                                                />
+                                                <button 
+                                                    type="button" 
+                                                    className="image-delete-btn"
+                                                    onClick={async () => {
+                                                        const oldCoverPath = shopForm.coverPath
+                                                        setShopForm({...shopForm, coverPath: ''})
+                                                        
+                                                        // Delete from cloud storage
+                                                        if (oldCoverPath && oldCoverPath.startsWith('https://storage.googleapis.com/')) {
+                                                            try {
+                                                                await deleteImage(oldCoverPath, token)
+                                                            } catch (error) {
+                                                                console.error('Failed to delete cover from cloud storage:', error)
+                                                            }
+                                                        }
+                                                    }}
+                                                    title="Remove cover image"
+                                                />
+                                            </>
                                         ) : (
                                             <div className="default"><Image size={24} /></div>
                                         )}
@@ -893,7 +1003,7 @@ export default function DashboardPage() {
                                                     onChange={async (e) => {
                                                         if (e.target.files[0]) {
                                                             try {
-                                                                const path = await onUpload(e.target.files[0], 'covers')
+                                                                const path = await onUpload(e.target.files[0], 'shops', shopForm.coverPath)
                                                                 setShopForm({...shopForm, coverPath: path})
                                                             } catch (error) {
                                                                 setError(error.message)
@@ -907,7 +1017,19 @@ export default function DashboardPage() {
                                                 <button 
                                                     type="button" 
                                                     className="btn-danger" 
-                                                    onClick={() => setShopForm({...shopForm, coverPath: ''})}
+                                                    onClick={async () => {
+                                                        const oldCoverPath = shopForm.coverPath
+                                                        setShopForm({...shopForm, coverPath: ''})
+                                                        
+                                                        // Delete from cloud storage
+                                                        if (oldCoverPath && oldCoverPath.startsWith('https://storage.googleapis.com/')) {
+                                                            try {
+                                                                await deleteImage(oldCoverPath, token)
+                                                            } catch (error) {
+                                                                console.error('Failed to delete cover from cloud storage:', error)
+                                                            }
+                                                        }
+                                                    }}
                                                 >
                                                     Remove Cover
                                                 </button>

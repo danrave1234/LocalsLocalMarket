@@ -70,12 +70,13 @@ public class CacheInvalidationService {
     }
 
     /**
-     * Clear caches when shop data changes (affects shops, products, and landing page)
+     * Clear caches when shop data changes (affects shops, products, sitemap, and landing page)
      */
     public void onShopDataChanged() {
         System.out.println("CacheInvalidationService: Shop data changed - clearing related caches");
         clearShopCaches();
         clearProductCaches(); // Products belong to shops
+        clearSitemapCaches(); // Sitemap includes shop pages
         // Note: Frontend will handle landing page cache clearing via events
     }
 
@@ -104,6 +105,60 @@ public class CacheInvalidationService {
     public void onStockUpdated() {
         System.out.println("CacheInvalidationService: Stock updated - clearing product caches");
         clearProductCaches();
+    }
+
+    /**
+     * Clear sitemap-related caches
+     */
+    public void clearSitemapCaches() {
+        System.out.println("CacheInvalidationService: Clearing sitemap caches");
+        List<String> sitemapCaches = Arrays.asList("sitemap");
+        clearSpecificCaches(sitemapCaches);
+    }
+
+    /**
+     * Clear service-related caches
+     */
+    public void clearServiceCaches() {
+        System.out.println("CacheInvalidationService: Clearing service caches");
+        List<String> serviceCaches = Arrays.asList(
+            "services_paginated",
+            "services_by_status_paginated",
+            "services_by_shop_paginated",
+            "services_by_shop_status_paginated",
+            "services_by_category_paginated",
+            "services_by_category_status_paginated",
+            "services_filtered_paginated",
+            "services_by_price_paginated",
+            "services_by_shop_price_paginated",
+            "services_by_category_price_paginated"
+        );
+        clearSpecificCaches(serviceCaches);
+    }
+
+    /**
+     * Clear caches when service data changes (affects services and potentially shops)
+     */
+    public void onServiceDataChanged() {
+        System.out.println("CacheInvalidationService: Service data changed - clearing related caches");
+        clearServiceCaches();
+        // Note: Frontend will handle service cache clearing via events
+    }
+
+    /**
+     * Clear caches when service status changes (affects services)
+     */
+    public void onServiceStatusChanged() {
+        System.out.println("CacheInvalidationService: Service status changed - clearing service caches");
+        clearServiceCaches();
+    }
+
+    /**
+     * Clear caches when service price changes (affects services)
+     */
+    public void onServicePriceChanged() {
+        System.out.println("CacheInvalidationService: Service price changed - clearing service caches");
+        clearServiceCaches();
     }
 
     /**

@@ -1,6 +1,9 @@
-# React + Vite
+# LocalsLocalMarket — Frontend (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Developer:** Danrave Keh  
+**Email:** danrave.keh@localslocalmarket.com
+
+This is the frontend application for LocalsLocalMarket, a local marketplace platform connecting businesses with their communities. Built with React and Vite for optimal performance and developer experience.
 
 Currently, two official plugins are available:
 

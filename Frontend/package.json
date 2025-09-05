@@ -3,6 +3,8 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "author": "Danrave Keh <danrave.keh@localslocalmarket.com>",
+  "description": "LocalsLocalMarket Frontend - A local marketplace platform connecting businesses with their communities",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Clock, CheckCircle, XCircle, Copy, Check, Plus, Minus } from 'lucide-react'
 import './BusinessHours.css'
 
@@ -13,6 +13,10 @@ export default function BusinessHours({ value, onChange }) {
     closeMinute: '00',
     closeAMPM: 'PM' 
   })
+  
+  // Use ref to store the latest onChange function to avoid dependency issues
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
 
   const days = [
     { key: 'monday', label: 'Monday', color: '#3B82F6' },
@@ -54,11 +58,16 @@ export default function BusinessHours({ value, onChange }) {
     }
   }, [value])
 
-  useEffect(() => {
-    if (onChange) {
-      onChange(JSON.stringify(businessHours))
+  // Use useCallback with stable dependencies to prevent infinite loops
+  const handleChange = useCallback((newBusinessHours) => {
+    if (onChangeRef.current) {
+      onChangeRef.current(JSON.stringify(newBusinessHours))
     }
-  }, [businessHours, onChange])
+  }, []) // Empty dependency array since we use ref
+
+  useEffect(() => {
+    handleChange(businessHours)
+  }, [businessHours, handleChange])
 
   const handleDayToggle = (dayKey) => {
     setSelectedDays(prev => 
