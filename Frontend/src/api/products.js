@@ -9,6 +9,10 @@ export async function fetchProducts(params = {}) {
   return api.get(`/products${qs ? `?${qs}` : ''}`)
 }
 
+export async function fetchProductsByShopIdPaginated(shopId, page = 0, size = 12) {
+  return api.get(`/products/by-shop/${shopId}?page=${page}&size=${size}`)
+}
+
 export async function createProduct(productData, token) {
   return api.post('/products', productData, {
     headers: {

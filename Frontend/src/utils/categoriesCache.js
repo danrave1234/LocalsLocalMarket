@@ -1,11 +1,18 @@
 /**
- * Global categories cache utility to prevent duplicate API calls
+ * Enhanced categories cache utility with localStorage persistence
+ * This helps reduce database usage by caching category data persistently
  */
 
 class CategoriesCache {
   constructor() {
-    this.cache = null
-    this.cacheExpiry = 30 * 60 * 1000 // 30 minutes in milliseconds (categories change rarely)
+    this.cacheKey = 'categories_cache'
+    this.cacheExpiryKey = 'categories_cache_expiry'
+    this.cacheVersionKey = 'categories_cache_version'
+    this.currentVersion = '1.0.0' // Increment when cache structure changes
+    this.cacheExpiry = 60 * 60 * 1000 // 60 minutes in milliseconds (categories change rarely)
+    
+    // In-memory cache for faster access
+    this.memoryCache = null
     this.lastFetch = 0
     this.isLoading = false
     this.loadingPromise = null
@@ -16,6 +23,9 @@ class CategoriesCache {
     this.clear = this.clear.bind(this)
     this.isExpired = this.isExpired.bind(this)
     this.getStats = this.getStats.bind(this)
+    this.setLoading = this.setLoading.bind(this)
+    this.getLoadingState = this.getLoadingState.bind(this)
+    this.getLoadingPromise = this.getLoadingPromise.bind(this)
   }
 
   /**
@@ -23,40 +33,106 @@ class CategoriesCache {
    * @returns {boolean} True if cache is expired
    */
   isExpired() {
-    return Date.now() > this.lastFetch + this.cacheExpiry
+    try {
+      const expiryData = localStorage.getItem(this.cacheExpiryKey)
+      if (!expiryData) return true
+      
+      const expiry = parseInt(expiryData)
+      return Date.now() > expiry
+    } catch (error) {
+      return true
+    }
   }
 
   /**
-   * Get categories from cache
+   * Get categories from cache (localStorage + memory)
    * @returns {Array|null} The cached categories or null if not found/expired
    */
   get() {
-    if (!this.cache || this.isExpired()) {
-      console.log('CategoriesCache: No valid cache, categories need to be fetched')
+    try {
+      // Check memory cache first (fastest)
+      if (this.memoryCache && !this.isExpired()) {
+        // Using memory cache
+        return this.memoryCache
+      }
+
+      // Check localStorage cache
+      const cacheData = localStorage.getItem(this.cacheKey)
+      const expiryData = localStorage.getItem(this.cacheExpiryKey)
+      const versionData = localStorage.getItem(this.cacheVersionKey)
+      
+      if (!cacheData || !expiryData || !versionData) {
+        // No cache data found
+        return null
+      }
+
+      // Check version compatibility
+      if (versionData !== this.currentVersion) {
+        // Version mismatch, clearing cache
+        this.clear()
+        return null
+      }
+
+      // Check if cache has expired
+      const expiry = parseInt(expiryData)
+      if (Date.now() > expiry) {
+        // Cache expired
+        this.clear()
+        return null
+      }
+
+      const parsed = JSON.parse(cacheData)
+      this.memoryCache = parsed // Update memory cache
+      this.lastFetch = Date.now()
+      
+      // Cache HIT! Retrieved categories from localStorage
+      return parsed
+    } catch (error) {
+      console.error('CategoriesCache: Failed to retrieve cache:', error)
+      this.clear()
       return null
     }
-
-    console.log('CategoriesCache: Using cached categories')
-    return this.cache
   }
 
   /**
-   * Store categories in cache
+   * Store categories in cache (localStorage + memory)
    * @param {Array} categories - The categories data to cache
    */
   set(categories) {
-    this.cache = categories
-    this.lastFetch = Date.now()
-    console.log(`CategoriesCache: Cached ${categories.length} categories`)
+    try {
+      // Update memory cache
+      this.memoryCache = categories
+      this.lastFetch = Date.now()
+      
+      // Store in localStorage
+      localStorage.setItem(this.cacheKey, JSON.stringify(categories))
+      localStorage.setItem(this.cacheExpiryKey, (Date.now() + this.cacheExpiry).toString())
+      localStorage.setItem(this.cacheVersionKey, this.currentVersion)
+      
+      // Cached categories in localStorage and memory
+    } catch (error) {
+      console.error('CategoriesCache: Failed to cache data:', error)
+      // Still update memory cache even if localStorage fails
+      this.memoryCache = categories
+      this.lastFetch = Date.now()
+    }
   }
 
   /**
-   * Clear cached categories
+   * Clear cached categories (localStorage + memory)
    */
   clear() {
-    this.cache = null
+    try {
+      localStorage.removeItem(this.cacheKey)
+      localStorage.removeItem(this.cacheExpiryKey)
+      localStorage.removeItem(this.cacheVersionKey)
+    } catch (error) {
+      console.error('CategoriesCache: Failed to clear localStorage:', error)
+    }
+    
+    this.memoryCache = null
     this.lastFetch = 0
-    console.log('CategoriesCache: Cleared categories cache')
+    // Cleared categories cache
   }
 
   /**
@@ -64,13 +140,59 @@ class CategoriesCache {
    * @returns {Object} Cache statistics
    */
   getStats() {
-    return {
-      hasCache: this.cache !== null,
-      isExpired: this.isExpired(),
-      lastFetch: this.lastFetch,
-      isLoading: this.isLoading,
-      cacheAge: this.lastFetch ? Date.now() - this.lastFetch : 0
+    try {
+      const cacheData = localStorage.getItem(this.cacheKey)
+      const expiryData = localStorage.getItem(this.cacheExpiryKey)
+      const versionData = localStorage.getItem(this.cacheVersionKey)
+      
+      if (!cacheData || !expiryData || !versionData) {
+        return { exists: false }
+      }
+
+      const parsed = JSON.parse(cacheData)
+      const expiry = parseInt(expiryData)
+      const timeLeft = Math.max(0, expiry - Date.now())
+      
+      return {
+        exists: true,
+        categoryCount: parsed.length,
+        version: versionData,
+        timeLeftMs: timeLeft,
+        timeLeftMinutes: Math.round(timeLeft / (60 * 1000) * 10) / 10,
+        isExpired: timeLeft <= 0,
+        hasMemoryCache: this.memoryCache !== null,
+        isLoading: this.isLoading,
+        lastFetch: this.lastFetch
+      }
+    } catch (error) {
+      return { exists: false, error: error.message }
     }
+  }
+
+  /**
+   * Extend cache expiry by additional time
+   * @param {number} additionalMs - Additional milliseconds to extend cache
+   */
+  extendExpiry(additionalMs = this.cacheExpiry) {
+    try {
+      const currentExpiry = localStorage.getItem(this.cacheExpiryKey)
+      if (currentExpiry) {
+        const newExpiry = parseInt(currentExpiry) + additionalMs
+        localStorage.setItem(this.cacheExpiryKey, newExpiry.toString())
+        // Extended cache expiry
+      }
+    } catch (error) {
+      console.error('CategoriesCache: Failed to extend expiry:', error)
+    }
+  }
+
+  /**
+   * Force refresh cache (clear and mark for reload)
+   */
+  forceRefresh() {
+    // Force refreshing cache
+    this.clear()
+    this.setLoading(false, null)
   }
 
   /**

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { MapPin } from 'lucide-react'
 
 export default function LocationMap({ onLocationSelect, initialLat = 10.3157, initialLng = 123.8854 }) {
   const mapRef = useRef(null)
@@ -256,7 +257,7 @@ export default function LocationMap({ onLocationSelect, initialLat = 10.3157, in
         borderRadius: '8px',
         color: 'var(--error)'
       }}>
-        <div style={{ marginBottom: '1rem' }}>🗺️</div>
+        <div style={{ marginBottom: '1rem' }}><MapPin size={24} /></div>
         <div style={{ marginBottom: '0.5rem', fontWeight: '500' }}>Map Error</div>
         <div style={{ fontSize: '0.875rem' }}>{error}</div>
         <button 
@@ -305,7 +306,7 @@ export default function LocationMap({ onLocationSelect, initialLat = 10.3157, in
           zIndex: 1000
         }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ marginBottom: '0.5rem' }}>🗺️</div>
+            <div style={{ marginBottom: '0.5rem' }}><MapPin size={24} /></div>
             <div>Loading map...</div>
           </div>
         </div>
@@ -333,7 +334,7 @@ export default function LocationMap({ onLocationSelect, initialLat = 10.3157, in
         }}
         title="Use my current location"
       >
-        📍
+        <MapPin size={16} />
       </button>
 
       {/* Instructions */}

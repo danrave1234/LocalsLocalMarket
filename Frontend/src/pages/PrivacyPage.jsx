@@ -1,9 +1,29 @@
 import React from 'react';
+import SEOHead from '../components/SEOHead.jsx';
 import '../privacy.css';
 
 const PrivacyPage = () => {
   return (
-    <main className="privacy-container">
+    <>
+      <SEOHead 
+        title="Privacy Policy - LocalsLocalMarket"
+        description="Read LocalsLocalMarket's privacy policy to understand how we collect, use, and protect your personal information. Learn about our data practices and your privacy rights on our local business marketplace platform."
+        keywords="privacy policy, data protection, personal information, privacy rights, data collection, user privacy, GDPR compliance, data security"
+        url="https://localslocalmarket.com/privacy"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": "Privacy Policy - LocalsLocalMarket",
+          "description": "Privacy policy explaining how LocalsLocalMarket collects and uses personal information",
+          "url": "https://localslocalmarket.com/privacy",
+          "isPartOf": {
+            "@type": "WebSite",
+            "name": "LocalsLocalMarket",
+            "url": "https://localslocalmarket.com"
+          }
+        }}
+      />
+      <main className="privacy-container">
       {/* Hero Section */}
       <section className="privacy-header">
         <h1 className="privacy-title">Privacy Policy</h1>
@@ -196,7 +216,8 @@ const PrivacyPage = () => {
       <div className="last-updated">
         <p>Last updated: December 2024</p>
       </div>
-    </main>
+      </main>
+    </>
   );
 };
 

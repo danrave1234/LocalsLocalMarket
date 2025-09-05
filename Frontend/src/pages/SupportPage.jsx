@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import SEOHead from '../components/SEOHead.jsx';
 import '../support.css';
+import { BookOpen, DollarSign, Wrench, Smartphone, Lock, FileText, Video, MessageCircle } from 'lucide-react';
 
 // Inline icon components to match landing page consistency
 function StoreIcon(props) {
@@ -51,7 +53,47 @@ const SupportPage = () => {
   ];
 
   return (
-    <main className="support-container">
+    <>
+      <SEOHead 
+        title="Support Center - LocalsLocalMarket"
+        description="Get help and support for LocalsLocalMarket. Find answers to frequently asked questions, contact our support team, and access resources to help you succeed on our local business marketplace platform."
+        keywords="customer support, help center, FAQ, support team, marketplace help, business support, user guide, troubleshooting, contact support"
+        url="https://localslocalmarket.com/support"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": "Support Center - LocalsLocalMarket",
+          "description": "Support and help center for LocalsLocalMarket users",
+          "url": "https://localslocalmarket.com/support",
+          "isPartOf": {
+            "@type": "WebSite",
+            "name": "LocalsLocalMarket",
+            "url": "https://localslocalmarket.com"
+          },
+          "mainEntity": {
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "How do I create an account?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "To create an account, click the 'Sign Up' button in the top right corner of the page. Fill in your details and verify your email address to get started."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How do I list my business?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "After creating an account, go to your dashboard and click 'Add Business'. Fill in your business details, upload photos, and submit for review. We'll approve your listing within 24-48 hours."
+                }
+              }
+            ]
+          }
+        }}
+      />
+      <main className="support-container">
       {/* Hero Section */}
       <section className="support-header">
         <h1 className="support-title">Support & Help Center</h1>
@@ -84,7 +126,7 @@ const SupportPage = () => {
       {/* Support Categories */}
       <section className="support-categories">
         <div className="support-category">
-          <div className="category-icon">📚</div>
+          <div className="category-icon"><BookOpen size={24} /></div>
           <h3 className="category-title">Getting Started</h3>
           <p className="category-description">
             New to LocalsLocalMarket? Learn the basics and get up and running quickly.
@@ -102,7 +144,7 @@ const SupportPage = () => {
         </div>
 
         <div className="support-category">
-          <div className="category-icon">💰</div>
+          <div className="category-icon"><DollarSign size={24} /></div>
           <h3 className="category-title">Payments & Billing</h3>
           <p className="category-description">
             Everything you need to know about payments, billing, and subscription management.
@@ -111,7 +153,7 @@ const SupportPage = () => {
         </div>
 
         <div className="support-category">
-          <div className="category-icon">🔧</div>
+          <div className="category-icon"><Wrench size={24} /></div>
           <h3 className="category-title">Technical Support</h3>
           <p className="category-description">
             Technical issues, troubleshooting, and platform-related questions.
@@ -120,7 +162,7 @@ const SupportPage = () => {
         </div>
 
         <div className="support-category">
-          <div className="category-icon">📱</div>
+          <div className="category-icon"><Smartphone size={24} /></div>
           <h3 className="category-title">Mobile App</h3>
           <p className="category-description">
             Using our mobile app? Find guides and tips for mobile users.
@@ -129,7 +171,7 @@ const SupportPage = () => {
         </div>
 
         <div className="support-category">
-          <div className="category-icon">🔒</div>
+          <div className="category-icon"><Lock size={24} /></div>
           <h3 className="category-title">Privacy & Security</h3>
           <p className="category-description">
             Learn about our privacy policies, data protection, and security measures.
@@ -166,7 +208,7 @@ const SupportPage = () => {
       {/* Help Resources */}
       <section className="help-resources">
         <div className="resource-card">
-          <div className="resource-icon">📖</div>
+          <div className="resource-icon"><FileText size={24} /></div>
           <h3 className="resource-title">User Guide</h3>
           <p className="resource-description">
             Comprehensive guide covering all features and functionality.
@@ -180,7 +222,7 @@ const SupportPage = () => {
         </div>
 
         <div className="resource-card">
-          <div className="resource-icon">🎥</div>
+          <div className="resource-icon"><Video size={24} /></div>
           <h3 className="resource-title">Video Tutorials</h3>
           <p className="resource-description">
             Step-by-step video tutorials for visual learners.
@@ -194,7 +236,7 @@ const SupportPage = () => {
         </div>
 
         <div className="resource-card">
-          <div className="resource-icon">💬</div>
+          <div className="resource-icon"><MessageCircle size={24} /></div>
           <h3 className="resource-title">Community Forum</h3>
           <p className="resource-description">
             Connect with other users and share tips and experiences.
@@ -221,7 +263,8 @@ const SupportPage = () => {
              </svg>
            </a>
         </section>
-    </main>
+      </main>
+    </>
   );
 };
 

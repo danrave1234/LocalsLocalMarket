@@ -1,8 +1,8 @@
 User-agent: *
 Allow: /
 
-# Sitemap location
-Sitemap: https://localslocalmarket.com/sitemap.xml
+# Sitemap location - Dynamic sitemap with all shop pages
+Sitemap: https://localslocalmarket.com/api/sitemap.xml
 
 # Disallow admin and private areas
 Disallow: /dashboard/

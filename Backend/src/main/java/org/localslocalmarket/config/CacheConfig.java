@@ -26,15 +26,21 @@ public class CacheConfig {
     @Value("${llm.cache.max-size:1000}")
     private long maxSize;
 
+    @Value("${llm.cache.categories.ttl-seconds:1800}")
+    private long categoriesTtlSeconds;
+
     @Bean
     public CacheManager cacheManager() {
         if (!cacheEnabled) {
             return new NoOpCacheManager();
         }
+        
+        // Use default TTL for most caches, categories will use longer TTL via annotation
         Caffeine<Object, Object> builder = Caffeine.newBuilder()
                 .maximumSize(maxSize)
                 .expireAfterWrite(Duration.ofSeconds(ttlSeconds))
-                .recordStats(); // Enable statistics for metrics
+                .recordStats();
+        
         CaffeineCacheManager manager = new CaffeineCacheManager();
         manager.setCaffeine(builder);
         manager.setCacheNames(List.of(
@@ -44,6 +50,9 @@ public class CacheConfig {
                 "shops_paginated",
                 "products_by_id",
                 "products_list",
+                "products_by_shop",
+                "products_by_category",
+                "products_by_subcategory",
                 "categories"
         ));
         return manager;

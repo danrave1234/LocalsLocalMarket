@@ -13,6 +13,9 @@ import { loadLeaflet, isLeafletLoaded } from "../utils/leafletLoader.js"
 import { getImageUrl } from '../utils/imageUtils.js'
 import { handleApiError } from '../utils/errorHandler.js'
 import shopCache from '../utils/shopCache.js'
+import landingPageCache from '../utils/landingPageCache.js'
+import categoriesCache from '../utils/categoriesCache.js'
+import cacheInvalidationService from '../utils/cacheInvalidationService.js'
 import { SkeletonShopCard, SkeletonMap, SkeletonText } from "../components/Skeleton.jsx"
 import ErrorDisplay from "../components/ErrorDisplay.jsx"
 import { LoadingSpinner, LoadingCard, LoadingOverlay } from "../components/Loading.jsx"
@@ -173,6 +176,12 @@ export default function LandingPage() {
     }
     const saved = localStorage.getItem("user_location")
     if (saved) setCoords(JSON.parse(saved))
+    
+    // Restore pinned location
+    const savedPinnedLocation = localStorage.getItem('pinned_location')
+    if (savedPinnedLocation) {
+      setPinnedLocation(JSON.parse(savedPinnedLocation))
+    }
   }, [])
 
   useEffect(() => {
@@ -181,24 +190,70 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // Save pinned location to localStorage whenever it changes
+  useEffect(() => {
+    if (pinnedLocation) {
+      localStorage.setItem('pinned_location', JSON.stringify(pinnedLocation))
+    } else {
+      localStorage.removeItem('pinned_location')
+    }
+  }, [pinnedLocation])
+
+  // Listen for storage events to sync with header clear action
+  useEffect(() => {
+    const handleStorageChange = (event) => {
+      if (event.key === 'pinned_location') {
+        if (event.newValue === null) {
+          // Pinned location was cleared by header
+          setPinnedLocation(null)
+        }
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
+
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
   // Load shops using paginated endpoint - only on mount and when currentPage changes
   useEffect(() => {
     const loadShops = async () => {
-              // Prevent multiple simultaneous calls
-        if (shopsLoadingRef.current) {
-          return
-        }
+      // Prevent multiple simultaneous calls
+      if (shopsLoadingRef.current) {
+        return
+      }
       
       shopsLoadingRef.current = true
       setLoading(true)
       setError('')
       
-              try {
-          const response = await fetchPaginatedShopsWithRatings(currentPage, 50) // Fetch 50 shops per page
-          
-          const shopsData = extractShopsFromResponse(response)
+      try {
+        // Check cache first for page 0 (initial load)
+        if (currentPage === 0) {
+          const cachedData = landingPageCache.get()
+          if (cachedData && cachedData.shops.length > 0) {
+            console.log('LandingPage: Using cached data for initial load')
+            setShops(cachedData.shops)
+            setHasMoreShops(cachedData.totalPages ? currentPage < cachedData.totalPages - 1 : true)
+            setLoading(false)
+            shopsLoadingRef.current = false
+            
+            // Cache individual shops for future use
+            cachedData.shops.forEach(shop => {
+              if (shop.id) {
+                shopCache.set(shop.id, shop)
+              }
+            })
+            return
+          }
+        }
+        
+        // Fetch from API if no cache or not page 0
+        console.log(`LandingPage: Fetching page ${currentPage} from API`)
+        const response = await fetchPaginatedShopsWithRatings(currentPage, 50) // Fetch 50 shops per page
+        
+        const shopsData = extractShopsFromResponse(response)
         
         // Cache all shop data for future use
         shopsData.forEach(shop => {
@@ -208,11 +263,18 @@ export default function LandingPage() {
         })
         
         if (currentPage === 0) {
-          // First page, replace all shops
+          // First page, replace all shops and cache the data
           setShops(shopsData)
+          
+          // Cache the landing page data for future page refreshes
+          const totalPages = response.totalPages || Math.ceil((response.totalElements || shopsData.length) / 50)
+          landingPageCache.set(shopsData, currentPage, totalPages)
         } else {
           // Subsequent pages, append shops
           setShops(prev => [...prev, ...shopsData])
+          
+          // Update cache with new shops
+          landingPageCache.appendShops(shopsData, currentPage)
         }
         
         // Check if there are more shops
@@ -719,6 +781,8 @@ export default function LandingPage() {
 
   const clearPinnedLocation = () => {
     setPinnedLocation(null)
+    // Clear from localStorage as well
+    localStorage.removeItem('pinned_location')
   }
 
   const forceMapRefresh = () => {
@@ -735,6 +799,43 @@ export default function LandingPage() {
       setMapContainerReady(true)
     }
   }
+
+  const refreshCache = () => {
+    console.log('LandingPage: Manually refreshing all caches')
+    cacheInvalidationService.clearAllCaches()
+    setCurrentPage(0)
+    setShops([])
+    setHasMoreShops(true)
+    // The useEffect will trigger and fetch fresh data
+  }
+
+  // Initialize cache invalidation service and debug functions
+  useEffect(() => {
+    // Register cache services with the invalidation service
+    cacheInvalidationService.registerCacheService('shopCache', shopCache)
+    cacheInvalidationService.registerCacheService('landingPageCache', landingPageCache)
+    cacheInvalidationService.registerCacheService('categoriesCache', categoriesCache)
+    
+    // Debug function to log cache stats (can be called from browser console)
+    window.landingPageCacheStats = () => {
+      const landingStats = landingPageCache.getStats()
+      const shopStats = shopCache.getStats()
+      const categoriesStats = categoriesCache.getStats()
+      const invalidationStats = cacheInvalidationService.getCacheStats()
+      console.log('=== Cache Statistics ===')
+      console.log('Landing Page Cache:', landingStats)
+      console.log('Shop Cache:', shopStats)
+      console.log('Categories Cache:', categoriesStats)
+      console.log('Cache Invalidation Service:', invalidationStats)
+      return { landing: landingStats, shop: shopStats, categories: categoriesStats, invalidation: invalidationStats }
+    }
+    
+    // Debug function to simulate data changes (for testing)
+    window.simulateDataChange = (dataType, operation, data = {}) => {
+      console.log(`Simulating ${dataType} ${operation}:`, data)
+      cacheInvalidationService.onDataChanged(dataType, operation, data)
+    }
+  }, [])
 
   if (loading) {
     return (
@@ -846,6 +947,7 @@ export default function LandingPage() {
             <SearchOptimization 
               onClearFilters={clearPinnedLocation} 
               onSearchChange={handleSearchChange}
+              hasPinnedLocation={!!pinnedLocation}
             />
           </div>
         </section>
@@ -872,40 +974,24 @@ export default function LandingPage() {
               </div>
             ) : (
             <div>
-                {/* Page title above the list */}
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600 }}>Explore Local Shops</h2>
-                  <p className="muted" style={{ margin: 0 }}>Discover amazing shops from all areas</p>
-                </div>
-                <div style={{ marginBottom: "1rem" }}>
-                  <p className="muted" style={{ margin: 0, fontSize: "0.875rem" }}>
-                    {clientQuery ? `Showing results for "${clientQuery}"` : 'All available shops'}
-                  </p>
-                  {pinnedLocation && (
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem', 
-                      marginTop: '0.5rem',
-                      fontSize: '0.875rem',
-                      color: 'var(--primary)'
-                    }}>
-                      <span>📍 Pinned location active</span>
-                      <button 
-                        onClick={clearPinnedLocation}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'var(--error)',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem',
-                          textDecoration: 'underline'
-                        }}
-                      >
-                        Clear
-                      </button>
+                {/* Enhanced Page Header */}
+                <div className="shops-section-header">
+                  <div className="shops-header-content">
+                    <div className="shops-title-section">
+                      <h2 className="shops-main-title">Explore Local Shops</h2>
+                      <p className="shops-subtitle">Discover amazing shops from all areas</p>
+                      <div className="filter-info">
+                        <span className="filter-label">
+                          {clientQuery ? `Search results for "${clientQuery}"` : 'All available shops'}
+                        </span>
+                      </div>
                     </div>
-                  )}
+                    <div className="shops-stats-section">
+                      <div className="shops-stats">
+                        <span className="shops-count">{sortedShops.length} shops found</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               
                             <div className="shops-grid">
@@ -925,7 +1011,7 @@ export default function LandingPage() {
                   >
                     {/* Shop Image */}
                     <div style={{ 
-                      height: "120px", 
+                      height: "160px", 
                       background: !shop.coverPath 
                         ? "linear-gradient(135deg, var(--surface) 0%, var(--card) 100%)"
                         : "transparent",
@@ -1227,6 +1313,34 @@ export default function LandingPage() {
                 title="Refresh Map"
               >
                 <RefreshIcon width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} />
+              </button>
+              
+              <button
+                onClick={refreshCache}
+                className="btn"
+                style={{
+                  width: isMobile ? '48px' : '40px', // Larger touch target on mobile
+                  height: isMobile ? '48px' : '40px',
+                  padding: '0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: isMobile ? '12px' : '8px', // Larger radius on mobile
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  // Mobile-optimized touch feedback
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent'
+                }}
+                title="Refresh Data Cache"
+              >
+                <svg width={isMobile ? 20 : 16} height={isMobile ? 20 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                  <path d="M21 3v5h-5"/>
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                  <path d="M3 21v-5h5"/>
+                </svg>
               </button>
             </div>
 

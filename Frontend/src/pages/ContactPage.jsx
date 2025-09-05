@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SEOHead from '../components/SEOHead.jsx';
 import '../contact.css';
 
 const ContactPage = () => {
@@ -35,7 +36,31 @@ const ContactPage = () => {
   };
 
   return (
-    <main className="contact-container">
+    <>
+      <SEOHead 
+        title="Contact Us - LocalsLocalMarket"
+        description="Get in touch with LocalsLocalMarket. Have questions about our platform, need support, or want to partner with us? Contact our team for assistance with local business marketplace solutions."
+        keywords="contact us, customer support, local business help, marketplace support, business partnership, contact form, customer service"
+        url="https://localslocalmarket.com/contact"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "ContactPage",
+          "name": "Contact LocalsLocalMarket",
+          "description": "Get in touch with LocalsLocalMarket for support and inquiries",
+          "url": "https://localslocalmarket.com/contact",
+          "mainEntity": {
+            "@type": "Organization",
+            "name": "LocalsLocalMarket",
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "contactType": "customer service",
+              "email": "support@localslocalmarket.com",
+              "availableLanguage": "English"
+            }
+          }
+        }}
+      />
+      <main className="contact-container">
       {/* Hero Section */}
       <section className="contact-header">
         <h1 className="contact-title">Get in Touch</h1>
@@ -235,7 +260,8 @@ const ContactPage = () => {
           </div>
         </div>
       </section>
-    </main>
+      </main>
+    </>
   );
 };
 

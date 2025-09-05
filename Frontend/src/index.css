@@ -1009,7 +1009,7 @@ h3 {
 /* Links Grid */
 .footer-links-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
   position: relative;
   z-index: 2;
@@ -1028,7 +1028,7 @@ h3 {
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--text);
-  margin: 0;
+  margin: 0 0 1rem 0;
 }
 
 /* Accordion behavior for mobile footer */
@@ -1068,7 +1068,14 @@ h3 {
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  padding-left: 0.25rem;
+}
+
+.footer-link svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .footer-link:hover {
@@ -4992,7 +4999,7 @@ h3 {
   display: flex;
   gap: 0.75rem;
   width: 100%;
-  max-width: 520px;
+  max-width: 572px;
 }
 
 /* Prevent actions from hugging screen edges, account for notches */
@@ -5581,15 +5588,16 @@ h3 {
 /* Airbnb-style Search Bar Styles */
 .airbnb-search-container {
   position: relative;
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
+  padding: 0 1rem;
 }
 
 .airbnb-search-bar {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 32px;
-  padding: 8px;
+  padding: 4px 2.8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
@@ -5602,6 +5610,51 @@ h3 {
   display: flex;
   align-items: center;
   gap: 0;
+}
+
+/* Filter Clear Button */
+.filter-clear-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--error-bg);
+  border: 1px solid var(--error);
+  border-radius: 20px;
+  color: var(--error);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+
+.filter-clear-button:hover {
+  background: var(--error);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.filter-clear-button:active {
+  transform: translateY(0);
+}
+
+.filter-clear-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Compact filter button for header */
+.filter-clear-button.compact {
+  padding: 0.5rem;
+  min-width: auto;
+  width: auto;
+}
+
+.filter-clear-button.compact svg {
+  width: 16px;
+  height: 16px;
 }
 
 .search-filter {
@@ -6001,7 +6054,7 @@ h3 {
 /* Compact the landing search bar on small screens */
 @media (max-width: 700px) {
   .airbnb-search-container { max-width: 100%; }
-  .airbnb-search-bar { padding: 2px; border-radius: 12px; display: flex; align-items: center; width: 100%; }
+  .airbnb-search-bar { padding: 2px 1.4px; border-radius: 12px; display: flex; align-items: center; width: 100%; }
   .search-input-group { gap: 6px; align-items: center; display: grid; grid-template-columns: auto 1fr auto; width: 100%; }
   /* Compact Airbnb-style segmented filter */
   .search-filter {
@@ -6024,7 +6077,7 @@ h3 {
 /* iPad Mini/tablet compact search bar */
 @media (min-width: 700px) and (max-width: 992px) {
   .airbnb-search-bar {
-    padding: 6px;
+    padding: 3px 2.1px;
     border-radius: 12px;
   }
   .search-input-group {
@@ -6121,7 +6174,7 @@ h3 {
 @media (max-width: 480px) {
   .airbnb-search-bar {
     border-radius: 16px;
-    padding: 4px;
+    padding: 2px 1.4px;
   }
   
   .search-filter,

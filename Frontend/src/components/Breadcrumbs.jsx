@@ -12,7 +12,15 @@ const Breadcrumbs = () => {
     'profile': 'Profile',
     'settings': 'Settings',
     'donate': 'Donate',
-    'product-management': 'Product Management'
+    'product-management': 'Product Management',
+    'about': 'About Us',
+    'contact': 'Contact',
+    'support': 'Support',
+    'help': 'Help',
+    'privacy': 'Privacy Policy',
+    'terms': 'Terms of Service',
+    'cookies': 'Cookie Policy',
+    'gdpr': 'GDPR'
   }
 
   const breadcrumbs = pathnames.map((name, index) => {

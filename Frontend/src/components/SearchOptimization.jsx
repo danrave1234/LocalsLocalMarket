@@ -3,8 +3,9 @@ import { useSearchParams } from 'react-router-dom'
 import { fetchCategories } from '../api/shops.js'
 import { useDebounce } from '../hooks/useDebounce.js'
 import categoriesCache from '../utils/categoriesCache.js'
+import { Utensils, ShoppingCart, Palette, Wrench, Smartphone, Shirt, Heart, Home } from 'lucide-react'
 
-const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
+const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation, compactFilter = false }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchSuggestions, setSearchSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -16,6 +17,9 @@ const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
 
   const query = searchParams.get('q') || ''
   const category = searchParams.get('category') || ''
+  
+  // Check if there are any active filters
+  const hasActiveFilters = localQuery || category || hasPinnedLocation
   
   // Debounce the local query to prevent immediate updates
   const debouncedQuery = useDebounce(localQuery, 300)
@@ -57,10 +61,10 @@ const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
   ]
 
   useEffect(() => {
-    // Check global cache first
+    // Check global cache first (now includes localStorage persistence)
     const cachedCategories = categoriesCache.get()
-    if (cachedCategories) {
-      console.log('SearchOptimization: Using cached categories')
+    if (cachedCategories && cachedCategories.length > 0) {
+      // Using cached categories from localStorage/memory
       setCategories(cachedCategories)
       categoriesLoadedRef.current = true
       return
@@ -68,7 +72,7 @@ const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
     
     // Check if already loading to prevent duplicate fetches
     if (categoriesCache.getLoadingState()) {
-      console.log('SearchOptimization: Categories already loading, waiting...')
+      // Categories already loading, waiting...
       // Wait for the existing promise
       categoriesCache.getLoadingPromise()?.then((data) => {
         setCategories(data.categories || [])
@@ -82,13 +86,13 @@ const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
     
     const loadCategories = async () => {
       try {
-        console.log('SearchOptimization: Loading categories from API...')
+        // Loading categories from API...
         categoriesCache.setLoading(true)
         
         const data = await fetchCategories()
-        console.log('SearchOptimization: Categories loaded from API:', data)
+        // Categories loaded from API
         
-        // Cache the categories globally
+        // Cache the categories globally (now persists to localStorage)
         categoriesCache.set(data.categories || [])
         
         setCategories(data.categories || [])
@@ -144,6 +148,15 @@ const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
     setLocalQuery('')
     setSearchParams({})
     setActiveFilter(null)
+    // Clear pinned location from localStorage
+    const oldValue = localStorage.getItem('pinned_location')
+    localStorage.removeItem('pinned_location')
+    // Trigger a storage event to notify other components
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'pinned_location',
+      newValue: null,
+      oldValue: oldValue
+    }))
     if (onClearFilters) {
       onClearFilters()
     }
@@ -217,6 +230,21 @@ const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
             )}
           </div>
 
+          {/* Filter Button - Only show when there are active filters */}
+          {hasActiveFilters && (
+            <button
+              className={`filter-clear-button ${compactFilter ? 'compact' : ''}`}
+              onClick={clearFilters}
+              title="Clear all filters"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              {!compactFilter && <span>Filter</span>}
+            </button>
+          )}
+
           {/* Search Button */}
           <button
             onClick={() => handleSearch(localQuery)}
@@ -258,14 +286,14 @@ const SearchOptimization = ({ onClearFilters, onSearchChange }) => {
                     onClick={() => handleQuickCategorySelect(cat)}
                   >
                     <div className="category-icon">
-                      {cat === 'Restaurants' && '🍽️'}
-                      {cat === 'Grocery' && '🛒'}
-                      {cat === 'Crafts' && '🎨'}
-                      {cat === 'Services' && '🔧'}
-                      {cat === 'Electronics' && '📱'}
-                      {cat === 'Clothing' && '👕'}
-                      {cat === 'Health & Beauty' && '💄'}
-                      {cat === 'Home & Garden' && '🏡'}
+                      {cat === 'Restaurants' && <Utensils size={20} />}
+                      {cat === 'Grocery' && <ShoppingCart size={20} />}
+                      {cat === 'Crafts' && <Palette size={20} />}
+                      {cat === 'Services' && <Wrench size={20} />}
+                      {cat === 'Electronics' && <Smartphone size={20} />}
+                      {cat === 'Clothing' && <Shirt size={20} />}
+                      {cat === 'Health & Beauty' && <Heart size={20} />}
+                      {cat === 'Home & Garden' && <Home size={20} />}
                     </div>
                     <span>{cat}</span>
                   </button>

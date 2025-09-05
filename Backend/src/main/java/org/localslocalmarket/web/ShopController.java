@@ -9,6 +9,7 @@ import org.localslocalmarket.repo.UnauthenticatedShopReviewRepository;
 import org.localslocalmarket.security.AuthorizationService;
 import org.localslocalmarket.security.AuditService;
 import org.localslocalmarket.security.InputValidationService;
+import org.localslocalmarket.service.CacheInvalidationService;
 import org.localslocalmarket.web.dto.ShopDtos;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -34,13 +35,15 @@ public class ShopController {
     private final InputValidationService inputValidationService;
     private final ShopRatingRepository shopRatings;
     private final UnauthenticatedShopReviewRepository unauthReviews;
+    private final CacheInvalidationService cacheInvalidationService;
 
     public ShopController(ShopRepository shops, UserRepository users, 
                          AuthorizationService authorizationService, 
                          AuditService auditService,
                          InputValidationService inputValidationService,
                          ShopRatingRepository shopRatings,
-                         UnauthenticatedShopReviewRepository unauthReviews){
+                         UnauthenticatedShopReviewRepository unauthReviews,
+                         CacheInvalidationService cacheInvalidationService){
         this.shops = shops;
         this.users = users;
         this.authorizationService = authorizationService;
@@ -48,14 +51,10 @@ public class ShopController {
         this.inputValidationService = inputValidationService;
         this.shopRatings = shopRatings;
         this.unauthReviews = unauthReviews;
+        this.cacheInvalidationService = cacheInvalidationService;
     }
 
     @PostMapping
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "shops_list", allEntries = true),
-            @CacheEvict(cacheNames = "shops_by_id", allEntries = true),
-            @CacheEvict(cacheNames = "all_shops", allEntries = true)
-    })
     public ResponseEntity<?> create(@RequestBody @Validated ShopDtos.CreateShopRequest req){
         try {
             // Verify user is authenticated
@@ -97,6 +96,9 @@ public class ShopController {
             s.setBusinessHoursJson(req.businessHoursJson());
             
             shops.save(s);
+            
+            // Smart cache invalidation
+            cacheInvalidationService.onShopDataChanged();
             
             // Log the action
             auditService.logUserAction(AuditService.AuditEventType.SHOP_CREATE, 
@@ -189,6 +191,7 @@ public class ShopController {
     }
 
     // Simple paginated endpoint for landing page
+    @Cacheable(cacheNames = "shops_paginated", key = "'simple_page=' + #page + '&size=' + #size")
     @GetMapping("/paginated")
     public Page<ShopDtos.ShopResponse> getPaginatedShops(
             @RequestParam(value = "page", defaultValue = "0") int page,
@@ -199,6 +202,7 @@ public class ShopController {
     }
 
     // Enhanced paginated endpoint with ratings for landing page
+    @Cacheable(cacheNames = "shops_paginated", key = "'page=' + #page + '&size=' + #size")
     @GetMapping("/paginated-with-ratings")
     public Page<ShopDtos.ShopResponseWithRatings> getPaginatedShopsWithRatings(
             @RequestParam(value = "page", defaultValue = "0") int page,
@@ -299,11 +303,6 @@ public class ShopController {
     }
 
     @PatchMapping("/{slug}")
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "shops_by_id", allEntries = true),
-            @CacheEvict(cacheNames = "shops_list", allEntries = true),
-            @CacheEvict(cacheNames = "all_shops", allEntries = true)
-    })
     public ResponseEntity<?> update(@PathVariable("slug") String slug,
                                     @RequestBody ShopDtos.UpdateShopRequest req){
         try {
@@ -359,6 +358,9 @@ public class ShopController {
                 if(req.businessHoursJson() != null) shop.setBusinessHoursJson(req.businessHoursJson());
                 shops.save(shop);
                 
+                // Smart cache invalidation
+                cacheInvalidationService.onShopDataChanged();
+                
                 // Log the action
                 auditService.logUserAction(AuditService.AuditEventType.SHOP_UPDATE, 
                         actor.getId().toString(), "UPDATE", "shop:" + shop.getId());
@@ -372,11 +374,6 @@ public class ShopController {
     }
 
     @DeleteMapping("/{slug}")
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "shops_by_id", allEntries = true),
-            @CacheEvict(cacheNames = "shops_list", allEntries = true),
-            @CacheEvict(cacheNames = "all_shops", allEntries = true)
-    })
     public ResponseEntity<?> delete(@PathVariable("slug") String slug){
         try {
             User actor = authorizationService.getCurrentUserOrThrow();
@@ -413,6 +410,9 @@ public class ShopController {
                     return ResponseEntity.status(403).body("Forbidden");
                 }
                 shops.delete(shop);
+                
+                // Smart cache invalidation
+                cacheInvalidationService.onShopDataChanged();
                 
                 // Log the action
                 auditService.logUserAction(AuditService.AuditEventType.SHOP_DELETE, 

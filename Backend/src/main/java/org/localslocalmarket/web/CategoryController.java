@@ -4,6 +4,7 @@ import org.localslocalmarket.model.Category;
 import org.localslocalmarket.model.User;
 import org.localslocalmarket.repository.CategoryRepository;
 import org.localslocalmarket.web.dto.CategoryDtos;
+import org.localslocalmarket.service.CacheInvalidationService;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -24,10 +25,12 @@ public class CategoryController {
     
     private final CategoryRepository categories;
     private final ObjectMapper objectMapper;
+    private final CacheInvalidationService cacheInvalidationService;
     
-    public CategoryController(CategoryRepository categories, ObjectMapper objectMapper) {
+    public CategoryController(CategoryRepository categories, ObjectMapper objectMapper, CacheInvalidationService cacheInvalidationService) {
         this.categories = categories;
         this.objectMapper = objectMapper;
+        this.cacheInvalidationService = cacheInvalidationService;
     }
     
     @Cacheable(cacheNames = "categories", key = "'all'")
@@ -74,9 +77,6 @@ public class CategoryController {
     
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "categories", allEntries = true)
-    })
     public ResponseEntity<CategoryDtos.CategoryResponse> createCategory(@RequestBody @Validated CategoryDtos.CreateCategoryRequest req) {
         // Check if category name already exists
         if (categories.existsByName(req.name())) {
@@ -102,14 +102,15 @@ public class CategoryController {
         }
         
         Category savedCategory = categories.save(category);
+        
+        // Smart cache invalidation
+        cacheInvalidationService.onCategoryDataChanged();
+        
         return ResponseEntity.ok(CategoryDtos.CategoryResponse.fromCategory(savedCategory));
     }
     
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "categories", allEntries = true)
-    })
     public ResponseEntity<CategoryDtos.CategoryResponse> updateCategory(@PathVariable Long id, @RequestBody @Validated CategoryDtos.UpdateCategoryRequest req) {
         return categories.findById(id)
                 .map(category -> {
@@ -123,6 +124,10 @@ public class CategoryController {
                     if (req.isActive() != null) category.setIsActive(req.isActive());
                     
                     Category savedCategory = categories.save(category);
+                    
+                    // Smart cache invalidation
+                    cacheInvalidationService.onCategoryDataChanged();
+                    
                     return ResponseEntity.ok(CategoryDtos.CategoryResponse.fromCategory(savedCategory));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -130,9 +135,6 @@ public class CategoryController {
     
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "categories", allEntries = true)
-    })
     public ResponseEntity<?> deleteCategory(@PathVariable Long id) {
         return categories.findById(id)
                 .map(category -> {
@@ -141,6 +143,10 @@ public class CategoryController {
                         return ResponseEntity.badRequest().body("Cannot delete system categories");
                     }
                     categories.delete(category);
+                    
+                    // Smart cache invalidation
+                    cacheInvalidationService.onCategoryDataChanged();
+                    
                     return ResponseEntity.ok().build();
                 })
                 .orElse(ResponseEntity.notFound().build());

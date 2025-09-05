@@ -1,3 +1,6 @@
+// Import slug generation utility
+import { generateShopSlug } from './slugUtils.js'
+
 // Utility to generate dynamic sitemap entries
 export const generateSitemapEntries = (shops = []) => {
   const entries = [
@@ -24,13 +27,50 @@ export const generateSitemapEntries = (shops = []) => {
       lastmod: new Date().toISOString().split('T')[0],
       changefreq: 'monthly',
       priority: '0.7'
+    },
+    {
+      loc: 'https://localslocalmarket.com/about',
+      lastmod: new Date().toISOString().split('T')[0],
+      changefreq: 'monthly',
+      priority: '0.6'
+    },
+    {
+      loc: 'https://localslocalmarket.com/contact',
+      lastmod: new Date().toISOString().split('T')[0],
+      changefreq: 'monthly',
+      priority: '0.6'
+    },
+    {
+      loc: 'https://localslocalmarket.com/support',
+      lastmod: new Date().toISOString().split('T')[0],
+      changefreq: 'monthly',
+      priority: '0.5'
+    },
+    {
+      loc: 'https://localslocalmarket.com/help',
+      lastmod: new Date().toISOString().split('T')[0],
+      changefreq: 'monthly',
+      priority: '0.5'
+    },
+    {
+      loc: 'https://localslocalmarket.com/privacy',
+      lastmod: new Date().toISOString().split('T')[0],
+      changefreq: 'yearly',
+      priority: '0.3'
+    },
+    {
+      loc: 'https://localslocalmarket.com/terms',
+      lastmod: new Date().toISOString().split('T')[0],
+      changefreq: 'yearly',
+      priority: '0.3'
     }
   ]
 
-  // Add shop entries
+  // Add shop entries with proper slug format
   shops.forEach(shop => {
+    const shopSlug = generateShopSlug(shop.name, shop.id)
     entries.push({
-      loc: `https://localslocalmarket.com/shops/${shop.id}`,
+      loc: `https://localslocalmarket.com/shops/${shopSlug}`,
       lastmod: new Date().toISOString().split('T')[0],
       changefreq: 'weekly',
       priority: '0.9'

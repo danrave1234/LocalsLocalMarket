@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { Home } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Logo from './Logo.jsx'
@@ -8,8 +8,41 @@ import SearchOptimization from './SearchOptimization.jsx'
 export default function Header() {
   const { token, user, logout, isLoading } = useAuth()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const [showSearch, setShowSearch] = React.useState(true)
   const isActive = (path) => location.pathname === path
+  
+  // Get current search state for synchronization
+  const query = searchParams.get('q') || ''
+  const category = searchParams.get('category') || ''
+  
+  // Check for pinned location in localStorage
+  const [hasPinnedLocation, setHasPinnedLocation] = React.useState(false)
+  
+  React.useEffect(() => {
+    const checkPinnedLocation = () => {
+      const pinnedLocation = localStorage.getItem('pinned_location')
+      const hasPinned = !!pinnedLocation && pinnedLocation !== 'null'
+      setHasPinnedLocation(hasPinned)
+    }
+    
+    // Check initially
+    checkPinnedLocation()
+    
+    // Listen for storage changes (when landing page updates pinned location)
+    window.addEventListener('storage', checkPinnedLocation)
+    
+    // Also check more frequently in case of same-tab updates
+    const interval = setInterval(checkPinnedLocation, 500)
+    
+    return () => {
+      window.removeEventListener('storage', checkPinnedLocation)
+      clearInterval(interval)
+    }
+  }, [])
+  
+  // Check if there are any active filters
+  const hasActiveFilters = query || category || hasPinnedLocation
 
   React.useEffect(() => {
     if (location.pathname !== '/') {
@@ -23,7 +56,7 @@ export default function Header() {
     const sentinel = document.getElementById('landing-hero-sentinel')
     if (!sentinel) {
       // Fallback to viewport-based threshold if sentinel missing
-      const onScroll = () => setShowSearch(window.scrollY > window.innerHeight * 0.2)
+      const onScroll = () => setShowSearch(window.scrollY > window.innerHeight * 0.1)
       window.addEventListener('scroll', onScroll)
       return () => window.removeEventListener('scroll', onScroll)
     }
@@ -40,6 +73,11 @@ export default function Header() {
 
   const handleLogout = () => {
     logout()
+  }
+
+  const clearFilters = () => {
+    // This function is called by SearchOptimization component
+    // The actual clearing is handled by SearchOptimization's clearFilters function
   }
 
   // Show loading state while checking authentication
@@ -87,7 +125,11 @@ export default function Header() {
         
         {showSearch && (
           <div className="header-center">
-            <SearchOptimization />
+            <SearchOptimization 
+              onClearFilters={clearFilters}
+              compactFilter={true}
+              hasPinnedLocation={hasPinnedLocation}
+            />
           </div>
         )}
         

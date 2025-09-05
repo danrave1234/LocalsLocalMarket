@@ -1,4 +1,6 @@
-export default function Avatar({ src, alt, size = 36, fallback = "🏪", name }) {
+import { Store } from 'lucide-react'
+
+export default function Avatar({ src, alt, size = 36, fallback = <Store size={20} />, name }) {
   // If we have a src, try to use it as an image
   if (src) {
     return (
@@ -52,7 +54,7 @@ export default function Avatar({ src, alt, size = 36, fallback = "🏪", name })
   }
 
   // If no src, show fallback or initial
-  const displayText = fallback || (name ? name.trim().charAt(0).toUpperCase() : '🏪')
+  const displayText = fallback || (name ? name.trim().charAt(0).toUpperCase() : <Store size={20} />)
   
   return (
     <div style={{

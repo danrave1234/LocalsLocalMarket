@@ -48,6 +48,34 @@ export const extractShopIdFromSlug = (slug) => {
 }
 
 /**
+ * Extract shop name from a slug
+ * @param {string} slug - The slug to parse
+ * @returns {string|null} The shop name or null if not found
+ */
+export const extractShopNameFromSlug = (slug) => {
+  if (!slug) return null
+  
+  // Try to parse as direct ID first (for backward compatibility)
+  if (!isNaN(slug)) {
+    return null // Can't extract name from numeric ID
+  }
+  
+  // Handle slug format: "shop-name-123"
+  const parts = slug.split('-')
+  if (parts.length >= 2) {
+    const lastPart = parts[parts.length - 1]
+    if (!isNaN(lastPart)) {
+      // Remove the ID part and reconstruct the name
+      const nameParts = parts.slice(0, -1)
+      return nameParts.join(' ').replace(/\b\w/g, l => l.toUpperCase())
+    }
+  }
+  
+  // Fallback to treating as shop name (old behavior)
+  return slug.replace(/\b\w/g, l => l.toUpperCase())
+}
+
+/**
  * Generate a URL-friendly shop link
  * @param {string} shopName - The shop name
  * @param {number|string} shopId - The shop ID

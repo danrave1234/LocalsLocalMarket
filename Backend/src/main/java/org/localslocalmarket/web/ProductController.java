@@ -1,25 +1,33 @@
 package org.localslocalmarket.web;
 
+import java.util.Optional;
+
 import org.localslocalmarket.model.Product;
 import org.localslocalmarket.model.Shop;
+import org.localslocalmarket.model.User;
 import org.localslocalmarket.repo.ProductRepository;
 import org.localslocalmarket.repo.ShopRepository;
-import org.localslocalmarket.model.User;
-import org.localslocalmarket.security.AuthorizationService;
 import org.localslocalmarket.security.AuditService;
+import org.localslocalmarket.security.AuthorizationService;
 import org.localslocalmarket.security.InputValidationService;
+import org.localslocalmarket.service.CacheInvalidationService;
+import org.localslocalmarket.web.dto.PaginationDtos;
 import org.localslocalmarket.web.dto.ProductDtos;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
-
-import java.util.Optional;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/products")
@@ -29,23 +37,22 @@ public class ProductController {
     private final AuthorizationService authorizationService;
     private final AuditService auditService;
     private final InputValidationService inputValidationService;
+    private final CacheInvalidationService cacheInvalidationService;
 
     public ProductController(ProductRepository products, ShopRepository shops,
                            AuthorizationService authorizationService,
                            AuditService auditService,
-                           InputValidationService inputValidationService){
+                           InputValidationService inputValidationService,
+                           CacheInvalidationService cacheInvalidationService){
         this.products = products;
         this.shops = shops;
         this.authorizationService = authorizationService;
         this.auditService = auditService;
         this.inputValidationService = inputValidationService;
+        this.cacheInvalidationService = cacheInvalidationService;
     }
 
     @PostMapping
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "products_list", allEntries = true),
-            @CacheEvict(cacheNames = "products_by_id", allEntries = true)
-    })
     public ResponseEntity<?> create(@RequestBody @Validated ProductDtos.CreateProductRequest req){
         try {
             User actor = authorizationService.getCurrentUserOrThrow();
@@ -91,6 +98,9 @@ public class ProductController {
             
             products.save(p);
             
+            // Smart cache invalidation
+            cacheInvalidationService.onProductDataChanged();
+            
             // Log the action
             auditService.logUserAction(AuditService.AuditEventType.PRODUCT_CREATE, 
                     actor.getId().toString(), "CREATE", "product:" + p.getId());
@@ -107,7 +117,7 @@ public class ProductController {
 
     @Cacheable(cacheNames = "products_list", key = "'q=' + #q.orElse('') + '&category=' + #category.orElse('') + '&mainCategory=' + #mainCategory.orElse('') + '&subcategory=' + #subcategory.orElse('') + '&minPrice=' + (#minPrice.isPresent() ? #minPrice.get() : '') + '&maxPrice=' + (#maxPrice.isPresent() ? #maxPrice.get() : '') + '&shopId=' + (#shopId.isPresent() ? #shopId.get() : '') + '&page=' + #page + '&size=' + #size")
     @GetMapping
-    public Page<ProductDtos.ProductResponse> list(@RequestParam("q") Optional<String> q,
+    public PaginationDtos.PaginatedResponse<ProductDtos.ProductResponse> list(@RequestParam("q") Optional<String> q,
                                                   @RequestParam("category") Optional<String> category,
                                                   @RequestParam("mainCategory") Optional<String> mainCategory,
                                                   @RequestParam("subcategory") Optional<String> subcategory,
@@ -124,7 +134,7 @@ public class ProductController {
             productPage = products.findAllActiveByShopIdWithShop(shopId.get(), PageRequest.of(page, size));
         } else {
             // Use specification for complex queries
-            Specification<Product> spec = Specification.where((root, cq, cb) -> cb.equal(root.get("isActive"), true));
+            Specification<Product> spec = (root, cq, cb) -> cb.equal(root.get("isActive"), true);
             if(q.isPresent()){
                 String like = "%" + q.get().toLowerCase() + "%";
                 spec = spec.and((root, cq, cb) -> cb.like(cb.lower(root.get("title")), like));
@@ -150,14 +160,31 @@ public class ProductController {
             productPage = products.findAll(spec, PageRequest.of(page, size));
         }
         
-        return productPage.map(ProductDtos.ProductResponse::fromProduct);
+        Page<ProductDtos.ProductResponse> responsePage = productPage.map(ProductDtos.ProductResponse::fromProduct);
+        return PaginationDtos.PaginatedResponse.of(responsePage);
+    }
+
+    /**
+     * Enhanced endpoint specifically for shop products with optimized caching
+     */
+    @Cacheable(cacheNames = "products_by_shop", key = "#shopId + '_' + #page + '_' + #size")
+    @GetMapping("/by-shop/{shopId}")
+    public PaginationDtos.PaginatedResponse<ProductDtos.ProductResponse> getProductsByShop(
+            @PathVariable("shopId") Long shopId,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "12") int size,
+            @RequestParam(value = "sort", defaultValue = "createdAt") String sort) {
+        
+        // Validate page size to prevent abuse
+        if (size > 50) size = 50;
+        if (size < 1) size = 12;
+        
+        Page<Product> productPage = products.findAllActiveByShopIdWithShop(shopId, PageRequest.of(page, size));
+        Page<ProductDtos.ProductResponse> responsePage = productPage.map(ProductDtos.ProductResponse::fromProduct);
+        return PaginationDtos.PaginatedResponse.of(responsePage);
     }
 
     @PostMapping("/{id}/decrement-stock")
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "products_by_id", key = "#id"),
-            @CacheEvict(cacheNames = "products_list", allEntries = true)
-    })
     public ResponseEntity<?> decrementStock(@PathVariable("id") Long id,
                                             @RequestParam(value = "amount", defaultValue = "1") int amount){
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
@@ -173,19 +200,19 @@ public class ProductController {
             if(!(isOwner || isAdmin)){
                 return ResponseEntity.status(403).body("Forbidden");
             }
-            int current = p.getStockCount() == null ? 0 : p.getStockCount();
+            int current = p.getStockCount() != null ? p.getStockCount() : 0;
             int next = Math.max(0, current - dec);
             p.setStockCount(next);
             products.save(p);
+            
+            // Smart cache invalidation for stock update
+            cacheInvalidationService.onStockUpdated();
+            
             return ResponseEntity.ok(java.util.Map.of("stockCount", next));
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/{id}")
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "products_by_id", key = "#id"),
-            @CacheEvict(cacheNames = "products_list", allEntries = true)
-    })
     public ResponseEntity<?> update(@PathVariable("id") Long id,
                                     @RequestBody ProductDtos.UpdateProductRequest req){
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
@@ -219,6 +246,10 @@ public class ProductController {
             
             if(req.isActive() != null) p.setIsActive(req.isActive());
             products.save(p);
+            
+            // Smart cache invalidation
+            cacheInvalidationService.onProductDataChanged();
+            
             return ResponseEntity.ok(ProductDtos.ProductResponse.fromProduct(p));
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -232,10 +263,6 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    @Caching(evict = {
-            @CacheEvict(cacheNames = "products_by_id", key = "#id"),
-            @CacheEvict(cacheNames = "products_list", allEntries = true)
-    })
     public ResponseEntity<?> delete(@PathVariable("id") Long id){
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || auth.getPrincipal() == null || !(auth.getPrincipal() instanceof User)) {
@@ -250,6 +277,10 @@ public class ProductController {
                 return ResponseEntity.status(403).body("Forbidden");
             }
             products.delete(p);
+            
+            // Smart cache invalidation
+            cacheInvalidationService.onProductDataChanged();
+            
             return ResponseEntity.noContent().build();
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -267,22 +298,26 @@ public class ProductController {
         return ResponseEntity.ok(subcategories);
     }
     
+    @Cacheable(cacheNames = "products_by_category", key = "'mainCategory=' + #mainCategory + '&page=' + #page + '&size=' + #size")
     @GetMapping("/by-category/{mainCategory}")
-    public Page<ProductDtos.ProductResponse> getProductsByMainCategory(
+    public PaginationDtos.PaginatedResponse<ProductDtos.ProductResponse> getProductsByMainCategory(
             @PathVariable("mainCategory") String mainCategory,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size) {
         Page<Product> productPage = products.findAllActiveByMainCategory(mainCategory, PageRequest.of(page, size));
-        return productPage.map(ProductDtos.ProductResponse::fromProduct);
+        Page<ProductDtos.ProductResponse> responsePage = productPage.map(ProductDtos.ProductResponse::fromProduct);
+        return PaginationDtos.PaginatedResponse.of(responsePage);
     }
     
+    @Cacheable(cacheNames = "products_by_subcategory", key = "'mainCategory=' + #mainCategory + '&subcategory=' + #subcategory + '&page=' + #page + '&size=' + #size")
     @GetMapping("/by-category/{mainCategory}/{subcategory}")
-    public Page<ProductDtos.ProductResponse> getProductsByMainCategoryAndSubcategory(
+    public PaginationDtos.PaginatedResponse<ProductDtos.ProductResponse> getProductsByMainCategoryAndSubcategory(
             @PathVariable("mainCategory") String mainCategory,
             @PathVariable("subcategory") String subcategory,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size) {
         Page<Product> productPage = products.findAllActiveByMainCategoryAndSubcategory(mainCategory, subcategory, PageRequest.of(page, size));
-        return productPage.map(ProductDtos.ProductResponse::fromProduct);
+        Page<ProductDtos.ProductResponse> responsePage = productPage.map(ProductDtos.ProductResponse::fromProduct);
+        return PaginationDtos.PaginatedResponse.of(responsePage);
     }
 }

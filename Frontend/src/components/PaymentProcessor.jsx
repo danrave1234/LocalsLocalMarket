@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Lock } from 'lucide-react'
 
 export default function PaymentProcessor({ amount, onSuccess, onError }) {
   const [isProcessing, setIsProcessing] = useState(false)
@@ -103,7 +104,7 @@ export default function PaymentProcessor({ amount, onSuccess, onError }) {
         color: 'var(--muted)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-          <span style={{ color: '#10b981' }}>🔒</span>
+          <Lock size={16} style={{ color: '#10b981' }} />
           <strong>Secure Payment</strong>
         </div>
         <p style={{ margin: 0, fontSize: '0.8rem' }}>

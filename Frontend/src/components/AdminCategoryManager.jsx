@@ -8,6 +8,7 @@ import {
     initializeCategories 
 } from '../api/categories.js'
 import './AdminCategoryManager.css'
+import { Utensils } from 'lucide-react'
 
 const AdminCategoryManager = () => {
     const { user, token } = useAuth()
@@ -251,7 +252,7 @@ const AdminCategoryManager = () => {
                                         className="input"
                                         value={formData.icon}
                                         onChange={(e) => setFormData({...formData, icon: e.target.value})}
-                                        placeholder="e.g., 🍽️"
+                                        placeholder="e.g., <Utensils />"
                                     />
                                 </div>
                                 

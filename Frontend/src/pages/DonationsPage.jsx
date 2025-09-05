@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import './DonationsPage.css'
+import { Heart } from 'lucide-react'
 
 export default function DonationsPage() {
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -59,7 +60,7 @@ export default function DonationsPage() {
         {/* GCash Section with Why Donate - Second in mobile view */}
         <section aria-labelledby="gcash-heading" className="donation-card gcash-section">
           <h2 id="gcash-heading" className="gcash-title">
-            💙 GCash Payment
+            <Heart size={20} /> GCash Payment
           </h2>
           
           {/* Why Donate Section Inside GCash Card */}

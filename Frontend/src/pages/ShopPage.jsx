@@ -12,16 +12,13 @@ import ServiceCard from '../components/ServiceCard.jsx'
 import ServiceForm from '../components/ServiceForm.jsx'
 import { fetchShopById } from '../api/shops.js'
 import shopCache from '../utils/shopCache.js'
+import { Store, MapPin, Check, Copy, Phone, Globe, BarChart3, Package, Search, DollarSign, Camera, Trash2, ShoppingCart, Plus, Info, Star, ThumbsUp, ThumbsDown, Crosshair } from 'lucide-react'
 
-// Debug: Verify cache is imported and working
-console.log('ShopPage: shopCache imported:', shopCache)
-console.log('ShopPage: shopCache methods:', Object.keys(shopCache))
-console.log('ShopPage: shopCache.get method:', typeof shopCache.get)
 
-import { fetchProducts, createProduct, updateProduct, deleteProduct, updateProductStock } from '../api/products.js'
+import { fetchProducts, fetchProductsByShopIdPaginated, createProduct, updateProduct, deleteProduct, updateProductStock } from '../api/products.js'
 import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
-import { extractShopIdFromSlug, generateShopSlug } from '../utils/slugUtils.js'
+import { extractShopIdFromSlug, extractShopNameFromSlug, generateShopSlug } from '../utils/slugUtils.js'
 import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
 import { getImageUrl } from '../utils/imageUtils.js'
 import { handleApiError } from '../utils/errorHandler.js'
@@ -42,6 +39,9 @@ export default function ShopPage() {
   const shopId = extractShopIdFromSlug(slug)
   const [shop, setShop] = useState(null)
   const [products, setProducts] = useState([])
+  const [pagination, setPagination] = useState(null)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [pageSize] = useState(12) // Fixed page size for shop products
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [showAddProduct, setShowAddProduct] = useState(false)
@@ -50,6 +50,35 @@ export default function ShopPage() {
   const [mapLoaded, setMapLoaded] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [savingStock, setSavingStock] = useState({})
+
+  // Function to fetch products with pagination
+  const fetchProductsWithPagination = useCallback(async (page = 0, shopId = null) => {
+    const targetShopId = shopId || shop?.id
+    if (!targetShopId) {
+      return
+    }
+    
+    try {
+      const response = await fetchProductsByShopIdPaginated(targetShopId, page, pageSize)
+      
+      if (response && response.content && response.pagination) {
+        setProducts(response.content)
+        setPagination(response.pagination)
+        setCurrentPage(page)
+      } else {
+        // Fallback to old API if new format not available
+        const fallbackResponse = await fetchProducts({ shopId: targetShopId })
+        const productsData = Array.isArray(fallbackResponse) ? fallbackResponse : (fallbackResponse.content || [])
+        setProducts(productsData)
+        setPagination(null)
+        setCurrentPage(0)
+      }
+    } catch (error) {
+      console.error('Failed to fetch products:', error)
+      setError('Failed to load products: ' + error.message)
+    }
+  }, [shop?.id, pageSize])
+
   const [productForm, setProductForm] = useState({
     title: '',
     description: '',
@@ -69,7 +98,6 @@ export default function ShopPage() {
   const [copiedText, setCopiedText] = useState('')
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showMobileSocials, setShowMobileSocials] = useState(false)
-  const [showFloatingMap, setShowFloatingMap] = useState(false)
   const [businessHours, setBusinessHours] = useState({
     monday: { open: '9:00 AM', close: '6:00 PM', closed: false },
     tuesday: { open: '9:00 AM', close: '6:00 PM', closed: false },
@@ -89,75 +117,6 @@ export default function ShopPage() {
   // Prevent duplicate API calls
   const shopLoadingRef = useRef(false)
 
-  // Floating map scroll effect
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY
-      const mapElement = document.getElementById('shop-map')
-      if (mapElement) {
-        const mapRect = mapElement.getBoundingClientRect()
-        const isMapOutOfView = mapRect.bottom < 0
-        setShowFloatingMap(isMapOutOfView)
-      }
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  // Initialize floating map when it appears
-  useEffect(() => {
-    if (showFloatingMap && shop && mapLoaded) {
-      const initializeFloatingMap = async () => {
-        if (typeof window.L === 'undefined') return
-        
-        try {
-          // Remove existing map if any
-          const existingMap = document.getElementById('floating-shop-map')
-          if (existingMap._leaflet_id) {
-            window.L.map(existingMap).remove()
-          }
-          
-          // Initialize new floating map
-          const floatingMap = window.L.map('floating-shop-map').setView([shop.lat, shop.lng], 15)
-          
-          window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-          }).addTo(floatingMap)
-
-          // Add shop marker (custom icon matching main map)
-          const logoUrl = shop.logoPath ? getImageUrl(shop.logoPath) : ''
-          const floatShopIcon = window.L.divIcon({
-            className: 'shop-marker',
-            html: `
-              <div style="
-                position: relative;
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                border: 3px solid white;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-                overflow: hidden;
-                color: white;">
-                ${logoUrl ? 
-                  `<div style="position:absolute; top:0; left:0; right:0; bottom:0; background-image:url('${logoUrl}'); background-size:cover; background-position:center;"></div>` : 
-                  '<div style="position:absolute; inset:0; background:#6366f1; display:flex; align-items:center; justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M3 9l1-5h16l1 5"/><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/><path d="M8 13h3v3H8z"/></svg></div>'}
-              </div>` ,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
-          })
-          window.L.marker([shop.lat, shop.lng], { icon: floatShopIcon })
-            .addTo(floatingMap)
-            .bindPopup(shop.name)
-        } catch (error) {
-          console.error('Failed to initialize floating map:', error)
-        }
-      }
-
-      // Small delay to ensure DOM is ready
-      setTimeout(initializeFloatingMap, 100)
-    }
-  }, [showFloatingMap, shop, mapLoaded])
 
   // Debug logging for image paths
 
@@ -230,27 +189,23 @@ export default function ShopPage() {
   // Format business hours display
   const formatHoursDisplay = useCallback((hours) => {
     if (!hours || hours.closed === true || hours.isOpen === false) {
-      console.log('formatHoursDisplay: Closed - no hours or explicitly closed')
       return 'Closed'
     }
     
     // Check if it's a 24-hour day
     if (hours.open === '12' && hours.openMinute === '00' && hours.openAMPM === 'AM' &&
         hours.close === '11' && hours.closeMinute === '59' && hours.closeAMPM === 'PM') {
-      console.log('formatHoursDisplay: 24 Hours - new format')
       return '24 Hours'
     }
     
     // Check if it's the old 24-hour format
     if (hours.open === '12' && hours.openMinute === '00' && hours.openAMPM === 'AM' &&
         hours.close === '12' && hours.closeMinute === '00' && hours.closeAMPM === 'AM') {
-      console.log('formatHoursDisplay: 24 Hours - old format')
       return '24 Hours'
     }
     
     // Regular time format
     const display = `${hours.open}:${hours.openMinute || '00'} ${hours.openAMPM || 'AM'} - ${hours.close}:${hours.closeMinute || '00'} ${hours.closeAMPM || 'PM'}`
-    console.log('formatHoursDisplay: Regular hours -', display)
     return display
   }, [])
 
@@ -324,35 +279,37 @@ export default function ShopPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  // Floating mini map removed
+
+  // Center shop location function
+  const centerShopLocation = () => {
+    if (mapInstanceRef.current && shop && shop.lat && shop.lng) {
+      mapInstanceRef.current.setView([shop.lat, shop.lng], 15)
+    }
+  }
+
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
 
   const isOwner = shop && user && shop.owner && shop.owner.id === user.id
 
   useEffect(() => {
-    console.log(`ShopPage: useEffect triggered for shopId: ${shopId}`)
-    
     const loadShopData = async () => {
       // Prevent duplicate API calls
       if (shopLoadingRef.current) {
-        console.log(`ShopPage: Already loading shop ${shopId}, skipping...`)
         return
       }
       shopLoadingRef.current = true
       
-      console.log(`ShopPage: loadShopData function called for shopId: ${shopId}`)
       setError('')
       setLoading(true)
       setMapLoaded(false)
       
       try {
-        console.log(`ShopPage: Loading shop ${shopId}, checking cache first...`)
         // First, check if we have shop data in the global cache
         let shopData = shopCache.get(shopId)
         
         if (shopData) {
-          console.log(`ShopPage: Cache HIT! Using cached data for shop ${shopId}`)
-          
           // Set default values if not present
           shopData.averageRating = shopData.averageRating || 0
           shopData.reviewCount = shopData.reviewCount || 0
@@ -360,9 +317,7 @@ export default function ShopPage() {
           setShop(shopData)
           
           // Only fetch products since they're not cached
-          const productsResponse = await fetchProducts({ shopId: shopData.id })
-          const productsData = Array.isArray(productsResponse) ? productsResponse : (productsResponse.content || [])
-          setProducts(productsData)
+          await fetchProductsWithPagination(0, shopId)
           
           // Load business hours from shop data
           if (shopData.businessHoursJson && shopData.businessHoursJson.trim() !== '') {
@@ -376,20 +331,10 @@ export default function ShopPage() {
           
         } else {
           // No cached data, fetch from API
-          console.log(`ShopPage: Fetching shop ${shopId} from API (cache miss)`)
           const apiShopData = await fetchShopById(shopId)
           
           // Cache the fetched data for future use
           shopCache.set(shopId, apiShopData)
-          console.log(`ShopPage: Cached shop ${shopId} after API fetch`)
-          
-          // Verify cache was set correctly
-          const verifyCache = shopCache.get(shopId)
-          if (verifyCache) {
-            console.log(`ShopPage: Cache verification successful for shop ${shopId}`)
-          } else {
-            console.log(`ShopPage: Cache verification FAILED for shop ${shopId}`)
-          }
           
           // Set default values if not present
           apiShopData.averageRating = apiShopData.averageRating || 0
@@ -398,9 +343,7 @@ export default function ShopPage() {
           setShop(apiShopData)
           
           // Fetch products
-          const productsResponse = await fetchProducts({ shopId: apiShopData.id })
-          const productsData = Array.isArray(productsResponse) ? productsResponse : (productsResponse.content || [])
-          setProducts(productsData)
+          await fetchProductsWithPagination(0, shopId)
           
           // Load business hours from shop data
           if (apiShopData.businessHoursJson && apiShopData.businessHoursJson.trim() !== '') {
@@ -508,7 +451,7 @@ export default function ShopPage() {
         try {
           mapInstanceRef.current.remove()
         } catch (error) {
-          console.log('Map already removed')
+          // Map already removed
         }
         mapInstanceRef.current = null
       }
@@ -543,9 +486,7 @@ export default function ShopPage() {
         stockCount: productForm.stockCount ? parseInt(productForm.stockCount) : 0,
         category: productForm.customCategory || productForm.subcategory || productForm.mainCategory
       }
-      console.log('ShopPage - Creating product with data:', productData)
       const newProduct = await createProduct(productData, token)
-      console.log('ShopPage - Created product response:', newProduct)
       
       // Validate the response
       if (!newProduct || !newProduct.id) {
@@ -597,6 +538,18 @@ export default function ShopPage() {
     setShowEditProduct(true)
   }
 
+  const handleOrderNow = (product) => {
+    // TODO: Implement order now functionality
+    console.log('Order Now clicked for product:', product.title)
+    alert(`Order Now: ${product.title} - ₱${product.price}`)
+  }
+
+  const handleAddToCart = (product) => {
+    // TODO: Implement add to cart functionality
+    console.log('Add to Cart clicked for product:', product.title)
+    alert(`Added to Cart: ${product.title} - ₱${product.price}`)
+  }
+
   const handleUpdateProduct = async (e) => {
     e.preventDefault()
     try {
@@ -605,7 +558,6 @@ export default function ShopPage() {
         category: productForm.customCategory || productForm.subcategory || productForm.mainCategory
       }
       const updatedProduct = await updateProduct(editingProduct.id, productData, token)
-      console.log('Updated product response:', updatedProduct)
       
       // Validate the response
       if (!updatedProduct || !updatedProduct.id) {
@@ -649,8 +601,7 @@ export default function ShopPage() {
       console.error('Failed to update stock:', error)
       setError('Failed to update stock: ' + error.message)
       // Revert the optimistic update
-      const originalProducts = await fetchProducts({ shopId: shop.id })
-      setProducts(Array.isArray(originalProducts) ? originalProducts : (originalProducts.content || []))
+      await fetchProductsWithPagination(currentPage)
     }
   }
 
@@ -686,8 +637,7 @@ export default function ShopPage() {
         console.error('Failed to update stock:', error)
         setError('Failed to update stock: ' + error.message)
         // Revert the optimistic update
-        const originalProducts = await fetchProducts({ shopId: shop.id })
-        setProducts(Array.isArray(originalProducts) ? originalProducts : (originalProducts.content || []))
+        await fetchProductsWithPagination(currentPage)
         // Clear the timer reference and saving state
         delete stockDebounceTimers.current[productId]
         setSavingStock(prev => ({ ...prev, [productId]: false }))
@@ -696,10 +646,14 @@ export default function ShopPage() {
   }
 
   if (loading) {
+    const shopNameFromSlug = extractShopNameFromSlug(slug)
+    const loadingTitle = shopNameFromSlug || "Shop"
+    
     return (
       <>
         <SEOHead 
-          title="Loading Shop"
+          key={`loading-${shopId}`}
+          title={loadingTitle}
           description="Loading shop information..."
         />
         <main className="container shop-page-container">
@@ -737,12 +691,8 @@ export default function ShopPage() {
           {/* Products Section Skeleton */}
           <section className="card" style={{ marginTop: '2rem' }}>
             <SkeletonText lines={1} height="1.5rem" style={{ marginBottom: '1rem' }} />
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-              gap: '1rem'
-            }}>
-              {Array.from({ length: 6 }).map((_, index) => (
+            <div className="products-grid-full-width">
+              {Array.from({ length: 8 }).map((_, index) => (
                 <SkeletonProductCard key={index} />
               ))}
             </div>
@@ -780,6 +730,7 @@ export default function ShopPage() {
   return (
     <>
       <SEOHead 
+        key={`shop-${shop.id}`}
         title={shop.name}
         description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products, contact information, and location. Support local businesses on LocalsLocalMarket.`}
         keywords={`${shop.name}, local shop, ${shop.addressLine ? shop.addressLine.split(',')[0] : 'local business'}, local products, shop local`}
@@ -823,7 +774,7 @@ export default function ShopPage() {
             <div className="shop-header-content">
               <div className="shop-info-section">
 
-                <Avatar src={getImageUrl(shop.logoPath)} alt={shop.name} size={200} fallback="🏪" />
+                <Avatar src={getImageUrl(shop.logoPath)} alt={shop.name} size={200} fallback={<Store size={80} />} />
                 <div className="shop-details">
                   <div className="shop-name-section">
                     <h1 className="shop-name">{shop.name}</h1>
@@ -861,14 +812,14 @@ export default function ShopPage() {
                       <div className="location-content-wrapper">
                         <div className="location-info">
                           <div className="location-header">
-                            <span className="location-icon">📍</span>
+                            <span className="location-icon"><MapPin size={16} /></span>
                             <span className="location-label">Location</span>
                             <button 
                               className="copy-btn"
                               onClick={() => copyToClipboard(shop.addressLine, 'Address')}
                               title="Copy address"
                             >
-                              {copiedText === 'Address' ? '✓' : '📋'}
+                              {copiedText === 'Address' ? <Check size={16} /> : <Copy size={16} />}
                             </button>
                           </div>
                           <p className="shop-address">
@@ -925,7 +876,7 @@ export default function ShopPage() {
                               className="contact-btn phone-btn"
                               onClick={() => handleCopyToClipboard(shop.phone, 'Phone number copied!')}
                             >
-                              📞 {shop.phone}
+                              <Phone size={16} /> {shop.phone}
                             </button>
                             {shop.email && (
                               <button 
@@ -942,7 +893,7 @@ export default function ShopPage() {
                                 rel="noopener noreferrer"
                                 className="contact-btn website-btn"
                               >
-                                🌐 Visit Website
+                                <Globe size={16} /> Visit Website
                               </a>
                             )}
                           </div>
@@ -978,7 +929,7 @@ export default function ShopPage() {
                     className="btn btn-primary"
                     onClick={() => window.location.href = '/dashboard'}
                   >
-                    <span className="btn-icon">📊</span>
+                    <span className="btn-icon"><BarChart3 size={16} /></span>
                     Go to Dashboard
                   </button>
                   {process.env.NODE_ENV === 'development' && (
@@ -1001,7 +952,7 @@ export default function ShopPage() {
                 <div className="shop-contact-details">
                   {shop.phone && (
                     <div className="contact-item">
-                      <span className="contact-icon">📞</span>
+                      <span className="contact-icon"><Phone size={16} /></span>
                       <a 
                         href={`tel:${shop.phone}`}
                         className="contact-link"
@@ -1013,7 +964,7 @@ export default function ShopPage() {
                         onClick={() => copyToClipboard(shop.phone, 'Phone')}
                         title="Copy phone number"
                       >
-                        {copiedText === 'Phone' ? '✓' : '📋'}
+                        {copiedText === 'Phone' ? <Check size={16} /> : <Copy size={16} />}
                       </button>
                     </div>
                   )}
@@ -1030,7 +981,7 @@ export default function ShopPage() {
                   )}
                   {shop.website && (
                     <div className="contact-item">
-                      <span className="contact-icon">🌐</span>
+                      <span className="contact-icon"><Globe size={16} /></span>
                       <a 
                         href={shop.website} 
                         target="_blank" 
@@ -1103,7 +1054,17 @@ export default function ShopPage() {
           {/* Shop Location Map */}
           {shop.lat && shop.lng && (
             <section className="card shop-map-section">
-              <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Location</h3>
+              <div className="map-header">
+                <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Location</h3>
+                <button 
+                  className="center-location-btn"
+                  onClick={centerShopLocation}
+                  title="Center on shop location"
+                  disabled={!mapLoaded}
+                >
+                  <Crosshair size={16} />
+                </button>
+              </div>
               <div 
                 ref={mapRef}
                 id="shop-map"
@@ -1196,7 +1157,7 @@ export default function ShopPage() {
             <div className="controls-left">
               <div className="search-sort-row">
                 <div className="search-container">
-                  <div className="search-icon">🔍</div>
+                  <div className="search-icon"><Search size={16} /></div>
                   <input
                     type="text"
                     placeholder="Search products..."
@@ -1239,7 +1200,7 @@ export default function ShopPage() {
                   onClick={() => setShowPriceFilter(!showPriceFilter)}
                   type="button"
                 >
-                  <span className="toggle-icon">💰</span>
+                  <span className="toggle-icon"><DollarSign size={16} /></span>
                   Price
                   {(priceRange.min || priceRange.max) && <span className="active-indicator">•</span>}
                 </button>
@@ -1249,7 +1210,7 @@ export default function ShopPage() {
                   onClick={() => setShowStockFilter(!showStockFilter)}
                   type="button"
                 >
-                  <span className="toggle-icon">📦</span>
+                  <span className="toggle-icon"><Package size={16} /></span>
                   Stock
                   {stockFilter !== 'all' && <span className="active-indicator">•</span>}
                 </button>
@@ -1413,7 +1374,7 @@ export default function ShopPage() {
 
         {(!Array.isArray(products) || products.length === 0) ? (
           <div className="card no-products-card">
-            <div className="no-products-icon">📦</div>
+            <div className="no-products-icon"><Package size={48} /></div>
             <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No products yet</h3>
             <p className="muted" style={{ marginBottom: '1rem' }}>
               {isOwner ? 'Start selling by adding your first product' : 'This shop hasn\'t added any products yet'}
@@ -1430,15 +1391,9 @@ export default function ShopPage() {
         ) : (
           <div className="products-grid-full-width">
             {getSortedProducts().map((product) => (
-                              <article 
+                <article 
                   key={product.id} 
                   className="card product-card"
-                  onMouseEnter={(e) => {
-                    e.currentTarget.querySelector('.product-quick-view')?.classList.add('show')
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.querySelector('.product-quick-view')?.classList.remove('show')
-                  }}
                 >
                   <div className="product-image-container">
                   {(() => {
@@ -1460,7 +1415,7 @@ export default function ShopPage() {
                             loading="lazy"
                           />
                           <div className="product-image-placeholder" style={{ display: 'none' }}>
-                            📷
+                            <Camera size={24} />
                           </div>
                         </>
                       );
@@ -1468,102 +1423,111 @@ export default function ShopPage() {
                     
                     return (
                       <div className="product-image-placeholder">
-                        📷
+                        <Camera size={24} />
                       </div>
                     );
                   })()}
+                  {product.description && product.description.trim() && (
+                    <div className="product-description-hover">
+                      <div className="description-trigger">
+                        <Info size={16} />
+                      </div>
+                      <div className="description-tooltip">
+                        {product.description}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="product-content">
                   <div className="product-title">{product.title}</div>
-                  <div className="product-price">
-                    ₱{product.price ? Number(product.price).toFixed(2) : '0.00'}
-                  </div>
-                  {product.category && (
-                    <div className="product-category">
-                      <span className="category-tag">{product.category}</span>
-                    </div>
-                  )}
-                  {(product.mainCategory || product.subcategory || product.customCategory) && (
-                    <div className="product-category">
-                      <span className="category-tag">
-                        {product.customCategory || product.subcategory || product.mainCategory}
-                      </span>
-                    </div>
-                  )}
-                                      <div className="product-stock">
-                      {product.stockCount > 0 ? (
-                        <span className="stock-in-stock">In Stock: {product.stockCount}</span>
-                      ) : (
-                        <span className="stock-out-of-stock">Out of Stock</span>
-                      )}
-                      {isOwner && (
-                        <div className="stock-controls">
-                          <button 
-                            className="stock-btn stock-minus"
-                            onClick={() => handleStockChange(product.id, -1)}
-                            title="Decrease stock by 1"
-                          >
-                            -
-                          </button>
-                          <input
-                            type="number"
-                            className={`stock-input ${savingStock[product.id] ? 'saving' : ''}`}
-                            value={product.stockCount || 0}
-                            onChange={(e) => handleStockInputChange(product.id, e.target.value)}
-                            min="0"
-                            title={savingStock[product.id] ? "Saving..." : "Edit stock count"}
-                          />
-                          {savingStock[product.id] && (
-                            <div className="stock-saving-indicator">
-                              <div className="saving-spinner"></div>
-                            </div>
-                          )}
-                          <button 
-                            className="stock-btn stock-plus"
-                            onClick={() => handleStockChange(product.id, 1)}
-                            title="Increase stock by 1"
-                          >
-                            +
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  {product.description && (
-                    <p className="product-description">
-                      {product.description.length > 60 
-                        ? product.description.substring(0, 60) + '...' 
-                        : product.description
-                      }
-                    </p>
-                  )}
                   
-                  {/* Quick View Tooltip */}
-                  <div className="product-quick-view">
-                    <div className="quick-view-content">
-                      <h4>{product.title}</h4>
-                      <p className="quick-view-price">₱{product.price ? Number(product.price).toFixed(2) : '0.00'}</p>
-                      {product.description && (
-                        <p className="quick-view-description">{product.description}</p>
-                      )}
-                      {product.category && (
-                        <span className="quick-view-category">{product.category}</span>
-                      )}
-                      {(product.mainCategory || product.subcategory || product.customCategory) && (
-                        <span className="quick-view-category">
-                          {product.customCategory || product.subcategory || product.mainCategory}
+                  <div className="product-price-stock">
+                    <div className="product-price">
+                      ₱{product.price ? Number(product.price).toFixed(2) : '0.00'}
+                    </div>
+                    <div className="product-stock-compact">
+                      {product.stockCount > 0 ? (
+                        <span className="stock-in-stock-compact">
+                          <Check size={12} />
+                          Stock: {product.stockCount}
+                        </span>
+                      ) : (
+                        <span className="stock-out-of-stock-compact">
+                          <span className="stock-x">✗</span>
+                          Out
                         </span>
                       )}
-                      <div className="quick-view-stock">
-                        {product.stockCount > 0 ? (
-                          <span className="stock-in-stock">In Stock: {product.stockCount}</span>
-                        ) : (
-                          <span className="stock-out-of-stock">Out of Stock</span>
-                        )}
-                      </div>
                     </div>
                   </div>
+
+                  <div className="product-category-section">
+                    {(() => {
+                      const category = product.category || product.customCategory || product.subcategory || product.mainCategory;
+                      return category ? (
+                        <span className="category-tag">{category}</span>
+                      ) : (
+                        <span className="no-category">No category</span>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="product-reviews-section">
+                    <div className="product-rating">
+                      {product.averageRating && product.reviewCount > 0 ? (
+                        <>
+                          <Star size={12} className="star-icon" />
+                          <span className="rating-text">{product.averageRating.toFixed(1)}</span>
+                          <span className="rating-count">({product.reviewCount})</span>
+                        </>
+                      ) : (
+                        <span className="no-reviews">No reviews</span>
+                      )}
+                    </div>
+                    
+                    <div className="review-actions">
+                      <button className="review-btn thumbs-up" title="Like this product">
+                        <ThumbsUp size={14} />
+                      </button>
+                      <button className="review-btn thumbs-down" title="Dislike this product">
+                        <ThumbsDown size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {isOwner && (
+                    <div className="stock-controls">
+                      <button 
+                        className="stock-btn stock-minus"
+                        onClick={() => handleStockChange(product.id, -1)}
+                        title="Decrease stock by 1"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        className={`stock-input ${savingStock[product.id] ? 'saving' : ''}`}
+                        value={product.stockCount || 0}
+                        onChange={(e) => handleStockInputChange(product.id, e.target.value)}
+                        min="0"
+                        title={savingStock[product.id] ? "Saving..." : "Edit stock count"}
+                      />
+                      {savingStock[product.id] && (
+                        <div className="stock-saving-indicator">
+                          <div className="saving-spinner"></div>
+                        </div>
+                      )}
+                      <button 
+                        className="stock-btn stock-plus"
+                        onClick={() => handleStockChange(product.id, 1)}
+                        title="Increase stock by 1"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
+                  
                   <div className="product-actions">
-                    {isOwner && (
+                    {isOwner ? (
                       <>
                         <button 
                           className="btn btn-secondary btn-sm"
@@ -1576,15 +1540,69 @@ export default function ShopPage() {
                           className="btn btn-danger btn-sm"
                           onClick={() => handleDeleteProduct(product.id)}
                         >
-                          <span className="btn-icon">🗑️</span>
+                          <span className="btn-icon"><Trash2 size={16} /></span>
                           Delete
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button 
+                          className="btn btn-primary btn-sm order-now-btn"
+                          onClick={() => handleOrderNow(product)}
+                        >
+                          <ShoppingCart size={20} />
+                          Order Now
+                        </button>
+                        <button 
+                          className="btn btn-outline btn-sm add-to-cart-btn"
+                          onClick={() => handleAddToCart(product)}
+                        >
+                          <Plus size={20} />
+                          Add to Cart
                         </button>
                       </>
                     )}
                   </div>
                                   </div>
                 </article>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {pagination && pagination.totalPages > 1 && (
+          <div className="pagination-controls">
+            <div className="pagination-info">
+              Showing {pagination.startIndex || 1} to {pagination.endIndex || pagination.numberOfElements} of {pagination.totalElements} products
+            </div>
+            <div className="pagination-buttons">
+              <button 
+                className="pagination-btn"
+                onClick={() => fetchProductsWithPagination(currentPage - 1)}
+                disabled={!pagination.hasPrevious}
+              >
+                Previous
+              </button>
+              
+              {/* Page numbers */}
+              {pagination.getPageRange(5).map(pageNum => (
+                <button
+                  key={pageNum}
+                  className={`pagination-btn ${pageNum === pagination.displayPage ? 'active' : ''}`}
+                  onClick={() => fetchProductsWithPagination(pageNum - 1)}
+                >
+                  {pageNum}
+                </button>
               ))}
+              
+              <button 
+                className="pagination-btn"
+                onClick={() => fetchProductsWithPagination(currentPage + 1)}
+                disabled={!pagination.hasNext}
+              >
+                Next
+              </button>
+            </div>
           </div>
         )}
          
@@ -1857,23 +1875,7 @@ export default function ShopPage() {
         </form>
       </Modal>
 
-      {/* Floating Map */}
-      {showFloatingMap && (
-        <div className="floating-map">
-          <div className="floating-map-header">
-            <span>📍 {shop.name}</span>
-            <button 
-              className="floating-map-close"
-              onClick={() => setShowFloatingMap(false)}
-            >
-              ✕
-            </button>
-          </div>
-          <div className="floating-map-content">
-            <div id="floating-shop-map"></div>
-          </div>
-        </div>
-      )}
+      {/* Floating mini map and minimizer removed */}
 
       {/* Back to Top Button */}
       {showBackToTop && (

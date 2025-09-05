@@ -1,9 +1,29 @@
 import React from 'react';
+import SEOHead from '../components/SEOHead.jsx';
 import '../terms.css';
 
 const TermsPage = () => {
   return (
-    <main className="terms-container">
+    <>
+      <SEOHead 
+        title="Terms of Service - LocalsLocalMarket"
+        description="Read LocalsLocalMarket's terms of service to understand the rules and guidelines for using our local business marketplace platform. Learn about user responsibilities, platform policies, and service agreements."
+        keywords="terms of service, user agreement, platform rules, marketplace terms, service agreement, user responsibilities, platform policies, legal terms"
+        url="https://localslocalmarket.com/terms"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": "Terms of Service - LocalsLocalMarket",
+          "description": "Terms of service for using the LocalsLocalMarket platform",
+          "url": "https://localslocalmarket.com/terms",
+          "isPartOf": {
+            "@type": "WebSite",
+            "name": "LocalsLocalMarket",
+            "url": "https://localslocalmarket.com"
+          }
+        }}
+      />
+      <main className="terms-container">
       {/* Hero Section */}
       <section className="terms-header">
         <h1 className="terms-title">Terms of Service</h1>
@@ -248,7 +268,8 @@ const TermsPage = () => {
       <div className="last-updated">
         <p>Last updated: December 2024</p>
       </div>
-    </main>
+      </main>
+    </>
   );
 };
 

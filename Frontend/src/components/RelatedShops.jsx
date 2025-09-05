@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchShops } from '../api/shops.js'
 import { generateShopUrl } from '../utils/slugUtils.js'
+import { MapPin } from 'lucide-react'
 
 const RelatedShops = ({ currentShop, limit = 4 }) => {
   const [relatedShops, setRelatedShops] = useState([])
@@ -111,7 +112,7 @@ const RelatedShops = ({ currentShop, limit = 4 }) => {
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap'
                 }}>
-                  📍 {shop.addressLine}
+                  <MapPin size={14} /> {shop.addressLine}
                 </p>
               )}
               

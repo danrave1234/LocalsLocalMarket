@@ -14,7 +14,7 @@ import { uploadImage } from '../api/products.js'
 import { getImageUrl } from '../utils/imageUtils.js'
 import { extractShopIdFromSlug } from '../utils/slugUtils.js'
 import { useAuth } from '../auth/AuthContext.jsx'
-import { Search, ChevronLeft, ChevronRight, Filter } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, Filter, Package } from 'lucide-react'
 import './ProductManagementPage.css'
 
 export default function ProductManagementPage() {
@@ -449,7 +449,7 @@ export default function ProductManagementPage() {
             <div className="products-management-container">
                 {(!Array.isArray(filteredProducts) || filteredProducts.length === 0) ? (
                     <div className="no-products-state">
-                        <div className="no-products-icon">📦</div>
+                        <div className="no-products-icon"><Package size={48} /></div>
                         <h3>
                             {searchQuery || categoryFilter !== 'all' 
                                 ? 'No products found' 

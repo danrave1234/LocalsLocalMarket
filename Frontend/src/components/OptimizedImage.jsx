@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import './OptimizedImage.css'
+import { Camera } from 'lucide-react'
 
 /**
  * Optimized image component with lazy loading, error handling, and loading states
@@ -73,7 +74,7 @@ const OptimizedImage = ({
       
       {hasError && imageSrc === fallbackSrc && (
         <div className="image-error">
-          <div className="error-icon">📷</div>
+          <div className="error-icon"><Camera size={24} /></div>
           <span>Image unavailable</span>
         </div>
       )}

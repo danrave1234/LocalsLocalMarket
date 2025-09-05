@@ -1,5 +1,5 @@
 import React from 'react';
-import { HeartHandshake, Home, Store, Info, Mail, HelpCircle, ShieldCheck, Cookie, FileText } from 'lucide-react';
+import { HeartHandshake, Home, Store, Info, HelpCircle, ShieldCheck, Cookie, FileText } from 'lucide-react';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -46,11 +46,10 @@ const Footer = () => {
                 Quick Links
               </summary>
               <ul className="footer-links-list">
-                <li><a href="/" className="footer-link"><Home aria-hidden size={16} style={{marginRight: 8}} />Home</a></li>
-                <li><a href="/shops" className="footer-link"><Store aria-hidden size={16} style={{marginRight: 8}} />Browse Shops</a></li>
-                <li><a href="/about" className="footer-link"><Info aria-hidden size={16} style={{marginRight: 8}} />About Us</a></li>
-                <li><a href="/contact" className="footer-link"><Mail aria-hidden size={16} style={{marginRight: 8}} />Contact</a></li>
-                <li><a href="/donate" className="footer-link special"><HeartHandshake aria-hidden size={16} style={{marginRight: 8}} />Support Us</a></li>
+                <li><a href="/" className="footer-link"><Home aria-hidden />Home</a></li>
+                <li><a href="/shops" className="footer-link"><Store aria-hidden />Browse Shops</a></li>
+                <li><a href="/about" className="footer-link"><Info aria-hidden />About Us</a></li>
+                <li><a href="/donate" className="footer-link special"><HeartHandshake aria-hidden />Support Us</a></li>
               </ul>
             </details>
 
@@ -63,10 +62,10 @@ const Footer = () => {
                 For Businesses
               </summary>
               <ul className="footer-links-list">
-                <li><a href="/register" className="footer-link"><Store aria-hidden size={16} style={{marginRight: 8}} />Register Shop</a></li>
-                <li><a href="/dashboard" className="footer-link"><FileText aria-hidden size={16} style={{marginRight: 8}} />Seller Dashboard</a></li>
-                <li><a href="/support" className="footer-link"><HelpCircle aria-hidden size={16} style={{marginRight: 8}} />Support</a></li>
-                <li><a href="/help" className="footer-link"><HelpCircle aria-hidden size={16} style={{marginRight: 8}} />Help & FAQ</a></li>
+                <li><a href="/register" className="footer-link"><Store aria-hidden />Register Shop</a></li>
+                <li><a href="/dashboard" className="footer-link"><FileText aria-hidden />Seller Dashboard</a></li>
+                <li><a href="/support" className="footer-link"><HelpCircle aria-hidden />Support</a></li>
+                <li><a href="/help" className="footer-link"><HelpCircle aria-hidden />Help & FAQ</a></li>
               </ul>
             </details>
 
@@ -79,10 +78,10 @@ const Footer = () => {
                 Legal
               </summary>
               <ul className="footer-links-list">
-                <li><a href="/privacy" className="footer-link"><ShieldCheck aria-hidden size={16} style={{marginRight: 8}} />Privacy Policy</a></li>
-                <li><a href="/terms" className="footer-link"><FileText aria-hidden size={16} style={{marginRight: 8}} />Terms of Service</a></li>
-                <li><a href="/cookies" className="footer-link"><Cookie aria-hidden size={16} style={{marginRight: 8}} />Cookie Policy</a></li>
-                <li><a href="/gdpr" className="footer-link"><ShieldCheck aria-hidden size={16} style={{marginRight: 8}} />GDPR</a></li>
+                <li><a href="/privacy" className="footer-link"><ShieldCheck aria-hidden />Privacy Policy</a></li>
+                <li><a href="/terms" className="footer-link"><FileText aria-hidden />Terms of Service</a></li>
+                <li><a href="/cookies" className="footer-link"><Cookie aria-hidden />Cookie Policy</a></li>
+                <li><a href="/gdpr" className="footer-link"><ShieldCheck aria-hidden />GDPR</a></li>
               </ul>
             </details>
           </div>

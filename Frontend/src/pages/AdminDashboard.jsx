@@ -5,6 +5,7 @@ import SEOHead from '../components/SEOHead.jsx'
 import AdminCategoryManager from '../components/AdminCategoryManager.jsx'
 import { fetchDashboardStats, fetchRecentActivity } from '../api/admin.js'
 import '../components/AdminDashboard.css'
+import { BarChart3, Users, Package, Tags, TrendingUp, Bell, Clipboard, UserPlus, User, Map } from 'lucide-react'
 
 // Inline icon components to match landing page consistency
 function StoreIcon(props) {
@@ -105,12 +106,12 @@ export default function AdminDashboard() {
     }
 
     const tabs = [
-        { id: 'overview', label: 'Overview', icon: '📊' },
-        { id: 'users', label: 'User Management', icon: '👥' },
+        { id: 'overview', label: 'Overview', icon: <BarChart3 size={16} /> },
+        { id: 'users', label: 'User Management', icon: <Users size={16} /> },
         { id: 'shops', label: 'Shop Management', icon: <StoreIcon width={16} height={16} /> },
-        { id: 'products', label: 'Product Management', icon: '📦' },
-        { id: 'categories', label: 'Category Management', icon: '🏷️' },
-        { id: 'reports', label: 'Reports & Analytics', icon: '📈' },
+        { id: 'products', label: 'Product Management', icon: <Package size={16} /> },
+        { id: 'categories', label: 'Category Management', icon: <Tags size={16} /> },
+        { id: 'reports', label: 'Reports & Analytics', icon: <TrendingUp size={16} /> },
         { id: 'settings', label: 'System Settings', icon: '⚙️' }
     ]
 
@@ -149,10 +150,10 @@ export default function AdminDashboard() {
                     </div>
                     <div className="admin-header-actions">
                         <button className="btn btn-secondary">
-                            📊 Export Data
+                            <BarChart3 size={16} /> Export Data
                         </button>
                         <button className="btn btn-primary">
-                            🔔 Notifications
+                            <Bell size={16} /> Notifications
                         </button>
                     </div>
                 </div>
@@ -197,7 +198,7 @@ function OverviewTab({ stats, loading, recentActivity }) {
                 <>
                     <div className="stats-grid">
                         <div className="stat-card">
-                            <div className="stat-icon">👥</div>
+                            <div className="stat-icon"><Users size={24} /></div>
                             <div className="stat-content">
                                 <h3>{stats.totalUsers.toLocaleString()}</h3>
                                 <p>Total Users</p>
@@ -215,7 +216,7 @@ function OverviewTab({ stats, loading, recentActivity }) {
                         </div>
 
                         <div className="stat-card">
-                            <div className="stat-icon">📦</div>
+                            <div className="stat-icon"><Package size={24} /></div>
                             <div className="stat-content">
                                 <h3>{stats.totalProducts.toLocaleString()}</h3>
                                 <p>Total Products</p>
@@ -224,7 +225,7 @@ function OverviewTab({ stats, loading, recentActivity }) {
                         </div>
 
                         <div className="stat-card">
-                            <div className="stat-icon">📈</div>
+                            <div className="stat-icon"><TrendingUp size={24} /></div>
                             <div className="stat-content">
                                 <h3>{stats.totalSales}</h3>
                                 <p>Total Sales</p>
@@ -240,7 +241,7 @@ function OverviewTab({ stats, loading, recentActivity }) {
                                 {recentActivity.length > 0 ? (
                                     recentActivity.map((activity, index) => (
                                         <div key={index} className="activity-item">
-                                            <div className="activity-icon">{activity.icon || '📋'}</div>
+                                            <div className="activity-icon">{activity.icon || <Clipboard size={16} />}</div>
                                             <div className="activity-content">
                                                 <p>{activity.message}</p>
                                                 <small>{new Date(activity.timestamp).toLocaleString()}</small>
@@ -249,7 +250,7 @@ function OverviewTab({ stats, loading, recentActivity }) {
                                     ))
                                 ) : (
                                     <div className="activity-item">
-                                        <div className="activity-icon">📋</div>
+                                        <div className="activity-icon"><Clipboard size={16} /></div>
                                         <div className="activity-content">
                                             <p>No recent activity</p>
                                             <small>Activity will appear here</small>
@@ -263,16 +264,16 @@ function OverviewTab({ stats, loading, recentActivity }) {
                             <h3>Quick Actions</h3>
                             <div className="quick-actions">
                                 <button className="btn btn-secondary">
-                                    👥 Review Pending Users
+                                    <Users size={16} /> Review Pending Users
                                 </button>
                                 <button className="btn btn-secondary">
                                     <StoreIcon width={16} height={16} /> Approve Shops
                                 </button>
                                 <button className="btn btn-secondary">
-                                    📦 Check Low Stock
+                                    <Package size={16} /> Check Low Stock
                                 </button>
                                 <button className="btn btn-secondary">
-                                    📊 Generate Report
+                                    <BarChart3 size={16} /> Generate Report
                                 </button>
                             </div>
                         </div>
@@ -304,7 +305,7 @@ function UserManagementTab() {
                         className="input"
                     />
                     <button className="btn btn-primary">
-                        👥 Add User
+                        <UserPlus size={16} /> Add User
                     </button>
                 </div>
             </div>
@@ -315,7 +316,7 @@ function UserManagementTab() {
                 <div className="user-list">
                     <div className="user-item">
                         <div className="user-info">
-                            <div className="user-avatar">👤</div>
+                            <div className="user-avatar"><User size={20} /></div>
                             <div className="user-details">
                                 <h4>John Doe</h4>
                                 <p>john.doe@example.com</p>
@@ -387,7 +388,7 @@ function ProductManagementTab() {
                         className="input"
                     />
                     <button className="btn btn-primary">
-                        📦 View All Products
+                        <Package size={16} /> View All Products
                     </button>
                 </div>
             </div>
@@ -435,10 +436,10 @@ function ReportsTab() {
                 <h2>Reports & Analytics</h2>
                 <div className="tab-actions">
                     <button className="btn btn-secondary">
-                        📊 Generate Report
+                        <BarChart3 size={16} /> Generate Report
                     </button>
                     <button className="btn btn-primary">
-                        📈 View Analytics
+                        <TrendingUp size={16} /> View Analytics
                     </button>
                 </div>
             </div>
@@ -447,25 +448,25 @@ function ReportsTab() {
                 <div className="report-card">
                     <h3>User Growth</h3>
                     <div className="report-chart">
-                        📈 Chart placeholder
+                        <TrendingUp size={24} /> Chart placeholder
                     </div>
                 </div>
                 <div className="report-card">
                     <h3>Sales Analytics</h3>
                     <div className="report-chart">
-                        📊 Chart placeholder
+                        <BarChart3 size={24} /> Chart placeholder
                     </div>
                 </div>
                 <div className="report-card">
                     <h3>Popular Categories</h3>
                     <div className="report-chart">
-                        🏷️ Chart placeholder
+                        <Tags size={24} /> Chart placeholder
                     </div>
                 </div>
                 <div className="report-card">
                     <h3>Geographic Distribution</h3>
                     <div className="report-chart">
-                        🗺️ Chart placeholder
+                        <Map size={24} /> Chart placeholder
                     </div>
                 </div>
             </div>

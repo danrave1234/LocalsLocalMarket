@@ -31,6 +31,7 @@ const HelpPage = lazy(() => import("./pages/HelpPage.jsx"))
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"))
 const ProductManagementPage = lazy(() => import("./pages/ProductManagementPage.jsx"))
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage.jsx"))
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage.jsx"))
 
 function App() {
   return (
@@ -106,7 +107,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>
           </ErrorBoundary>

@@ -1,10 +1,34 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import SEOHead from '../components/SEOHead.jsx';
 import '../about-us.css';
+import { User, Code, Palette } from 'lucide-react';
 
 const AboutPage = () => {
   return (
-    <main className="about-us-container">
+    <>
+      <SEOHead 
+        title="About Us - LocalsLocalMarket"
+        description="Learn about LocalsLocalMarket's mission to connect local businesses with their communities. Discover how we're empowering local commerce and building stronger communities through innovative marketplace solutions."
+        keywords="about us, local business platform, community marketplace, local commerce, supporting local businesses, marketplace mission, local economy"
+        url="https://localslocalmarket.com/about"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "AboutPage",
+          "name": "About LocalsLocalMarket",
+          "description": "Learn about LocalsLocalMarket's mission to connect local businesses with their communities",
+          "url": "https://localslocalmarket.com/about",
+          "mainEntity": {
+            "@type": "Organization",
+            "name": "LocalsLocalMarket",
+            "description": "A platform connecting local businesses with customers in the community",
+            "url": "https://localslocalmarket.com",
+            "foundingDate": "2024",
+            "mission": "To create a vibrant digital marketplace that strengthens the connection between local businesses and their communities"
+          }
+        }}
+      />
+      <main className="about-us-container">
       {/* Hero Section */}
       <section className="about-us-header">
         <h1 className="about-us-title">About Our Mission</h1>
@@ -60,7 +84,7 @@ const AboutPage = () => {
       <section className="about-us-team">
         <h2 className="about-us-section-title">Our Team</h2>
         <div className="team-member">
-          <div className="team-member-avatar">👨‍💼</div>
+          <div className="team-member-avatar"><User size={32} /></div>
           <h3 className="team-member-name">John Smith</h3>
           <p className="team-member-role">CEO & Founder</p>
           <p className="team-member-bio">
@@ -68,7 +92,7 @@ const AboutPage = () => {
           </p>
         </div>
         <div className="team-member">
-          <div className="team-member-avatar">👩‍💻</div>
+          <div className="team-member-avatar"><Code size={32} /></div>
           <h3 className="team-member-name">Sarah Johnson</h3>
           <p className="team-member-role">CTO</p>
           <p className="team-member-bio">
@@ -76,7 +100,7 @@ const AboutPage = () => {
           </p>
         </div>
         <div className="team-member">
-          <div className="team-member-avatar">👨‍🎨</div>
+          <div className="team-member-avatar"><Palette size={32} /></div>
           <h3 className="team-member-name">Mike Chen</h3>
           <p className="team-member-role">Head of Design</p>
           <p className="team-member-bio">
@@ -118,7 +142,8 @@ const AboutPage = () => {
           </svg>
         </Link>
       </section>
-    </main>
+      </main>
+    </>
   );
 };
 

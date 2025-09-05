@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowUp } from 'lucide-react'
+import { ArrowUp, MapPin, Image } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Modal from '../components/Modal.jsx'
 import CategorySelector from '../components/CategorySelector.jsx'
@@ -13,6 +13,7 @@ import {
     deleteShopRequest as deleteShop,
     fetchCategories
 } from '../api/shops.js'
+import categoriesCache from '../utils/categoriesCache.js'
 import { uploadImage } from '../api/products.js'
 import { getImageUrl } from '../utils/imageUtils.js'
 import { handleApiError } from '../utils/errorHandler.js'
@@ -81,8 +82,22 @@ export default function DashboardPage() {
 
     const fetchCategoriesData = async () => {
         try {
+            // Check cache first
+            const cachedCategories = categoriesCache.get()
+            if (cachedCategories && cachedCategories.length > 0) {
+                console.log('DashboardPage: Using cached categories')
+                setCategories(cachedCategories)
+                return
+            }
+            
+            // Fetch from API if not cached
+            console.log('DashboardPage: Loading categories from API...')
             const data = await fetchCategories()
-            setCategories(data.categories || [])
+            const categoriesData = data.categories || []
+            
+            // Cache the categories
+            categoriesCache.set(categoriesData)
+            setCategories(categoriesData)
         } catch (error) {
             console.error('Failed to fetch categories:', error)
         }
@@ -380,7 +395,7 @@ export default function DashboardPage() {
                                 )}
                                 {shop.addressLine && (
                                     <p className="shop-address">
-                                        📍 {shop.addressLine}
+                                        <MapPin size={14} /> {shop.addressLine}
                                     </p>
                                 )}
                                 <p className="shop-description">
@@ -601,7 +616,7 @@ export default function DashboardPage() {
                                         )}
                                         {shopForm.addressLine && (
                                             <p className="shop-preview-address">
-                                                📍 {shopForm.addressLine}
+                                                <MapPin size={14} /> {shopForm.addressLine}
                                             </p>
                                         )}
                                     </div>
@@ -698,7 +713,7 @@ export default function DashboardPage() {
                                             alt="Current cover" 
                                         />
                                     ) : (
-                                        <div className="default">🖼️</div>
+                                        <div className="default"><Image size={24} /></div>
                                     )}
                                 </div>
                                 <div className="upload-controls">
@@ -859,7 +874,7 @@ export default function DashboardPage() {
                                                 alt="Shop Cover" 
                                             />
                                         ) : (
-                                            <div className="default">🖼️</div>
+                                            <div className="default"><Image size={24} /></div>
                                         )}
                                     </div>
                                     <div className="upload-controls">
@@ -1064,7 +1079,7 @@ export default function DashboardPage() {
                                         )}
                                         {shopForm.addressLine && (
                                             <p className="shop-preview-address">
-                                                📍 {shopForm.addressLine}
+                                                <MapPin size={14} /> {shopForm.addressLine}
                                             </p>
                                         )}
                                     </div>

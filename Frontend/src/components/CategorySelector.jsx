@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { fetchAllCategories, getSubcategoriesForMain } from '../api/categories.js'
+import categoriesCache from '../utils/categoriesCache.js'
 
 const CategorySelector = ({ 
     value, 
@@ -42,7 +43,22 @@ const CategorySelector = ({
     const loadCategories = async () => {
         try {
             setLoading(true)
+            
+            // Check cache first
+            const cachedCategories = categoriesCache.get()
+            if (cachedCategories && cachedCategories.length > 0) {
+                console.log('CategorySelector: Using cached categories')
+                setCategories(cachedCategories)
+                setLoading(false)
+                return
+            }
+            
+            // Fetch from API if not cached
+            console.log('CategorySelector: Loading categories from API...')
             const data = await fetchAllCategories()
+            
+            // Cache the categories
+            categoriesCache.set(data)
             setCategories(data)
         } catch (err) {
             console.error('Failed to load categories:', err)
