@@ -322,10 +322,10 @@ h3 {
   /* Add breathing room for buttons on the right edge */
   .header-right { padding-right: 1rem; }
 
-  /* Shrink logo */
+  /* Shrink logo by 20% for mobile */
   .brand-link img {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
   }
 
   /* Compact right actions: show icons only */

@@ -28,14 +28,24 @@ const Breadcrumbs = () => {
     const isLast = index === pathnames.length - 1
     let displayName = breadcrumbMap[name] || name
 
-    // Handle shop-management slug parameters
-    if (pathnames[index - 1] === 'shop-management' && name !== 'shop-management') {
+    // Handle shop slug parameters (for /shops/shop-name-123)
+    if (pathnames[index - 1] === 'shops' && name !== 'shops') {
       // Extract shop name from slug (remove the ID part)
       const slugParts = name.split('-')
       if (slugParts.length > 1) {
         const shopName = slugParts.slice(0, -1).join(' ').replace(/\b\w/g, l => l.toUpperCase())
         displayName = shopName
       }
+    }
+
+    // Handle product management routes
+    if (pathnames[index - 1] === 'product-management' && name !== 'product-management') {
+      displayName = 'Product Management'
+    }
+
+    // Handle shop management routes
+    if (pathnames[index - 1] === 'shop-management' && name !== 'shop-management') {
+      displayName = 'Shop Management'
     }
 
     return {

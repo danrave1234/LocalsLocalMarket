@@ -1,7 +1,17 @@
 // Smart API base URL detection
 function getApiBase() {
   // Use Vite environment variable (configured in vite.config.js)
-  return import.meta.env.VITE_API_BASE
+  const apiBase = import.meta.env.VITE_API_BASE
+  
+  // For mobile devices, ensure we're using the correct protocol
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    // If frontend is served over HTTPS, ensure API is also HTTPS
+    if (apiBase && apiBase.startsWith('http://localhost')) {
+      console.warn('⚠️ Frontend is served over HTTPS but API is HTTP. This may cause issues on mobile devices.')
+    }
+  }
+  
+  return apiBase
 }
 
 export const API_BASE = getApiBase()
@@ -37,20 +47,46 @@ export async function apiRequest(path, { method = 'GET', body, token, headers } 
     requestHeaders['Content-Type'] = 'application/json';
   }
   
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: requestHeaders,
-    body: isFormData ? body : body ? JSON.stringify(body) : undefined,
-    credentials: 'include',
-  })
-  if (!res.ok) {
-    let error
-    try { error = await res.json() } catch { error = { message: res.statusText } }
-    throw Object.assign(new Error(error.message || 'Request failed'), { status: res.status, data: error })
+  // Add mobile-specific headers for better compatibility
+  requestHeaders['Accept'] = 'application/json, text/plain, */*';
+  requestHeaders['Cache-Control'] = 'no-cache';
+  
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: requestHeaders,
+      body: isFormData ? body : body ? JSON.stringify(body) : undefined,
+      credentials: 'include',
+      // Add timeout for mobile networks
+      signal: AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined, // 30 second timeout
+    })
+    
+    if (!res.ok) {
+      let error
+      try { 
+        error = await res.json() 
+      } catch { 
+        error = { 
+          message: res.statusText || 'Network request failed',
+          status: res.status 
+        } 
+      }
+      throw Object.assign(new Error(error.message || 'Request failed'), { status: res.status, data: error })
+    }
+    
+    const contentType = res.headers.get('content-type') || ''
+    if (contentType.includes('application/json')) return res.json()
+    return res.text()
+  } catch (error) {
+    // Enhanced error handling for mobile devices
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout - please check your internet connection')
+    }
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error('Network error - please check your internet connection and try again')
+    }
+    throw error
   }
-  const contentType = res.headers.get('content-type') || ''
-  if (contentType.includes('application/json')) return res.json()
-  return res.text()
 }
 
 export const api = {
