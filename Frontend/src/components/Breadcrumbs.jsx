@@ -24,7 +24,7 @@ const Breadcrumbs = () => {
   }
 
   const breadcrumbs = pathnames.map((name, index) => {
-    const routeTo = `/${pathnames.slice(0, index + 1).join('/')}`
+    let routeTo = `/${pathnames.slice(0, index + 1).join('/')}`
     const isLast = index === pathnames.length - 1
     let displayName = breadcrumbMap[name] || name
 
@@ -47,6 +47,7 @@ const Breadcrumbs = () => {
     if (pathnames[index - 1] === 'shop-management' && name !== 'shop-management') {
       displayName = 'Shop Management'
     }
+
 
     return {
       name: displayName,

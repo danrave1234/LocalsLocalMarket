@@ -51,6 +51,7 @@ function App() {
             <Suspense fallback={<div className="page-loading">Loading...</div>}>
               <Routes>
               <Route path="/" element={<LandingPage />} />
+              <Route path="/shops" element={<Navigate to="/" replace />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
