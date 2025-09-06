@@ -517,16 +517,26 @@ export default function ShopPage() {
           
         } else {
           // No cached data, fetch from API
-          const apiShopData = await fetchShopById(shopId)
+          console.log('🔍 ShopPage: Fetching shop data from API for ID:', shopId)
           
-          // Cache the fetched data for future use
-          shopCache.set(shopId, apiShopData)
-          
-          // Set default values if not present
-          apiShopData.averageRating = apiShopData.averageRating || 0
-          apiShopData.reviewCount = apiShopData.reviewCount || 0
-          
-          setShop(apiShopData)
+          try {
+            const apiShopData = await fetchShopById(shopId)
+            console.log('✅ ShopPage: Successfully fetched shop data:', apiShopData)
+            
+            // Cache the fetched data for future use
+            shopCache.set(shopId, apiShopData)
+            
+            // Set default values if not present
+            apiShopData.averageRating = apiShopData.averageRating || 0
+            apiShopData.reviewCount = apiShopData.reviewCount || 0
+            
+            setShop(apiShopData)
+          } catch (error) {
+            console.error('❌ ShopPage: Failed to fetch shop data:', error)
+            setError('Failed to load shop: ' + error.message)
+            setLoading(false)
+            return
+          }
           
           // Fetch products and services
           await Promise.all([
