@@ -267,7 +267,71 @@ h3 {
   padding-right: 1rem;
 }
 
-/* Tablet header adjustments to prevent overlap */
+/* Ensure header search stays consistent regardless of page overrides */
+.modern-header .airbnb-search-container { width: 100%; }
+.modern-header .airbnb-search-bar { max-width: 700px; width: 100%; }
+.modern-header .search-input-group { width: 100%; }
+.modern-header .search-input-wrapper {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  border-radius: 24px;
+  transition: all 0.2s ease;
+  border: none;
+  background: transparent;
+}
+.modern-header .search-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  height: 36px;
+  padding: 0;
+}
+.modern-header .search-input:focus { outline: none; }
+
+/* Compact adjustments for small screens */
+@media (max-width: 768px) {
+  .modern-header .airbnb-search-bar { max-width: 100%; }
+  .modern-header .search-input { height: 36px; }
+}
+
+/* Desktop vs Mobile navigation controls */
+.desktop-nav { display: flex; align-items: center; gap: 0.75rem; }
+.mobile-menu-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+.mobile-menu-toggle:hover { background: rgba(255, 255, 255, 0.08); }
+
+/* Mobile dropdown container (hidden by default on desktop) */
+.mobile-nav { display: none; }
+.mobile-nav .mobile-nav-content { background: rgba(10, 11, 15, 0.98); border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.mobile-nav-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  text-align: left;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+.mobile-nav-item:last-child { border-bottom: 0; }
+.mobile-nav-item.active { color: var(--accent); }
+
 @media (max-width: 1200px) and (min-width: 993px) {
   .header-row {
     grid-template-columns: auto minmax(260px, 460px) auto;
@@ -286,6 +350,66 @@ h3 {
     font-size: 0.8rem;
   }
   .nav-icon { width: 15px; height: 15px; }
+}
+
+/* Mobile breakpoints */
+@media (max-width: 768px) {
+  .modern-header { --header-mobile-height: 72px; }
+  .header-row {
+    grid-template-columns: auto 1fr auto;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    min-height: var(--header-mobile-height, 72px);
+  }
+
+  .header-center { 
+    display: flex !important; 
+    justify-content: center; 
+    align-items: center; 
+    margin: 0 0.5rem; 
+  }
+
+  /* Force header search visibility and compact sizing on small screens */
+  .modern-header .airbnb-search-container { display: block !important; max-width: 100%; }
+  .modern-header .airbnb-search-bar { 
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1px 4px;
+    gap: 4px;
+  }
+  .modern-header .search-filter { padding: 6px 10px; border-radius: 9999px; }
+  .modern-header .search-input-wrapper { padding: 8px 12px; border-radius: 18px; }
+  .modern-header .search-input { height: 30px; }
+  .modern-header .search-button { padding: 6px 8px; border-radius: 10px; }
+
+  .desktop-nav { display: none; }
+  .mobile-menu-toggle { display: inline-flex; }
+
+  .mobile-nav {
+    display: block;
+    position: fixed;
+    top: var(--header-mobile-height, 72px);
+    left: 0;
+    right: 0;
+    z-index: 999;
+    max-height: 0;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease, max-height 0.25s ease;
+  }
+
+  .mobile-nav .mobile-nav-content {
+    max-height: calc(100vh - var(--header-mobile-height, 72px));
+    overflow-y: auto;
+  }
+
+  .mobile-nav.open {
+    max-height: calc(100vh - var(--header-mobile-height, 72px));
+    pointer-events: auto;
+    opacity: 1;
+  }
 }
 
 /* Active nav state */
@@ -395,6 +519,53 @@ h3 {
     gap: 0.5rem;
   }
   .nav-icon { width: 18px; height: 18px; }
+}
+
+/* Laptop and tablet screens - reduce button sizes */
+@media (min-width: 768px) and (max-width: 1600px) {
+  .nav-link,
+  .register-btn,
+  .logout-btn,
+  .donate-link {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.7rem !important;
+    gap: 0.25rem !important;
+  }
+  .nav-icon { 
+    width: 12px !important; 
+    height: 12px !important; 
+  }
+  .header-right {
+    gap: 0.3rem !important;
+  }
+  
+  /* Scale search bar for laptop/tablet */
+  .airbnb-search-bar {
+    max-width: 500px !important;
+    padding: 2px 1.4px !important;
+    border-radius: 16px !important;
+  }
+  .search-input-group {
+    gap: 4px !important;
+  }
+  .search-filter {
+    padding: 4px 8px !important;
+    font-size: 0.8rem !important;
+    border-radius: 10px !important;
+  }
+  .search-input-wrapper {
+    padding: 0 !important;
+  }
+  .search-input {
+    height: 32px !important;
+    padding: 6px 24px 6px 8px !important;
+    font-size: 0.8rem !important;
+  }
+  .search-button {
+    height: 32px !important;
+    padding: 4px 6px !important;
+    border-radius: 8px !important;
+  }
 }
 
 /* Modern navigation styles */
@@ -534,6 +705,169 @@ h3 {
   color: #dc2626;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+/* Profile Dropdown Styles */
+.profile-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(79, 70, 229, 0.1) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 12px;
+  color: var(--accent);
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  min-width: 120px;
+}
+
+.profile-dropdown-trigger:hover {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.2) 100%);
+  border-color: var(--accent);
+  color: var(--accent-2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--accent);
+  color: white;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.profile-name {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-chevron {
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.dropdown-chevron.open {
+  transform: rotate(180deg);
+}
+
+.profile-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 180px;
+  overflow: hidden;
+  animation: dropdownFadeIn 0.2s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: var(--muted);
+  color: var(--text);
+}
+
+.dropdown-item.logout-item {
+  color: #ef4444;
+  border-top: 1px solid var(--border);
+}
+
+.dropdown-item.logout-item:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.dropdown-item svg {
+  flex-shrink: 0;
+}
+
+/* Mobile responsive styles for profile dropdown */
+@media (max-width: 768px) {
+  .profile-dropdown-trigger {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    min-width: 100px;
+  }
+  
+  .profile-name {
+    display: none;
+  }
+  
+  .profile-dropdown-menu {
+    right: 0;
+    left: auto;
+    min-width: 160px;
+  }
+  
+  .dropdown-item {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-dropdown-trigger {
+    padding: 0.4rem 0.6rem;
+    min-width: 80px;
+  }
+  
+  .profile-avatar {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .profile-dropdown-trigger svg {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 .register-btn {

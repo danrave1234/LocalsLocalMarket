@@ -43,9 +43,15 @@ const Breadcrumbs = () => {
       displayName = 'Product Management'
     }
 
-    // Handle shop management routes
+    // Handle shop management routes - convert slug to shop name
     if (pathnames[index - 1] === 'shop-management' && name !== 'shop-management') {
-      displayName = 'Shop Management'
+      const slugParts = name.split('-')
+      if (slugParts.length > 1) {
+        const shopName = slugParts.slice(0, -1).join(' ').replace(/\b\w/g, l => l.toUpperCase())
+        displayName = shopName
+      } else {
+        displayName = name
+      }
     }
 
 

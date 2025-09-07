@@ -12,7 +12,7 @@ import ServiceCard from '../components/ServiceCard.jsx'
 import ServiceForm from '../components/ServiceForm.jsx'
 import { fetchShopById } from '../api/shops.js'
 import shopCache from '../utils/shopCache.js'
-import { Store, MapPin, Check, Copy, Phone, Globe, BarChart3, Package, Search, DollarSign, Camera, Trash2, ShoppingCart, Plus, Info, Star, ThumbsUp, ThumbsDown, Crosshair, Wrench } from 'lucide-react'
+import { Store, MapPin, Check, Copy, Phone, Globe, BarChart3, Package, Search, DollarSign, Camera, Trash2, ShoppingCart, Plus, Info, Star, ThumbsUp, ThumbsDown, Crosshair, Wrench, Share2 } from 'lucide-react'
 
 
 import { fetchProducts, fetchProductsByShopIdPaginated, createProduct, updateProduct, deleteProduct, updateProductStock } from '../api/products.js'
@@ -31,7 +31,7 @@ import { useScroll } from '../hooks/useEvents.js'
 import { useClipboard } from '../hooks/useStorage.js'
 import { useLocalStorage } from '../hooks/useStorage.js'
 import './ShopPage.css'
-import { Clock } from 'lucide-react'
+import { Clock, MapPin as MapPinIcon } from 'lucide-react'
 
 export default function ShopPage() {
   const { slug } = useParams()
@@ -58,6 +58,13 @@ export default function ShopPage() {
   const [mapLoaded, setMapLoaded] = useState(false)
   const [savingStock, setSavingStock] = useState({})
   const [activeTab, setActiveTab] = useState('products') // 'products' or 'services'
+  const [shareOpen, setShareOpen] = useState(false)
+  const [contactsOpen, setContactsOpen] = useState(false)
+  const hoursRef = useRef(null)
+  const [showMapModal, setShowMapModal] = useState(false)
+  const mobileMapRef = useRef(null)
+  const mobileMapInstanceRef = useRef(null)
+  const isMobileDevice = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator.userAgent)
 
   // Function to fetch products with pagination
   const fetchProductsWithPagination = useCallback(async (page = 0, shopId = null) => {
@@ -171,6 +178,7 @@ export default function ShopPage() {
   const [copiedText, setCopiedText] = useState('')
   const [showBusinessHours, setShowBusinessHours] = useState(false)
   const [showMobileSocials, setShowMobileSocials] = useState(false)
+  const [showImageModal, setShowImageModal] = useState(false)
   const [businessHours, setBusinessHours] = useState({
     monday: { open: '9:00 AM', close: '6:00 PM', closed: false },
     tuesday: { open: '9:00 AM', close: '6:00 PM', closed: false },
@@ -471,6 +479,42 @@ export default function ShopPage() {
 
   const isOwner = shop && user && shop.owner && shop.owner.id === user.id
 
+  useEffect(() => {
+    // Initialize map inside the modal when opened
+    const initMobileMap = async () => {
+      try {
+        if (!showMapModal || !shop?.lat || !shop?.lng) return
+        // Load Leaflet only once (ShopPage already ensures CSS/JS, but guard here too)
+        if (typeof window.L === 'undefined') {
+          // Fallback dynamic loader
+          const link = document.createElement('link')
+          link.rel = 'stylesheet'
+          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+          document.head.appendChild(link)
+          const script = document.createElement('script')
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+          await new Promise((res) => { script.onload = res; document.body.appendChild(script) })
+        }
+        const L = window.L
+        // Cleanup existing instance
+        try { if (mobileMapInstanceRef.current) { mobileMapInstanceRef.current.remove() } } catch {}
+        if (mobileMapRef.current) {
+          const map = L.map(mobileMapRef.current, { zoomControl: true, attributionControl: false })
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19
+          }).addTo(map)
+          L.marker([shop.lat, shop.lng]).addTo(map)
+          map.setView([shop.lat, shop.lng], 16)
+          setTimeout(() => { try { map.invalidateSize() } catch {} }, 200)
+          mobileMapInstanceRef.current = map
+        }
+      } catch {}
+    }
+    initMobileMap()
+    return () => {
+      try { if (mobileMapInstanceRef.current) { mobileMapInstanceRef.current.remove(); mobileMapInstanceRef.current = null } } catch {}
+    }
+  }, [showMapModal, shop?.lat, shop?.lng])
   useEffect(() => {
     const loadShopData = async () => {
       // Prevent duplicate API calls
@@ -1084,35 +1128,35 @@ export default function ShopPage() {
   return (
     <>
       <SEOHead 
-        key={`shop-${shop.id}`}
-        title={shop.name}
-        description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products, contact information, and location. Support local businesses on LocalsLocalMarket.`}
-        keywords={`${shop.name}, local shop, ${shop.addressLine ? shop.addressLine.split(',')[0] : 'local business'}, local products, shop local`}
-        url={`https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}`}
+        key={`shop-${shop?.id || 'unknown'}`}
+        title={shop?.name || 'Shop'}
+        description={`Visit ${shop?.name || 'Shop'} - ${shop?.addressLine || 'Local shop'}. Discover products, contact information, and location. Support local businesses on LocalsLocalMarket.`}
+        keywords={`${shop?.name || 'Shop'}, local shop, ${shop?.addressLine ? shop.addressLine.split(',')[0] : 'local business'}, local products, shop local`}
+        url={shop?.name && shop?.id ? `https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}` : undefined}
         structuredData={{
           "@context": "https://schema.org",
           "@type": "LocalBusiness",
-          "name": shop.name,
-          "description": shop.description || `Local shop: ${shop.name}`,
-          "url": `https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}`,
-          "telephone": shop.phone,
-          "email": shop.email,
-          "address": shop.addressLine ? {
+          "name": shop?.name,
+          "description": shop?.description || (shop?.name ? `Local shop: ${shop.name}` : undefined),
+          "url": shop?.name && shop?.id ? `https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}` : undefined,
+          "telephone": shop?.phone,
+          "email": shop?.email,
+          "address": shop?.addressLine ? {
             "@type": "PostalAddress",
             "streetAddress": shop.addressLine
           } : undefined,
-          "geo": shop.lat && shop.lng ? {
+          "geo": shop?.lat && shop?.lng ? {
             "@type": "GeoCoordinates",
             "latitude": shop.lat,
             "longitude": shop.lng
           } : undefined,
-                  "image": getImageUrl(shop.coverPath), // Shop view image
-        "logo": getImageUrl(shop.logoPath),
+          "image": shop?.coverPath ? getImageUrl(shop.coverPath) : undefined,
+          "logo": shop?.logoPath ? getImageUrl(shop.logoPath) : undefined,
           "sameAs": [
-            shop.facebook,
-            shop.instagram,
-            shop.twitter,
-            shop.website
+            shop?.facebook,
+            shop?.instagram,
+            shop?.twitter,
+            shop?.website
           ].filter(Boolean)
         }}
       />
@@ -1128,7 +1172,15 @@ export default function ShopPage() {
             <div className="shop-header-content">
               <div className="shop-info-section">
 
-                <Avatar src={getImageUrl(shop.logoPath)} alt={shop.name} size={200} fallback={<Store size={80} />} />
+                {/* Mobile Avatar */}
+                <div className="mobile-only">
+                  <Avatar src={getImageUrl(shop.logoPath)} alt={shop.name} size={80} fallback={<Store size={40} />} />
+                </div>
+                
+                {/* Desktop Avatar */}
+                <div className="desktop-only">
+                  <Avatar src={getImageUrl(shop.logoPath)} alt={shop.name} size={220} fallback={<Store size={110} />} />
+                </div>
                 <div className="shop-details">
                   <div className="shop-name-section">
                     <h1 className="shop-name">{shop.name}</h1>
@@ -1159,116 +1211,174 @@ export default function ShopPage() {
                         </span>
                       </div>
                     </div>
+                    
+                    {/* Address under reviews for desktop */}
+                    {shop.addressLine && (
+                      <div className="shop-address-desktop desktop-only" style={{ marginTop: '0.75rem' }}>
+                        <div className="location-row">
+                          <span className="location-icon"><MapPin size={16} /></span>
+                          <span className="location-address">{shop.addressLine}</span>
+                          <button 
+                            className="copy-btn"
+                            onClick={() => copyToClipboard(shop.addressLine, 'Address')}
+                            title="Copy address"
+                          >
+                            {copiedText === 'Address' ? <Check size={16} /> : <Copy size={16} />}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
-                  {shop.addressLine && (
-                    <div className="shop-location-section">
-                      <div className="location-content-wrapper">
-                        <div className="location-info">
-                          <div className="location-header">
-                            <span className="location-icon"><MapPin size={16} /></span>
-                            <span className="location-label">Location</span>
-                            <button 
-                              className="copy-btn"
-                              onClick={() => copyToClipboard(shop.addressLine, 'Address')}
-                              title="Copy address"
-                            >
-                              {copiedText === 'Address' ? <Check size={16} /> : <Copy size={16} />}
-                            </button>
-                          </div>
-                          <p className="shop-address">
-                            {shop.addressLine}
-                          </p>
-                        </div>
-                        {shop.coverPath && (
-                          <div className="shop-view-image">
-                            <img 
-                              src={getImageUrl(shop.coverPath)} 
-                              alt={`${shop.name} shop view`}
-                              style={{
-                                objectFit: 'cover',
-                                borderRadius: '8px'
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  
                   
 
                 </div>
-              </div>
-                {/* Mobile Social Actions Dropdown */}
-                <div className="mobile-social-dropdown">
-                  <button 
-                    className="mobile-dropdown-toggle"
-                    onClick={() => setShowMobileSocials(!showMobileSocials)}
+                {/* Desktop actions: Share only */}
+                <div className="desktop-actions desktop-only">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => setShareOpen(true)}
+                    disabled={!shop}
+                    aria-label="Share shop"
                   >
-                    <span>Social & Contact</span>
-                    <span className={`dropdown-arrow ${showMobileSocials ? 'rotated' : ''}`}>▼</span>
+                    <Share2 size={16} style={{ marginRight: '0.4rem' }} /> Share
                   </button>
-                  {showMobileSocials && (
-                    <div className="mobile-dropdown-content">
-                      <div className="mobile-social-section">
-                        <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>Share This Shop</h3>
-                        <p className="muted" style={{ marginBottom: '0.75rem', fontSize: '0.875rem' }}>
-                          Help others discover {shop.name}
-                        </p>
-                        <SocialSharing
-                          title={`${shop.name} - Local Shop`}
-                          description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products and support local businesses.`}
-                          url={`https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}`}
-                          image={getImageUrl(shop.coverPath)}
+                  
+                  {/* Shop image as clickable button for desktop */}
+                  {shop.coverPath && (
+                    <div className="shop-image-button desktop-only" style={{ marginTop: '0.75rem', width: '100%' }}>
+                      <button
+                        className="shop-image-btn"
+                        onClick={() => setShowImageModal(true)}
+                        title="View full shop image"
+                        style={{ 
+                          width: '100%', 
+                          padding: 0, 
+                          border: 'none', 
+                          background: 'transparent',
+                          cursor: 'pointer',
+                          borderRadius: '8px',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <img 
+                          src={getImageUrl(shop.coverPath)} 
+                          alt={`${shop.name} shop view - Click to view full size`}
+                          style={{ 
+                            objectFit: 'cover', 
+                            borderRadius: '8px',
+                            width: '100%',
+                            height: '180px',
+                            transition: 'transform 0.2s ease'
+                          }}
                         />
-                      </div>
-                      {shop.phone && (
-                        <div className="mobile-contact-section">
-                          <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>Contact Info</h3>
-                          <div className="mobile-contact-buttons">
-                            <button 
-                              className="contact-btn phone-btn"
-                              onClick={() => handleCopyToClipboard(shop.phone, 'Phone number copied!')}
-                            >
-                              <Phone size={16} /> {shop.phone}
-                            </button>
-                            {shop.email && (
-                              <button 
-                                className="contact-btn email-btn"
-                                onClick={() => handleCopyToClipboard(shop.email, 'Email copied!')}
-                              >
-                                ✉️ {shop.email}
-                              </button>
-                            )}
-                            {shop.website && (
-                              <a 
-                                href={shop.website} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="contact-btn website-btn"
-                              >
-                                <Globe size={16} /> Visit Website
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                      </button>
                     </div>
                   )}
                 </div>
+              </div>
+              {/* Location full-width row under header info */}
+              {shop.addressLine && (
+                <div className="shop-location-inline mobile-only">
+                  <div className="location-row">
+                    <span className="location-icon"><MapPin size={16} /></span>
+                    <span className="location-address">{shop.addressLine}</span>
+                    <button 
+                      className="copy-btn"
+                      onClick={() => copyToClipboard(shop.addressLine, 'Address')}
+                      title="Copy address"
+                    >
+                      {copiedText === 'Address' ? <Check size={16} /> : <Copy size={16} />}
+                    </button>
+                  </div>
+                  {shop.coverPath && (
+                    <div className="shop-view-image" style={{ marginTop: '0.5rem' }}>
+                      <img 
+                        src={getImageUrl(shop.coverPath)} 
+                        alt={`${shop.name} shop view`}
+                        style={{ objectFit: 'cover', borderRadius: '8px' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Floating Map Button (mobile) */}
+              {isMobileDevice && shop?.lat && shop?.lng && (
+                  <button 
+                  type="button"
+                  className="floating-map-btn"
+                  onClick={() => setShowMapModal(true)}
+                  aria-label="Open map"
+                >
+                  <MapPinIcon size={18} />
+                  </button>
+              )}
 
-                {/* Desktop Social Sharing Section */}
-                <div className="desktop-social-sharing-section">
-                    <h3 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>Share This Shop</h3>
-                    <p className="muted" style={{ marginBottom: '0.75rem', fontSize: '0.875rem' }}>
-                        Help others discover {shop.name}
-                    </p>
-                    <SocialSharing
-                        title={`${shop.name} - Local Shop`}
-                        description={`Visit ${shop.name} - ${shop.addressLine || 'Local shop'}. Discover products and support local businesses.`}
-                        url={`https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}`}
-                        image={getImageUrl(shop.coverPath)} // Shop view image
+              {/* Modals accessible when shop is loaded */}
+              <Modal isOpen={shareOpen} onClose={() => setShareOpen(false)} title={`Share ${shop?.name || 'Shop'}`} size="small">
+                <p className="muted" style={{ marginBottom: '0.75rem' }}>Help others discover {shop?.name || 'this shop'}</p>
+                        <SocialSharing
+                  title={`${shop?.name || 'Shop'} - Local Shop`}
+                  description={`Visit ${shop?.name || 'Shop'} - ${shop?.addressLine || 'Local shop'}. Discover products and support local businesses.`}
+                  url={shop?.name && shop?.id ? `https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}` : undefined}
+                  image={shop?.coverPath ? getImageUrl(shop.coverPath) : undefined}
+                />
+              </Modal>
+              <Modal isOpen={showBusinessHours} onClose={() => setShowBusinessHours(false)} title="Business Hours" size="small">
+                <div className="hours-grid">
+                  {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
+                    const hours = businessHours[day];
+                    return (
+                      <div key={day} className="hours-row">
+                        <span className="day-name">{day.charAt(0).toUpperCase() + day.slice(1)}</span>
+                        <span className="hours-time">{formatHoursDisplay(hours)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ marginTop: '0.75rem' }}>
+                  <div className={`status-indicator ${isShopOpen() ? 'open' : 'closed'}`}>
+                    {isShopOpen() ? 'Open' : 'Closed'}
+                  </div>
+                </div>
+              </Modal>
+
+              {/* Map Modal */}
+              <Modal isOpen={showMapModal} onClose={() => setShowMapModal(false)} title="Location" size="small">
+                <div id="mobile-shop-map" ref={mobileMapRef} style={{ width: '100%', height: '280px', borderRadius: '8px', overflow: 'hidden' }} />
+              </Modal>
+
+              {/* Shop Image Modal */}
+              <Modal isOpen={showImageModal} onClose={() => setShowImageModal(false)} title={`${shop?.name || 'Shop'} Image`} size="large">
+                {shop?.coverPath && (
+                  <div style={{ textAlign: 'center' }}>
+                    <img 
+                      src={getImageUrl(shop.coverPath)} 
+                      alt={`${shop.name} shop view`}
+                      style={{ 
+                        maxWidth: '100%', 
+                        maxHeight: '80vh', 
+                        objectFit: 'contain',
+                        borderRadius: '8px'
+                      }}
                     />
+                  </div>
+                )}
+              </Modal>
+                {/* Global Share Button */}
+                <div className="shop-actions-row mobile-only">
+                  <button type="button" className="btn btn-primary" onClick={() => { console.log('Share click'); setShareOpen(true) }} disabled={!shop}>
+                    <Share2 size={16} style={{ marginRight: '0.4rem' }} /> Share
+                  </button>
+                  <button 
+                    type="button"
+                    className="btn btn-secondary hours-inline-btn"
+                    onClick={() => { console.log('Hours click'); setShowBusinessHours(true) }}
+                  >
+                    <Clock size={16} style={{ marginRight: '0.4rem' }} /> {isShopOpen() ? 'Open' : 'Closed'}
+                  </button>
                 </div>
               {isOwner && (
                 <div className="shop-owner-actions">
@@ -1299,10 +1409,19 @@ export default function ShopPage() {
               )}
             </div>
 
-            {/* Shop Contact Details and Social Sharing */}
-            <div className="shop-contact-sharing-section">
-              {/* Contact Details */}
+            {/* Contact & Social - Collapsible */}
               {(shop.phone || shop.website || shop.email || shop.facebook || shop.instagram || shop.twitter) && (
+              <div className="collapsible-section">
+                <button 
+                  className="collapsible-toggle"
+                  onClick={() => setContactsOpen(!contactsOpen)}
+                  aria-expanded={contactsOpen}
+                >
+                  <span>Contact & Social</span>
+                  <span className={`dropdown-arrow ${contactsOpen ? 'rotated' : ''}`}>▼</span>
+                </button>
+                {contactsOpen && (
+                  <div className="collapsible-content">
                 <div className="shop-contact-details">
                   {shop.phone && (
                     <div className="contact-item">
@@ -1397,14 +1516,17 @@ export default function ShopPage() {
                       </a>
                     </div>
                   )}
+                    </div>
                 </div>
               )}
             </div>
+            )}
           </section>
         </div>
 
         {/* Right Column - Map Only */}
         <div className="shop-right-column">
+          {/* Address moved into header */}
           {/* Shop Location Map */}
           {shop.lat && shop.lng && (
             <section className="card shop-map-section">
@@ -1430,43 +1552,23 @@ export default function ShopPage() {
                   </div>
                 )}
               </div>
+              
+              {/* Business Hours Status under map for desktop only */}
+              <div className="desktop-only" style={{ marginTop: '1rem', textAlign: 'center' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary hours-inline-btn"
+                  onClick={() => setShowBusinessHours(true)}
+                  aria-label="View business hours"
+                  style={{ width: '100%' }}
+                >
+                  <Clock size={16} style={{ marginRight: '0.4rem' }} /> {isShopOpen() ? 'Open' : 'Closed'}
+                </button>
+              </div>
             </section>
           )}
           
-          {/* Business Hours Dropdown - Moved outside shop map section */}
-          <div className="business-hours-dropdown">
-            <button 
-              className="hours-toggle-btn"
-              onClick={() => setShowBusinessHours(!showBusinessHours)}
-            >
-              <Clock className="hours-icon" size={16} />
-              <span className="hours-label">Business Hours</span>
-              <div className={`status-indicator ${isShopOpen() ? 'open' : 'closed'}`}>
-                {isShopOpen() ? 'Open' : 'Closed'}
-              </div>
-              <span className="dropdown-arrow">{showBusinessHours ? '▲' : '▼'}</span>
-            </button>
-            
-            {/* Conditional dropdown - now properly positioned */}
-            {showBusinessHours && (
-              <div className="hours-dropdown-content">
-                <div className="hours-grid">
-                  {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
-                    const hours = businessHours[day];
-                    
-                    return (
-                      <div key={day} className="hours-row">
-                        <span className="day-name">{day.charAt(0).toUpperCase() + day.slice(1)}</span>
-                        <span className="hours-time">
-                          {formatHoursDisplay(hours)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Business Hours inline dropdown removed; now handled by modal near header */}
         </div>
       </div>
 
@@ -1491,29 +1593,6 @@ export default function ShopPage() {
         </div>
 
         <div className="products-header">
-          <div>
-            <h3 style={{ margin: 0 }}>
-              {activeTab === 'products' ? 'Products' : 'Services'}
-            </h3>
-            <p className="muted" style={{ marginTop: 4 }}>
-              {(() => {
-                const currentItems = activeTab === 'products' ? products : services;
-                const sortedItems = activeTab === 'products' ? getSortedProducts() : getSortedServices();
-                const totalItems = currentItems.length;
-                const filteredCount = sortedItems.length;
-                
-                if (!Array.isArray(currentItems) || currentItems.length === 0) {
-                  return `No ${activeTab} yet`;
-                }
-                
-                if (searchQuery || selectedCategory) {
-                  return `${filteredCount} of ${totalItems} ${activeTab.slice(0, -1)}${totalItems !== 1 ? 's' : ''} found`;
-                }
-                
-                return `${totalItems} ${activeTab.slice(0, -1)}${totalItems !== 1 ? 's' : ''} available`;
-              })()}
-            </p>
-          </div>
           {isOwner && (
             <button 
               className="btn add-another-product-btn"
@@ -1574,45 +1653,9 @@ export default function ShopPage() {
                 </div>
               </div>
             </div>
+            {/* Location section moved to right column */}
             
-            <div className="controls-right">
-              <div className="filter-toggles">
-                <button
-                  className={`filter-toggle ${priceRange.min || priceRange.max ? 'active' : ''}`}
-                  onClick={() => setShowPriceFilter(!showPriceFilter)}
-                  type="button"
-                >
-                  <span className="toggle-icon"><DollarSign size={16} /></span>
-                  Price
-                  {(priceRange.min || priceRange.max) && <span className="active-indicator">•</span>}
-                </button>
-                
-                {activeTab === 'products' && (
-                  <button
-                    className={`filter-toggle ${stockFilter !== 'all' ? 'active' : ''}`}
-                    onClick={() => setShowStockFilter(!showStockFilter)}
-                    type="button"
-                  >
-                    <span className="toggle-icon"><Package size={16} /></span>
-                    Stock
-                    {stockFilter !== 'all' && <span className="active-indicator">•</span>}
-                  </button>
-                )}
-                
-                {(priceRange.min || priceRange.max || stockFilter !== 'all') && (
-                  <button
-                    className="clear-filters-btn"
-                    onClick={() => {
-                      setPriceRange({ min: '', max: '' });
-                      setStockFilter('all');
-                    }}
-                    type="button"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </div>
+            {/* Filter toggle chips removed per design (redundant) */}
           </div>
         )}
 

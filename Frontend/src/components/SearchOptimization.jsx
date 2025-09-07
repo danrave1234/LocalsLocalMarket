@@ -178,13 +178,15 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
           {/* Category Filter */}
           <div 
             className={`search-filter ${activeFilter === 'category' ? 'active' : ''}`}
+            aria-label={`Category${category ? ': ' + category : ''}`}
             onClick={() => {
               setActiveFilter(activeFilter === 'category' ? null : 'category')
               setIsExpanded(true)
             }}
           >
             <div className="filter-value">
-              {category || 'Any category'}
+              <span className="category-label desktop-only">Category</span>
+              {category && category}
             </div>
             <svg className="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="6,9 12,15 18,9"></polyline>

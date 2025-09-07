@@ -29,6 +29,7 @@ import {
 } from '../api/products.js'
 import { 
   fetchServicesByShopId, 
+  fetchServicesByShopIdLegacy,
   createService, 
   updateService, 
   deleteService 
@@ -112,56 +113,61 @@ export default function ShopManagementPage() {
     try {
       setLoading(true)
       setError('')
-      
-      // Load both products and services in parallel
-      const [productsResponse, servicesResponse] = await Promise.all([
-        fetchProductsByShopIdPaginated(shopId, 0, 100), // Get first 100 products
-        fetchServicesByShopId(shopId, { page: 0, size: 100 }) // Get first 100 services
-      ])
-      
-      // Handle paginated products response
+
+      // Basic mobile detection
+      const isMobile = typeof window !== 'undefined' && (
+        window.navigator.userAgent.includes('Mobile') ||
+        window.navigator.userAgent.includes('Android') ||
+        window.navigator.userAgent.includes('iPhone')
+      )
+
+      // PRODUCTS: try paginated, fallback to non-paginated shape
       let productsData = []
-      if (productsResponse && productsResponse.content) {
-        productsData = productsResponse.content
-        console.log('ShopManagement: Loaded products from paginated API:', productsData)
-        // Debug: Check image URLs
-        productsData.forEach((product, index) => {
-          console.log(`Product ${index + 1} (${product.title}):`, {
-            imageUrl: product.imageUrl,
-            imagePathsJson: product.imagePathsJson,
-            hasImageUrl: !!product.imageUrl,
-            hasImagePathsJson: !!product.imagePathsJson
-          })
-        })
-      } else if (Array.isArray(productsResponse)) {
-        // Fallback for non-paginated response
-        productsData = productsResponse
-        console.log('ShopManagement: Loaded products from fallback API:', productsData)
-        // Debug: Check image URLs
-        productsData.forEach((product, index) => {
-          console.log(`Product ${index + 1} (${product.title}):`, {
-            imageUrl: product.imageUrl,
-            imagePathsJson: product.imagePathsJson,
-            hasImageUrl: !!product.imageUrl,
-            hasImagePathsJson: !!product.imagePathsJson
-          })
-        })
+      try {
+        const productsResponse = await fetchProductsByShopIdPaginated(shopId, 0, 100)
+        if (productsResponse && productsResponse.content) {
+          productsData = productsResponse.content
+        } else if (Array.isArray(productsResponse)) {
+          productsData = productsResponse
+        }
+      } catch (prodErr) {
+        console.error('ShopManagement: Failed to load products:', prodErr)
+        if (!isMobile) {
+          throw prodErr
+        }
       }
-      
-      // Handle paginated services response
+
+      // SERVICES: try paginated, fallback to legacy; on mobile, do not fail page
       let servicesData = []
-      if (servicesResponse && servicesResponse.content) {
-        servicesData = servicesResponse.content
-        console.log('ShopManagement: Loaded services from paginated API:', servicesData)
-      } else if (Array.isArray(servicesResponse)) {
-        // Fallback for non-paginated response
-        servicesData = servicesResponse
-        console.log('ShopManagement: Loaded services from fallback API:', servicesData)
+      try {
+        const servicesResponse = await fetchServicesByShopId(shopId, { page: 0, size: 100 })
+        if (servicesResponse && servicesResponse.content) {
+          servicesData = servicesResponse.content
+        } else if (Array.isArray(servicesResponse)) {
+          servicesData = servicesResponse
+        } else {
+          // fallback to legacy
+          try {
+            const legacy = await fetchServicesByShopIdLegacy(shopId)
+            servicesData = Array.isArray(legacy) ? legacy : []
+          } catch (legacyErr) {
+            console.error('ShopManagement: Legacy services API failed:', legacyErr)
+            if (!isMobile) {
+              throw legacyErr
+            }
+          }
+        }
+      } catch (svcErr) {
+        console.error('ShopManagement: Services fetch failed:', svcErr)
+        // On mobile, continue without services
+        if (!isMobile) {
+          throw svcErr
+        }
       }
-      
+
       setProducts(productsData)
       setServices(servicesData)
-      setTotalItems(productsData.length + servicesData.length)
+      setTotalItems((productsData?.length || 0) + (servicesData?.length || 0))
     } catch (error) {
       console.error('Failed to load data:', error)
       setError('Failed to load shop data: ' + error.message)

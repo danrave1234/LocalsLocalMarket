@@ -28,15 +28,16 @@ const ErrorDisplay = ({
 
   return (
     <div 
-      className={className}
+      className={`error-display ${className}`}
       style={{
         backgroundColor: 'var(--card)', 
         color: 'var(--text)', 
-        padding: '2rem', 
+        padding: 'clamp(1rem, 4vw, 2rem)', 
         borderRadius: '16px',
         fontSize: '1rem',
         textAlign: 'center',
-        maxWidth: '600px',
+        width: '100%',
+        maxWidth: 'min(600px, 100%)',
         margin: '0 auto',
         border: '1px solid var(--border)',
         boxShadow: 'var(--shadow-md)',
@@ -72,7 +73,7 @@ const ErrorDisplay = ({
       <h3 style={{ 
         margin: '0 0 1rem 0', 
         color: 'var(--error)', 
-        fontSize: '1.5rem',
+        fontSize: 'clamp(1.25rem, 3.5vw, 1.75rem)',
         fontWeight: '600',
         letterSpacing: '-0.025em'
       }}>
@@ -81,10 +82,11 @@ const ErrorDisplay = ({
       
       <p style={{ 
         color: 'var(--muted)',
-        fontSize: '1rem',
+        fontSize: 'clamp(0.95rem, 3vw, 1rem)',
         lineHeight: '1.6',
-        maxWidth: '500px',
-        margin: '0 auto 2rem auto'
+        maxWidth: '520px',
+        margin: '0 auto 1.5rem auto',
+        padding: '0 0.25rem'
       }}>
         {error}
       </p>
@@ -95,14 +97,19 @@ const ErrorDisplay = ({
           background: 'var(--error)',
           color: 'white',
           border: 'none',
-          padding: '0.875rem 2rem',
+          padding: 'clamp(0.75rem, 2.5vw, 0.875rem) clamp(1rem, 4vw, 2rem)',
           borderRadius: '12px',
           fontSize: '1rem',
           cursor: 'pointer',
           fontWeight: '600',
           transition: 'all 0.2s ease',
           boxShadow: 'var(--shadow-sm)',
-          minWidth: '140px'
+          minWidth: '140px',
+          width: '100%',
+          maxWidth: '320px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
         onMouseEnter={(e) => {
           e.target.style.background = 'var(--accent-hover)'
