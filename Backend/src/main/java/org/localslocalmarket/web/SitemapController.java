@@ -11,12 +11,14 @@ import org.localslocalmarket.repo.ShopRepository;
 import org.localslocalmarket.service.SearchEngineNotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -138,16 +140,22 @@ public class SitemapController {
      */
     @Cacheable(cacheNames = "sitemap", key = "'shops_' + #page")
     @GetMapping(value = "/sitemap/shops-{page}.xml", produces = MediaType.APPLICATION_XML_VALUE)
-    public ResponseEntity<String> generateShopSitemap(@RequestParam("page") int page) {
+    public ResponseEntity<String> generateShopSitemap(@PathVariable("page") int page) {
         try {
+            System.out.println("Generating shop sitemap for page: " + page);
             String currentDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
             
             // Calculate offset and limit for this page
             int offset = page * SHOPS_PER_SITEMAP;
             int limit = SHOPS_PER_SITEMAP;
             
-            // Get shops for this page (ordered by ID for consistent pagination)
-            List<Shop> shops = shopRepository.findShopsPaginated(offset, limit);
+            System.out.println("Fetching shops for page: " + page + ", size: " + SHOPS_PER_SITEMAP);
+            
+            // Get shops for this page using Spring Data JPA pagination
+            Page<Shop> shopPage = shopRepository.findAllByOrderByIdAsc(PageRequest.of(page, SHOPS_PER_SITEMAP));
+            List<Shop> shops = shopPage.getContent();
+            
+            System.out.println("Found " + shops.size() + " shops for page " + page + " (total: " + shopPage.getTotalElements() + ")");
             
             StringBuilder sitemap = new StringBuilder();
             sitemap.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
@@ -174,6 +182,8 @@ public class SitemapController {
                     .body(sitemap.toString());
                     
         } catch (Exception e) {
+            System.err.println("Error generating shop sitemap for page " + page + ": " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(500)
                     .body("Error generating shop sitemap: " + e.getMessage());
         }
@@ -299,6 +309,33 @@ public class SitemapController {
         } catch (Exception e) {
             return ResponseEntity.status(500)
                     .body("Error pinging search engines: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Test endpoint to check if shops can be fetched
+     */
+    @GetMapping("/sitemap/test")
+    public ResponseEntity<Map<String, Object>> testSitemap() {
+        try {
+            long totalShops = shopRepository.count();
+            Page<Shop> shopPage = shopRepository.findAllByOrderByIdAsc(PageRequest.of(0, 5));
+            List<Shop> shops = shopPage.getContent();
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("totalShops", totalShops);
+            result.put("testShops", shops.size());
+            result.put("shops", shops.stream().map(shop -> Map.of(
+                "id", shop.getId(),
+                "name", shop.getName() != null ? shop.getName() : "null"
+            )).toList());
+            
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            System.err.println("Test sitemap error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
