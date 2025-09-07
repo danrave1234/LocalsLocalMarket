@@ -43,15 +43,6 @@ export default function ShopPage() {
   const [services, setServices] = useState([])
   const [selectedCategory, setSelectedCategory] = useState(null)
   
-  // Debug products state
-  useEffect(() => {
-    console.log('Products state changed:', products)
-  }, [products])
-  
-  // Debug services state
-  useEffect(() => {
-    console.log('Services state changed:', services)
-  }, [services])
   
   const [pagination, setPagination] = useState(null)
   const [currentPage, setCurrentPage] = useState(0)
@@ -79,7 +70,6 @@ export default function ShopPage() {
       const response = await fetchProductsByShopIdPaginated(targetShopId, page, pageSize)
       
       if (response && response.content && response.pagination) {
-        console.log('Setting products from paginated response:', response.content)
         setProducts(response.content)
         setPagination(response.pagination)
         setCurrentPage(page)
@@ -105,26 +95,19 @@ export default function ShopPage() {
     }
     
     try {
-      console.log('Fetching services for shop ID:', targetShopId)
-      
       // Try paginated API first
       const response = await fetchServicesByShopId(targetShopId, { page: 0, size: 100 })
-      console.log('Services API response:', response)
       
       // Handle paginated response format
       if (response && response.content && Array.isArray(response.content)) {
-        console.log('Setting services from paginated response:', response.content)
         setServices(response.content)
       } else if (Array.isArray(response)) {
         // Fallback for non-paginated response
-        console.log('Setting services from non-paginated response:', response)
         setServices(response)
       } else {
-        console.log('No services found or invalid response format, trying legacy API')
         // Try legacy non-paginated API as fallback
         try {
           const legacyResponse = await fetchServicesByShopIdLegacy(targetShopId)
-          console.log('Legacy services API response:', legacyResponse)
           setServices(Array.isArray(legacyResponse) ? legacyResponse : [])
         } catch (legacyError) {
           console.error('Legacy API also failed:', legacyError)
@@ -133,30 +116,14 @@ export default function ShopPage() {
       }
     } catch (error) {
       console.error('Failed to fetch services:', error)
-      
-      // Enhanced mobile error handling for services
-      const isMobile = typeof window !== 'undefined' && 
-        (window.navigator.userAgent.includes('Mobile') || 
-         window.navigator.userAgent.includes('Android') ||
-         window.navigator.userAgent.includes('iPhone'))
-      
       // Try legacy API as fallback
       try {
-        console.log('Trying legacy API as fallback...')
         const legacyResponse = await fetchServicesByShopIdLegacy(targetShopId)
-        console.log('Legacy services API response:', legacyResponse)
         setServices(Array.isArray(legacyResponse) ? legacyResponse : [])
       } catch (legacyError) {
         console.error('Both APIs failed:', legacyError)
-        
-        // Don't set error for services failure on mobile - just log it
-        if (isMobile) {
-          console.warn('Services failed to load on mobile, but continuing without services')
-          setServices([])
-        } else {
-          setError('Failed to load services: ' + error.message)
-          setServices([])
-        }
+        setError('Failed to load services: ' + error.message)
+        setServices([])
       }
     }
   }, [shop?.id])
@@ -491,7 +458,7 @@ export default function ShopPage() {
   const isOwner = shop && user && shop.owner && shop.owner.id === user.id
 
   useEffect(() => {
-    const loadShopData = async (retryCount = 0) => {
+    const loadShopData = async () => {
       // Prevent duplicate API calls
       if (shopLoadingRef.current) {
         return
@@ -502,19 +469,6 @@ export default function ShopPage() {
       setLoading(true)
       setMapLoaded(false)
       
-      // Mobile-specific retry logic
-      const isMobile = typeof window !== 'undefined' && 
-        (window.navigator.userAgent.includes('Mobile') || 
-         window.navigator.userAgent.includes('Android') ||
-         window.navigator.userAgent.includes('iPhone'))
-      
-      const maxRetries = isMobile ? 1 : 0 // Reduced retries to prevent infinite loops
-      
-      // Clear cache on mobile if this is a retry attempt
-      if (isMobile && retryCount > 0) {
-        console.log('🔄 Mobile retry: Clearing shop cache to force fresh fetch')
-        shopCache.delete(shopId)
-      }
       
       try {
         // First, check if we have shop data in the global cache
@@ -528,18 +482,10 @@ export default function ShopPage() {
           setShop(shopData)
           
           // Only fetch products and services since they're not cached
-          try {
-            await Promise.all([
-              fetchProductsWithPagination(0, shopId),
-              fetchServices(shopId)
-            ])
-          } catch (fetchError) {
-            console.error('Error fetching products/services from cache:', fetchError)
-            // On mobile, don't fail the entire page load for products/services errors
-            if (!isMobile) {
-              throw fetchError
-            }
-          }
+          await Promise.all([
+            fetchProductsWithPagination(0, shopId),
+            fetchServices(shopId)
+          ])
           
           // Load business hours from shop data
           if (shopData.businessHoursJson && shopData.businessHoursJson.trim() !== '') {
@@ -553,12 +499,9 @@ export default function ShopPage() {
           
         } else {
           // No cached data, fetch from API
-          console.log('🔍 ShopPage: Fetching shop data from API for ID:', shopId)
-          
           let apiShopData = null
           try {
             apiShopData = await fetchShopById(shopId)
-            console.log('✅ ShopPage: Successfully fetched shop data:', apiShopData)
             
             // Cache the fetched data for future use
             shopCache.set(shopId, apiShopData)
@@ -569,40 +512,17 @@ export default function ShopPage() {
             
             setShop(apiShopData)
           } catch (error) {
-            console.error('❌ ShopPage: Failed to fetch shop data:', error)
-            
-            // Enhanced error handling for mobile devices
-            const isMobile = typeof window !== 'undefined' && 
-              (window.navigator.userAgent.includes('Mobile') || 
-               window.navigator.userAgent.includes('Android') ||
-               window.navigator.userAgent.includes('iPhone'))
-            
-            let errorMessage = 'Failed to load shop: ' + error.message
-            
-            if (isMobile && error.message.includes('Failed to fetch')) {
-              errorMessage = 'Unable to connect to server. Please check your internet connection and try again.'
-            } else if (isMobile && error.message.includes('timeout')) {
-              errorMessage = 'Request timed out. Please check your internet connection and try again.'
-            }
-            
-            setError(errorMessage)
+            console.error('Failed to fetch shop data:', error)
+            setError('Failed to load shop: ' + error.message)
             setLoading(false)
             return
           }
           
-          // Fetch products and services - handle failures gracefully on mobile
-          try {
-            await Promise.all([
-              fetchProductsWithPagination(0, shopId),
-              fetchServices(shopId)
-            ])
-          } catch (fetchError) {
-            console.error('Error fetching products/services:', fetchError)
-            // On mobile, don't fail the entire page load for products/services errors
-            if (!isMobile) {
-              throw fetchError
-            }
-          }
+          // Fetch products and services
+          await Promise.all([
+            fetchProductsWithPagination(0, shopId),
+            fetchServices(shopId)
+          ])
           
           // Load business hours from shop data
           if (apiShopData && apiShopData.businessHoursJson && apiShopData.businessHoursJson.trim() !== '') {
@@ -618,36 +538,7 @@ export default function ShopPage() {
       } catch (e) {
         console.error('Failed to load shop data:', e)
         const errorInfo = handleApiError(e)
-        
-        // Enhanced mobile error handling
-        const isMobile = typeof window !== 'undefined' && 
-          (window.navigator.userAgent.includes('Mobile') || 
-           window.navigator.userAgent.includes('Android') ||
-           window.navigator.userAgent.includes('iPhone'))
-        
-        let errorMessage = errorInfo.message
-        
-        if (isMobile && (e.message?.includes('Failed to fetch') || errorInfo.type === 'network')) {
-          errorMessage = 'Unable to connect to server. Please check your internet connection and try again.'
-        } else if (isMobile && e.message?.includes('timeout')) {
-          errorMessage = 'Request timed out. Please check your internet connection and try again.'
-        }
-        
-        setError(errorMessage)
-        
-        // Retry logic for mobile devices
-        if (isMobile && retryCount < maxRetries && (
-          e.message?.includes('Failed to fetch') || 
-          e.message?.includes('timeout') ||
-          e.message?.includes('Network error')
-        )) {
-          console.log(`🔄 Mobile retry attempt ${retryCount + 1}/${maxRetries + 1}`)
-          shopLoadingRef.current = false
-          setTimeout(() => {
-            loadShopData(retryCount + 1)
-          }, 2000 * (retryCount + 1)) // Exponential backoff
-          return
-        }
+        setError(errorInfo.message)
       } finally {
         setLoading(false)
         shopLoadingRef.current = false

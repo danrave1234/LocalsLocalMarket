@@ -67,21 +67,6 @@ if (!import.meta.env.DEV) {
   })
 }
 
-// Android-specific debugging
-if (typeof window !== 'undefined') {
-  const isAndroid = window.navigator.userAgent.includes('Android') || 
-    window.navigator.userAgent.includes('Mobile')
-  
-  if (isAndroid) {
-    console.log('🤖 Android Device Detected:', {
-      userAgent: window.navigator.userAgent,
-      apiBase: API_BASE,
-      currentHost: window.location.hostname,
-      protocol: window.location.protocol,
-      isSecure: window.location.protocol === 'https:'
-    })
-  }
-}
 
 export async function apiRequest(path, { method = 'GET', body, token, headers } = {}) {
   const isFormData = body instanceof FormData;
@@ -99,19 +84,13 @@ export async function apiRequest(path, { method = 'GET', body, token, headers } 
   requestHeaders['Accept'] = 'application/json, text/plain, */*';
   requestHeaders['Cache-Control'] = 'no-cache';
   
-  // Detect Android for specific handling
-  const isAndroid = typeof window !== 'undefined' && 
-    (window.navigator.userAgent.includes('Android') || 
-     window.navigator.userAgent.includes('Mobile'))
-  
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers: requestHeaders,
       body: isFormData ? body : body ? JSON.stringify(body) : undefined,
       credentials: 'include',
-      // Add timeout for mobile networks - longer for Android
-      signal: AbortSignal.timeout ? AbortSignal.timeout(isAndroid ? 45000 : 30000) : undefined,
+      signal: AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined,
     })
     
     if (!res.ok) {
@@ -131,60 +110,25 @@ export async function apiRequest(path, { method = 'GET', body, token, headers } 
     if (contentType.includes('application/json')) return res.json()
     return res.text()
   } catch (error) {
-    // Enhanced error handling for mobile devices
-    const isMobile = isAndroid || (typeof window !== 'undefined' && 
-      (window.navigator.userAgent.includes('Mobile') || 
-       window.navigator.userAgent.includes('iPhone')))
-    
     if (error.name === 'AbortError') {
-      const message = isMobile 
-        ? 'Request timeout - Mobile devices may need a stronger internet connection. Please try again.'
-        : 'Request timeout - please check your internet connection'
-      throw new Error(message)
+      throw new Error('Request timeout - please check your internet connection')
     }
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      const message = isMobile
-        ? 'Network error on mobile device - please check your internet connection and ensure the app has network permissions'
-        : 'Network error - please check your internet connection and try again'
-      throw new Error(message)
+      throw new Error('Network error - please check your internet connection and try again')
     }
     if (error.message.includes('Failed to fetch')) {
-      const message = isMobile
-        ? 'Unable to connect to server on mobile device. Please check your internet connection and try again.'
-        : 'Unable to connect to server. Please check your internet connection and try again.'
-      throw new Error(message)
+      throw new Error('Unable to connect to server. Please check your internet connection and try again.')
     }
     throw error
   }
 }
 
-// Retry mechanism for mobile devices
+// Retry mechanism for failed requests
 async function apiRequestWithRetry(path, options, maxRetries = 2) {
-  const isMobile = typeof window !== 'undefined' && 
-    (window.navigator.userAgent.includes('Android') || 
-     window.navigator.userAgent.includes('Mobile') ||
-     window.navigator.userAgent.includes('iPhone'))
-  
-  if (!isMobile) {
-    return apiRequest(path, options)
-  }
-  
   let lastError
-  let useFallback = false
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // On the last attempt, try fallback API if available
-      if (attempt === maxRetries && window.ANDROID_FALLBACK_API && !useFallback) {
-        console.log('📱 Mobile trying fallback API:', window.ANDROID_FALLBACK_API)
-        useFallback = true
-        // Temporarily override API_BASE for this request
-        const originalApiBase = API_BASE
-        const fallbackPath = `${window.ANDROID_FALLBACK_API}${path}`
-        const fallbackOptions = { ...options, fallbackApi: window.ANDROID_FALLBACK_API }
-        return await apiRequestWithFallback(fallbackPath, fallbackOptions)
-      }
-      
       return await apiRequest(path, options)
     } catch (error) {
       lastError = error
@@ -193,7 +137,6 @@ async function apiRequestWithRetry(path, options, maxRetries = 2) {
         error.message.includes('Network error') ||
         error.name === 'AbortError'
       )) {
-        console.log(`📱 Mobile retry attempt ${attempt + 1}/${maxRetries + 1} for ${path}`)
         // Wait before retry (exponential backoff)
         await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
         continue
@@ -204,47 +147,6 @@ async function apiRequestWithRetry(path, options, maxRetries = 2) {
   throw lastError
 }
 
-// Helper function for fallback API requests
-async function apiRequestWithFallback(fullUrl, options) {
-  const { fallbackApi, ...requestOptions } = options
-  const isFormData = requestOptions.body instanceof FormData;
-  const requestHeaders = {
-    ...(requestOptions.token ? { Authorization: `Bearer ${requestOptions.token}` } : {}),
-    ...requestOptions.headers,
-  };
-  
-  if (!isFormData) {
-    requestHeaders['Content-Type'] = 'application/json';
-  }
-  
-  requestHeaders['Accept'] = 'application/json, text/plain, */*';
-  requestHeaders['Cache-Control'] = 'no-cache';
-  
-  const res = await fetch(fullUrl, {
-    method: requestOptions.method || 'GET',
-    headers: requestHeaders,
-    body: isFormData ? requestOptions.body : requestOptions.body ? JSON.stringify(requestOptions.body) : undefined,
-    credentials: 'include',
-    signal: AbortSignal.timeout ? AbortSignal.timeout(45000) : undefined,
-  })
-  
-  if (!res.ok) {
-    let error
-    try { 
-      error = await res.json() 
-    } catch { 
-      error = { 
-        message: res.statusText || 'Network request failed',
-        status: res.status 
-      } 
-    }
-    throw Object.assign(new Error(error.message || 'Request failed'), { status: res.status, data: error })
-  }
-  
-  const contentType = res.headers.get('content-type') || ''
-  if (contentType.includes('application/json')) return res.json()
-  return res.text()
-}
 
 export const api = {
   get: (p, opts) => apiRequestWithRetry(p, { ...opts, method: 'GET' }),
