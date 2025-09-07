@@ -2,16 +2,28 @@
 export const handleApiError = (error, navigate) => {
   console.error('API Error:', error);
 
-  // Handle network errors
-  if (!error.response) {
+  // Handle network errors (both fetch and axios style errors)
+  if (!error.response && !error.status) {
+    // This is a fetch-style error or network error
     return {
       type: 'network',
-      message: 'Network error. Please check your internet connection and try again.',
+      message: error.message || 'Network error. Please check your internet connection and try again.',
       code: 'NETWORK_ERROR'
     };
   }
 
-  const { status, data } = error.response;
+  // Handle fetch-style errors (from our API client)
+  if (error.status && !error.response) {
+    return {
+      type: 'http_error',
+      message: error.message || `HTTP ${error.status}: ${error.statusText || 'Request failed'}`,
+      code: `HTTP_${error.status}`,
+      status: error.status
+    };
+  }
+
+  // Handle axios-style errors (legacy support)
+  const { status, data } = error.response || { status: error.status, data: error.data };
 
   // Handle different HTTP status codes
   switch (status) {

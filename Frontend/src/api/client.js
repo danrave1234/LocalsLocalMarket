@@ -131,22 +131,26 @@ export async function apiRequest(path, { method = 'GET', body, token, headers } 
     if (contentType.includes('application/json')) return res.json()
     return res.text()
   } catch (error) {
-    // Enhanced error handling for Android devices
+    // Enhanced error handling for mobile devices
+    const isMobile = isAndroid || (typeof window !== 'undefined' && 
+      (window.navigator.userAgent.includes('Mobile') || 
+       window.navigator.userAgent.includes('iPhone')))
+    
     if (error.name === 'AbortError') {
-      const message = isAndroid 
-        ? 'Request timeout - Android devices may need a stronger internet connection. Please try again.'
+      const message = isMobile 
+        ? 'Request timeout - Mobile devices may need a stronger internet connection. Please try again.'
         : 'Request timeout - please check your internet connection'
       throw new Error(message)
     }
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      const message = isAndroid
-        ? 'Network error on Android - please check your internet connection and ensure the app has network permissions'
+      const message = isMobile
+        ? 'Network error on mobile device - please check your internet connection and ensure the app has network permissions'
         : 'Network error - please check your internet connection and try again'
       throw new Error(message)
     }
     if (error.message.includes('Failed to fetch')) {
-      const message = isAndroid
-        ? 'Unable to connect to server on Android. Please check your internet connection and try again.'
+      const message = isMobile
+        ? 'Unable to connect to server on mobile device. Please check your internet connection and try again.'
         : 'Unable to connect to server. Please check your internet connection and try again.'
       throw new Error(message)
     }
@@ -154,13 +158,14 @@ export async function apiRequest(path, { method = 'GET', body, token, headers } 
   }
 }
 
-// Retry mechanism for Android devices
+// Retry mechanism for mobile devices
 async function apiRequestWithRetry(path, options, maxRetries = 2) {
-  const isAndroid = typeof window !== 'undefined' && 
+  const isMobile = typeof window !== 'undefined' && 
     (window.navigator.userAgent.includes('Android') || 
-     window.navigator.userAgent.includes('Mobile'))
+     window.navigator.userAgent.includes('Mobile') ||
+     window.navigator.userAgent.includes('iPhone'))
   
-  if (!isAndroid) {
+  if (!isMobile) {
     return apiRequest(path, options)
   }
   
@@ -171,7 +176,7 @@ async function apiRequestWithRetry(path, options, maxRetries = 2) {
     try {
       // On the last attempt, try fallback API if available
       if (attempt === maxRetries && window.ANDROID_FALLBACK_API && !useFallback) {
-        console.log('🤖 Android trying fallback API:', window.ANDROID_FALLBACK_API)
+        console.log('📱 Mobile trying fallback API:', window.ANDROID_FALLBACK_API)
         useFallback = true
         // Temporarily override API_BASE for this request
         const originalApiBase = API_BASE
@@ -188,7 +193,7 @@ async function apiRequestWithRetry(path, options, maxRetries = 2) {
         error.message.includes('Network error') ||
         error.name === 'AbortError'
       )) {
-        console.log(`🤖 Android retry attempt ${attempt + 1}/${maxRetries + 1} for ${path}`)
+        console.log(`📱 Mobile retry attempt ${attempt + 1}/${maxRetries + 1} for ${path}`)
         // Wait before retry (exponential backoff)
         await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
         continue

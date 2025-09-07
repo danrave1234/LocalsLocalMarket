@@ -477,7 +477,7 @@ export default function ShopPage() {
   const isOwner = shop && user && shop.owner && shop.owner.id === user.id
 
   useEffect(() => {
-    const loadShopData = async () => {
+    const loadShopData = async (retryCount = 0) => {
       // Prevent duplicate API calls
       if (shopLoadingRef.current) {
         return
@@ -487,6 +487,14 @@ export default function ShopPage() {
       setError('')
       setLoading(true)
       setMapLoaded(false)
+      
+      // Mobile-specific retry logic
+      const isMobile = typeof window !== 'undefined' && 
+        (window.navigator.userAgent.includes('Mobile') || 
+         window.navigator.userAgent.includes('Android') ||
+         window.navigator.userAgent.includes('iPhone'))
+      
+      const maxRetries = isMobile ? 2 : 0
       
       try {
         // First, check if we have shop data in the global cache
@@ -533,7 +541,22 @@ export default function ShopPage() {
             setShop(apiShopData)
           } catch (error) {
             console.error('❌ ShopPage: Failed to fetch shop data:', error)
-            setError('Failed to load shop: ' + error.message)
+            
+            // Enhanced error handling for mobile devices
+            const isMobile = typeof window !== 'undefined' && 
+              (window.navigator.userAgent.includes('Mobile') || 
+               window.navigator.userAgent.includes('Android') ||
+               window.navigator.userAgent.includes('iPhone'))
+            
+            let errorMessage = 'Failed to load shop: ' + error.message
+            
+            if (isMobile && error.message.includes('Failed to fetch')) {
+              errorMessage = 'Unable to connect to server. Please check your internet connection and try again.'
+            } else if (isMobile && error.message.includes('timeout')) {
+              errorMessage = 'Request timed out. Please check your internet connection and try again.'
+            }
+            
+            setError(errorMessage)
             setLoading(false)
             return
           }
@@ -558,19 +581,48 @@ export default function ShopPage() {
       } catch (e) {
         console.error('Failed to load shop data:', e)
         const errorInfo = handleApiError(e)
-        setError(errorInfo.message)
-              } finally {
-          setLoading(false)
-          shopLoadingRef.current = false
+        
+        // Enhanced mobile error handling
+        const isMobile = typeof window !== 'undefined' && 
+          (window.navigator.userAgent.includes('Mobile') || 
+           window.navigator.userAgent.includes('Android') ||
+           window.navigator.userAgent.includes('iPhone'))
+        
+        let errorMessage = errorInfo.message
+        
+        if (isMobile && (e.message?.includes('Failed to fetch') || errorInfo.type === 'network')) {
+          errorMessage = 'Unable to connect to server. Please check your internet connection and try again.'
+        } else if (isMobile && e.message?.includes('timeout')) {
+          errorMessage = 'Request timed out. Please check your internet connection and try again.'
         }
+        
+        setError(errorMessage)
+        
+        // Retry logic for mobile devices
+        if (isMobile && retryCount < maxRetries && (
+          e.message?.includes('Failed to fetch') || 
+          e.message?.includes('timeout') ||
+          e.message?.includes('Network error')
+        )) {
+          console.log(`🔄 Mobile retry attempt ${retryCount + 1}/${maxRetries + 1}`)
+          shopLoadingRef.current = false
+          setTimeout(() => {
+            loadShopData(retryCount + 1)
+          }, 2000 * (retryCount + 1)) // Exponential backoff
+          return
+        }
+      } finally {
+        setLoading(false)
+        shopLoadingRef.current = false
       }
+    }
 
-          if (shopId) {
-        // Small delay to allow cache to be populated from other components
-        setTimeout(() => {
-          loadShopData()
-        }, 100)
-      }
+    if (shopId) {
+      // Small delay to allow cache to be populated from other components
+      setTimeout(() => {
+        loadShopData()
+      }, 100)
+    }
   }, [shopId])
 
 
