@@ -1119,9 +1119,15 @@ export default function ShopPage() {
 
   if (!shop) {
     return (
-      <main className="container shop-page-container">
-        <div className="muted">Shop not found</div>
-      </main>
+      <>
+        <SEOHead 
+          title="Shop Not Found - LocalsLocalMarket"
+          description="The requested shop could not be found. Browse other local shops and businesses on LocalsLocalMarket."
+        />
+        <main className="container shop-page-container">
+          <div className="muted">Shop not found</div>
+        </main>
+      </>
     )
   }
 

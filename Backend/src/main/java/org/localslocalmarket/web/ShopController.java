@@ -11,6 +11,7 @@ import org.localslocalmarket.security.AuditService;
 import org.localslocalmarket.security.InputValidationService;
 import org.localslocalmarket.service.CacheInvalidationService;
 import org.localslocalmarket.service.SearchEngineNotificationService;
+import org.localslocalmarket.service.SitemapService;
 import org.localslocalmarket.web.dto.ShopDtos;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,8 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
 
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +37,7 @@ public class ShopController {
     private final UnauthenticatedShopReviewRepository unauthReviews;
     private final CacheInvalidationService cacheInvalidationService;
     private final SearchEngineNotificationService searchEngineNotificationService;
+    private final SitemapService sitemapService;
 
     public ShopController(ShopRepository shops, UserRepository users, 
                          AuthorizationService authorizationService, 
@@ -46,7 +46,8 @@ public class ShopController {
                          ShopRatingRepository shopRatings,
                          UnauthenticatedShopReviewRepository unauthReviews,
                          CacheInvalidationService cacheInvalidationService,
-                         SearchEngineNotificationService searchEngineNotificationService){
+                         SearchEngineNotificationService searchEngineNotificationService,
+                         SitemapService sitemapService){
         this.shops = shops;
         this.users = users;
         this.authorizationService = authorizationService;
@@ -56,6 +57,7 @@ public class ShopController {
         this.unauthReviews = unauthReviews;
         this.cacheInvalidationService = cacheInvalidationService;
         this.searchEngineNotificationService = searchEngineNotificationService;
+        this.sitemapService = sitemapService;
     }
 
     @PostMapping
@@ -103,6 +105,9 @@ public class ShopController {
             
             // Smart cache invalidation
             cacheInvalidationService.onShopDataChanged();
+            
+            // Invalidate sitemap cache for new shop
+            sitemapService.invalidateSitemapCache();
             
             // Notify search engines about new content
             searchEngineNotificationService.notifySitemapUpdated();
@@ -420,6 +425,9 @@ public class ShopController {
                 
                 // Smart cache invalidation
                 cacheInvalidationService.onShopDataChanged();
+                
+                // Invalidate sitemap cache for deleted shop
+                sitemapService.invalidateSitemapCache();
                 
                 // Log the action
                 auditService.logUserAction(AuditService.AuditEventType.SHOP_DELETE, 
