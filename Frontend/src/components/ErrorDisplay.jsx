@@ -57,7 +57,6 @@ const ErrorDisplay = ({
       
       {showIcon && (
         <div style={{ 
-          marginBottom: '1.5rem', 
           display: 'flex', 
           justifyContent: 'center',
           padding: '1rem',
@@ -81,7 +80,6 @@ const ErrorDisplay = ({
       </h3>
       
       <p style={{ 
-        margin: '0 0 2rem 0', 
         color: 'var(--muted)',
         fontSize: '1rem',
         lineHeight: '1.6',

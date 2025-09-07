@@ -527,8 +527,9 @@ export default function ShopPage() {
           // No cached data, fetch from API
           console.log('🔍 ShopPage: Fetching shop data from API for ID:', shopId)
           
+          let apiShopData = null
           try {
-            const apiShopData = await fetchShopById(shopId)
+            apiShopData = await fetchShopById(shopId)
             console.log('✅ ShopPage: Successfully fetched shop data:', apiShopData)
             
             // Cache the fetched data for future use
@@ -568,7 +569,7 @@ export default function ShopPage() {
           ])
           
           // Load business hours from shop data
-          if (apiShopData.businessHoursJson && apiShopData.businessHoursJson.trim() !== '') {
+          if (apiShopData && apiShopData.businessHoursJson && apiShopData.businessHoursJson.trim() !== '') {
             try {
               const parsedHours = JSON.parse(apiShopData.businessHoursJson)
               setBusinessHours(parsedHours)
