@@ -133,6 +133,13 @@ export default function ShopPage() {
       }
     } catch (error) {
       console.error('Failed to fetch services:', error)
+      
+      // Enhanced mobile error handling for services
+      const isMobile = typeof window !== 'undefined' && 
+        (window.navigator.userAgent.includes('Mobile') || 
+         window.navigator.userAgent.includes('Android') ||
+         window.navigator.userAgent.includes('iPhone'))
+      
       // Try legacy API as fallback
       try {
         console.log('Trying legacy API as fallback...')
@@ -141,8 +148,15 @@ export default function ShopPage() {
         setServices(Array.isArray(legacyResponse) ? legacyResponse : [])
       } catch (legacyError) {
         console.error('Both APIs failed:', legacyError)
-        setError('Failed to load services: ' + error.message)
-        setServices([])
+        
+        // Don't set error for services failure on mobile - just log it
+        if (isMobile) {
+          console.warn('Services failed to load on mobile, but continuing without services')
+          setServices([])
+        } else {
+          setError('Failed to load services: ' + error.message)
+          setServices([])
+        }
       }
     }
   }, [shop?.id])
@@ -494,7 +508,13 @@ export default function ShopPage() {
          window.navigator.userAgent.includes('Android') ||
          window.navigator.userAgent.includes('iPhone'))
       
-      const maxRetries = isMobile ? 2 : 0
+      const maxRetries = isMobile ? 1 : 0 // Reduced retries to prevent infinite loops
+      
+      // Clear cache on mobile if this is a retry attempt
+      if (isMobile && retryCount > 0) {
+        console.log('🔄 Mobile retry: Clearing shop cache to force fresh fetch')
+        shopCache.delete(shopId)
+      }
       
       try {
         // First, check if we have shop data in the global cache
@@ -508,10 +528,18 @@ export default function ShopPage() {
           setShop(shopData)
           
           // Only fetch products and services since they're not cached
-          await Promise.all([
-            fetchProductsWithPagination(0, shopId),
-            fetchServices(shopId)
-          ])
+          try {
+            await Promise.all([
+              fetchProductsWithPagination(0, shopId),
+              fetchServices(shopId)
+            ])
+          } catch (fetchError) {
+            console.error('Error fetching products/services from cache:', fetchError)
+            // On mobile, don't fail the entire page load for products/services errors
+            if (!isMobile) {
+              throw fetchError
+            }
+          }
           
           // Load business hours from shop data
           if (shopData.businessHoursJson && shopData.businessHoursJson.trim() !== '') {
@@ -562,11 +590,19 @@ export default function ShopPage() {
             return
           }
           
-          // Fetch products and services
-          await Promise.all([
-            fetchProductsWithPagination(0, shopId),
-            fetchServices(shopId)
-          ])
+          // Fetch products and services - handle failures gracefully on mobile
+          try {
+            await Promise.all([
+              fetchProductsWithPagination(0, shopId),
+              fetchServices(shopId)
+            ])
+          } catch (fetchError) {
+            console.error('Error fetching products/services:', fetchError)
+            // On mobile, don't fail the entire page load for products/services errors
+            if (!isMobile) {
+              throw fetchError
+            }
+          }
           
           // Load business hours from shop data
           if (apiShopData && apiShopData.businessHoursJson && apiShopData.businessHoursJson.trim() !== '') {
