@@ -8,333 +8,18 @@
   isolation: isolate;
 }
 
-/* Reset ALL button styles within auth containers */
+/* Reset button styles within auth containers */
 .auth-container button:not(.password-toggle-btn):not(.forgot-password-btn):not(.auth-submit-btn):not(.register-btn),
 .auth-card button:not(.password-toggle-btn):not(.forgot-password-btn):not(.auth-submit-btn):not(.register-btn),
 .auth-form button:not(.password-toggle-btn):not(.forgot-password-btn):not(.auth-submit-btn):not(.register-btn) {
   all: unset;
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
+  display: inline-block;
+  cursor: pointer;
   font: inherit;
   color: inherit;
-  text-decoration: none;
-  cursor: pointer;
-  outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  display: inline-block;
-  vertical-align: middle;
-  text-align: center;
-  line-height: 1;
-  white-space: nowrap;
-  overflow: visible;
-  text-transform: none;
-  font-size: 1rem;
-  font-weight: normal;
-  font-style: normal;
-  font-variant: normal;
-  text-rendering: auto;
-  letter-spacing: normal;
-  word-spacing: normal;
-  text-indent: 0;
-  text-shadow: none;
-  border-radius: 0;
-  box-shadow: none;
-  transform: none;
-  transition: none;
-  animation: none;
-  opacity: 1;
-  visibility: visible;
-  position: static;
-  top: auto;
-  right: auto;
-  bottom: auto;
-  left: auto;
-  z-index: auto;
-  width: auto;
-  height: auto;
-  min-width: 0;
-  min-height: 0;
-  max-width: none;
-  max-height: none;
-  flex: none;
-  flex-grow: 0;
-  flex-shrink: 1;
-  flex-basis: auto;
-  align-self: auto;
-  order: 0;
-  grid-area: auto;
-  grid-column: auto;
-  grid-row: auto;
-  grid-column-start: auto;
-  grid-column-end: auto;
-  grid-row-start: auto;
-  grid-row-end: auto;
-  justify-self: auto;
-  align-self: auto;
-  place-self: auto;
-  margin-block: 0;
-  margin-inline: 0;
-  padding-block: 0;
-  padding-inline: 0;
-  border-block: none;
-  border-inline: none;
-  border-block-start: none;
-  border-block-end: none;
-  border-inline-start: none;
-  border-inline-end: none;
-  border-block-start-width: 0;
-  border-block-end-width: 0;
-  border-inline-start-width: 0;
-  border-inline-end-width: 0;
-  border-block-start-style: none;
-  border-block-end-style: none;
-  border-inline-start-style: none;
-  border-inline-end-style: none;
-  border-block-start-color: transparent;
-  border-block-end-color: transparent;
-  border-inline-start-color: transparent;
-  border-inline-end-color: transparent;
-  border-image: none;
-  border-image-source: none;
-  border-image-slice: 100%;
-  border-image-width: 1;
-  border-image-outset: 0;
-  border-image-repeat: stretch;
-  outline: none;
-  outline-width: 0;
-  outline-style: none;
-  outline-color: transparent;
-  outline-offset: 0;
-  box-shadow: none;
-  filter: none;
-  backdrop-filter: none;
-  mix-blend-mode: normal;
-  isolation: auto;
-  clip: auto;
-  clip-path: none;
-  mask: none;
-  mask-type: luminance;
-  mask-mode: match-source;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-clip: border-box;
-  mask-origin: border-box;
-  mask-size: auto;
-  mask-composite: add;
-  mask-image: none;
-  mask-border: none;
-  mask-border-source: none;
-  mask-border-slice: 100%;
-  mask-border-width: 1;
-  mask-border-outset: 0;
-  mask-border-repeat: stretch;
-  mask-border-mode: alpha;
-  shape-outside: none;
-  shape-image-threshold: 0;
-  shape-margin: 0;
-  contain: none;
-  contain-intrinsic-size: none;
-  contain-intrinsic-block-size: none;
-  contain-intrinsic-inline-size: none;
-  contain-intrinsic-width: none;
-  contain-intrinsic-height: none;
-  contain-intrinsic-min-width: none;
-  contain-intrinsic-min-height: none;
-  contain-intrinsic-max-width: none;
-  contain-intrinsic-max-height: none;
-  content: normal;
-  quotes: none;
-  counter-reset: none;
-  counter-increment: none;
-  list-style: none;
-  list-style-type: disc;
-  list-style-position: outside;
-  list-style-image: none;
-  table-layout: auto;
-  empty-cells: show;
-  caption-side: top;
-  border-spacing: 0;
-  border-collapse: separate;
-  vertical-align: baseline;
-  text-align: start;
-  text-align-last: auto;
-  text-combine-upright: none;
-  text-orientation: mixed;
-  text-indent: 0;
-  text-justify: auto;
-  text-overflow: clip;
-  text-shadow: none;
-  text-transform: none;
-  text-underline-offset: auto;
-  text-underline-position: auto;
-  text-emphasis: none;
-  text-emphasis-color: currentColor;
-  text-emphasis-style: none;
-  text-emphasis-position: over right;
-  text-wrap: wrap;
-  white-space: normal;
-  word-break: normal;
-  word-spacing: normal;
-  word-wrap: normal;
-  overflow-wrap: normal;
-  hyphens: manual;
-  line-height: normal;
-  line-height-step: 0;
-  line-padding: 0;
-  line-snap: none;
-  line-stacking: inline-line-height;
-  line-stacking-ruby: exclude-ruby;
-  line-stacking-shift: consider-shifts;
-  line-stacking-strategy: inline-line-height;
-  tab-size: 8;
-  font-family: inherit;
-  font-size: 1rem;
-  font-style: normal;
-  font-variant: normal;
-  font-weight: normal;
-  font-stretch: normal;
-  font-size-adjust: none;
-  font-kerning: auto;
-  font-feature-settings: normal;
-  font-variation-settings: normal;
-  font-optical-sizing: auto;
-  font-synthesis: weight style;
-  color: inherit;
-  background: transparent;
-  background-color: transparent;
-  background-image: none;
-  background-repeat: repeat;
-  background-attachment: scroll;
-  background-position: 0% 0%;
-  background-clip: border-box;
-  background-origin: padding-box;
-  background-size: auto auto;
-  border: none;
-  border-width: 0;
-  border-style: none;
-  border-color: transparent;
-  border-top: none;
-  border-right: none;
-  border-bottom: none;
-  border-left: none;
-  border-radius: 0;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  border-bottom-left-radius: 0;
-  box-shadow: none;
-  transform: none;
-  transform-origin: 50% 50% 0;
-  transform-style: flat;
-  perspective: none;
-  perspective-origin: 50% 50%;
-  backface-visibility: visible;
-  transition: none;
-  transition-property: all;
-  transition-duration: 0s;
-  transition-timing-function: ease;
-  transition-delay: 0s;
-  animation: none;
-  animation-name: none;
-  animation-duration: 0s;
-  animation-timing-function: ease;
-  animation-delay: 0s;
-  animation-iteration-count: 1;
-  animation-direction: normal;
-  animation-fill-mode: none;
-  animation-play-state: running;
-  will-change: auto;
-  touch-action: auto;
-  user-select: auto;
-  -webkit-user-select: auto;
-  -moz-user-select: auto;
-  -ms-user-select: auto;
-  -webkit-touch-callout: default;
-  -webkit-tap-highlight-color: transparent;
-  -webkit-text-size-adjust: 100%;
-  -webkit-font-smoothing: auto;
-  -moz-osx-font-smoothing: auto;
-  -webkit-font-feature-settings: normal;
-  -moz-font-feature-settings: normal;
-  font-feature-settings: normal;
-  -webkit-font-variant-ligatures: normal;
-  -moz-font-variant-ligatures: normal;
-  font-variant-ligatures: normal;
-  -webkit-font-variant-caps: normal;
-  -moz-font-variant-caps: normal;
-  font-variant-caps: normal;
-  -webkit-font-variant-numeric: normal;
-  -moz-font-variant-numeric: normal;
-  font-variant-numeric: normal;
-  -webkit-font-variant-east-asian: normal;
-  -moz-font-variant-east-asian: normal;
-  font-variant-east-asian: normal;
-  -webkit-font-variant-alternates: normal;
-  -moz-font-variant-alternates: normal;
-  font-variant-alternates: normal;
-  -webkit-font-variant-position: normal;
-  -moz-font-variant-position: normal;
-  font-variant-position: normal;
-  -webkit-font-variant-emoji: normal;
-  -moz-font-variant-emoji: normal;
-  font-variant-emoji: normal;
-  -webkit-font-optical-sizing: auto;
-  -moz-font-optical-sizing: auto;
-  font-optical-sizing: auto;
-  -webkit-font-size-adjust: none;
-  -moz-font-size-adjust: none;
-  font-size-adjust: none;
-  -webkit-font-kerning: auto;
-  -moz-font-kerning: auto;
-  font-kerning: auto;
-  -webkit-font-synthesis: weight style;
-  -moz-font-synthesis: weight style;
-  font-synthesis: weight style;
-  -webkit-font-language-override: normal;
-  -moz-font-language-override: normal;
-  font-language-override: normal;
-  -webkit-font-display: auto;
-  -moz-font-display: auto;
-  font-display: auto;
-  -webkit-font-variant-numeric: normal;
-  -moz-font-variant-numeric: normal;
-  font-variant-numeric: normal;
-  -webkit-font-variant-east-asian: normal;
-  -moz-font-variant-east-asian: normal;
-  font-variant-east-asian: normal;
-  -webkit-font-variant-alternates: normal;
-  -moz-font-variant-alternates: normal;
-  font-variant-alternates: normal;
-  -webkit-font-variant-position: normal;
-  -moz-font-variant-position: normal;
-  font-variant-position: normal;
-  -webkit-font-variant-emoji: normal;
-  -moz-font-variant-emoji: normal;
-  font-variant-emoji: normal;
-  -webkit-font-optical-sizing: auto;
-  -moz-font-optical-sizing: auto;
-  font-optical-sizing: auto;
-  -webkit-font-size-adjust: none;
-  -moz-font-size-adjust: none;
-  font-size-adjust: none;
-  -webkit-font-kerning: auto;
-  -moz-font-kerning: auto;
-  font-kerning: auto;
-  -webkit-font-synthesis: weight style;
-  -moz-font-synthesis: weight style;
-  font-synthesis: weight style;
-  -webkit-font-language-override: normal;
-  -moz-font-language-override: normal;
-  font-language-override: normal;
-  -webkit-font-display: auto;
-  -moz-font-display: auto;
-  font-display: auto;
 }
+
 .auth-container {
   min-height: 100vh;
   display: flex;
@@ -448,7 +133,7 @@
   pointer-events: none;
 }
 
-.auth-card::before {
+.auth-card::after {
   content: '';
   position: absolute;
   top: 0;
@@ -940,20 +625,6 @@ html body button[type="submit"].auth-submit-btn:hover {
 }
 
 /* Enhanced Auth Styles for Reset Password */
-.auth-logo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.logo-icon {
-  width: 2rem;
-  height: 2rem;
-  color: var(--accent);
-}
-
 .auth-header h1 {
   font-size: 2rem;
   font-weight: 700;
@@ -965,44 +636,10 @@ html body button[type="submit"].auth-submit-btn:hover {
   background-clip: text;
 }
 
-.auth-subtitle {
-  color: var(--muted);
-  font-size: 1rem;
-  margin: 0;
-  line-height: 1.5;
-}
-
-.form-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--text);
-  font-weight: 500;
-  font-size: 0.9rem;
-}
-
 .input-icon {
   width: 1rem;
   height: 1rem;
   color: var(--accent);
-}
-
-.auth-error {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 12px;
-  padding: 1rem;
-  color: #fca5a5;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.error-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-  flex-shrink: 0;
 }
 
 .auth-success {
@@ -1083,25 +720,9 @@ html body button.auth-button:disabled {
   animation: spin 1s linear infinite;
 }
 
-.auth-footer {
-  text-align: center;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.auth-link {
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.auth-link:hover {
-  color: var(--accent-2);
-  text-decoration: underline;
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Responsive Design */
@@ -1270,7 +891,8 @@ html body button.auth-button:disabled {
     font-size: 0.8rem;
   }
 }
-  
+
+@media (max-width: 360px) {
   .auth-input {
     padding: 0.875rem 1rem;
     min-height: 44px;
