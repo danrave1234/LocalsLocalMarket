@@ -7,6 +7,7 @@ const SEOHead = ({
   image, 
   url, 
   type = 'website',
+  robots = 'index, follow',
   structuredData = null 
 }) => {
   const defaultTitle = 'LocalsLocalMarket - Connect with Local Businesses'
@@ -24,6 +25,7 @@ const SEOHead = ({
       {/* Basic Meta Tags */}
       <title>{finalTitle}</title>
       <meta name="description" content={finalDescription} />
+      <meta name="robots" content={robots} />
       {keywords && <meta name="keywords" content={keywords} />}
       <link rel="canonical" href={finalUrl} />
 

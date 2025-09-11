@@ -1,10 +1,11 @@
 package org.localslocalmarket.repo;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 
 import org.localslocalmarket.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -25,14 +26,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Count users who are both enabled and active
     long countByEnabledTrueAndIsActiveTrue();
     
-    // Find users by enabled status
-    List<User> findByEnabled(boolean enabled);
-    
-    // Find users by active status
-    List<User> findByIsActive(boolean isActive);
-    
-    // Find users by both enabled and active status
-    List<User> findByEnabledAndIsActive(boolean enabled, boolean isActive);
+    // Pageable finders for admin listing and filtering
+    Page<User> findAll(Pageable pageable);
+    Page<User> findByEnabled(boolean enabled, Pageable pageable);
+    Page<User> findByIsActive(boolean isActive, Pageable pageable);
+    Page<User> findByEnabledAndIsActive(boolean enabled, boolean isActive, Pageable pageable);
+    Page<User> findByEmailContainingIgnoreCaseOrNameContainingIgnoreCase(String email, String name, Pageable pageable);
     
     // Admin dashboard methods
     long countByCreatedAtAfter(Instant date);

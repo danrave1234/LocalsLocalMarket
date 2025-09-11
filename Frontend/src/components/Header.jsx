@@ -148,6 +148,7 @@ export default function Header({ onOpenFeedback }) {
               onClearFilters={clearFilters}
               compactFilter={true}
               hasPinnedLocation={hasPinnedLocation}
+              navigateOnSubmit={true}
             />
           </div>
         )}

@@ -116,23 +116,14 @@ public class AdminController {
         Page<User> usersPage;
         
         if (search != null && !search.trim().isEmpty()) {
-            // TODO: Implement search functionality
-            usersPage = users.findAll(pageable);
+            String q = search.trim();
+            usersPage = users.findByEmailContainingIgnoreCaseOrNameContainingIgnoreCase(q, q, pageable);
         } else if (enabled != null && isActive != null) {
-            // Filter by both enabled and active status
-            List<User> filteredUsers = users.findByEnabledAndIsActive(enabled, isActive);
-            // TODO: Implement proper pagination for filtered results
-            usersPage = users.findAll(pageable);
+            usersPage = users.findByEnabledAndIsActive(enabled, isActive, pageable);
         } else if (enabled != null) {
-            // Filter by enabled status only
-            List<User> filteredUsers = users.findByEnabled(enabled);
-            // TODO: Implement proper pagination for filtered results
-            usersPage = users.findAll(pageable);
+            usersPage = users.findByEnabled(enabled, pageable);
         } else if (isActive != null) {
-            // Filter by active status only
-            List<User> filteredUsers = users.findByIsActive(isActive);
-            // TODO: Implement proper pagination for filtered results
-            usersPage = users.findAll(pageable);
+            usersPage = users.findByIsActive(isActive, pageable);
         } else {
             usersPage = users.findAll(pageable);
         }
@@ -227,12 +218,16 @@ public class AdminController {
     public ResponseEntity<Page<Product>> getProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String filter) {
+            @RequestParam(required = false) String filter,
+            @RequestParam(required = false, name = "q") String query) {
         
         Pageable pageable = PageRequest.of(page, size);
         Page<Product> productsPage;
         
-        if ("low-stock".equals(filter)) {
+        // If a search query is provided, prioritize search by title (case-insensitive)
+        if (query != null && !query.isBlank()) {
+            productsPage = products.findByTitleContainingIgnoreCase(query.trim(), pageable);
+        } else if ("low-stock".equals(filter)) {
             productsPage = products.findByStockCountLessThanEqual(5, pageable);
         } else if ("out-of-stock".equals(filter)) {
             productsPage = products.findByStockCount(0, pageable);

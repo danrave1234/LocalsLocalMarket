@@ -44,4 +44,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     Page<Product> findByStockCountLessThanEqual(int stockCount, Pageable pageable);
     
     Page<Product> findByStockCount(int stockCount, Pageable pageable);
+    
+    // Admin search
+    Page<Product> findByTitleContainingIgnoreCase(String title, Pageable pageable);
 }

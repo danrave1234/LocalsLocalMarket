@@ -100,7 +100,7 @@ const Footer = ({ onOpenFeedback }) => {
               <a href="/privacy" className="footer-bottom-link">Privacy</a>
               <a href="/terms" className="footer-bottom-link">Terms</a>
               <a href="/cookies" className="footer-bottom-link">Cookies</a>
-              <a href="/sitemap" className="footer-bottom-link">Sitemap</a>
+              <a href="/sitemap.xml" className="footer-bottom-link">Sitemap</a>
             </nav>
           </div>
         </div>

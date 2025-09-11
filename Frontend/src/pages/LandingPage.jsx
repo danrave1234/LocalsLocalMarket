@@ -15,6 +15,8 @@ import { handleApiError } from '../utils/errorHandler.js'
 import { SkeletonShopCard, SkeletonMap, SkeletonText } from "../components/Skeleton.jsx"
 import ErrorDisplay from "../components/ErrorDisplay.jsx"
 import { LoadingSpinner, LoadingCard, LoadingOverlay } from "../components/Loading.jsx"
+import { useTutorial } from "../contexts/TutorialContext.jsx"
+import { landingPageTutorialSteps } from "../components/TutorialSteps.js"
 import '../landing-page.css'
 
 // Inline icon components to avoid external dependencies
@@ -160,7 +162,13 @@ export default function LandingPage() {
   const mapRef = useRef(null)
   const shopsLoadingRef = useRef(false)
 
+  // Tutorial integration
+  const { setTutorialSteps } = useTutorial()
+
   useEffect(() => {
+    // Set tutorial steps for landing page
+    setTutorialSteps(landingPageTutorialSteps)
+    
     // Restore persisted tip visibility
     try {
       const tipClosed = localStorage.getItem('landing_map_tip_closed')
@@ -178,7 +186,7 @@ export default function LandingPage() {
     if (savedPinnedLocation) {
       setPinnedLocation(JSON.parse(savedPinnedLocation))
     }
-  }, [])
+  }, [setTutorialSteps])
 
   useEffect(() => {
     const onScroll = () => setShowBackToTop(window.scrollY > 300)
@@ -869,7 +877,7 @@ export default function LandingPage() {
         <div id="landing-hero-sentinel" style={{ height: 1 }} />
         {/* Header + Search in one row */}
         <section style={{ marginBottom: "2rem" }}>
-          <div style={{ marginTop: '1rem' }}>
+          <div style={{ marginTop: '1rem' }} data-tutorial="search-bar">
             <SearchOptimization 
               onClearFilters={clearPinnedLocation} 
               onSearchChange={handleSearchChange}
@@ -920,7 +928,7 @@ export default function LandingPage() {
                   </div>
                 </div>
               
-                            <div className="shops-grid">
+                            <div className="shops-grid" data-tutorial="shop-cards">
                 {sortedShops.map((shop) => (
                   <div key={shop.id} className="card" style={{ 
                     padding: 0, 
@@ -1150,6 +1158,7 @@ export default function LandingPage() {
         {!isMobile && (
         <div 
           className="map-sticky-container"
+          data-tutorial="map-container"
           style={{ 
             height: isMapExpanded ? 'calc(100vh - 90px)' : 'calc(60vh - 2rem)', // Increased from 42vh to 60vh for taller map
             minHeight: isMapExpanded ? '600px' : '400px', // Increased minHeight from 300px to 400px
@@ -1186,6 +1195,7 @@ export default function LandingPage() {
             {/* Map Controls */}
             <div 
               className="map-controls"
+              data-tutorial="map-controls"
               style={{
                 position: 'absolute',
                 top: '1rem',
@@ -1311,6 +1321,7 @@ export default function LandingPage() {
       
         <button 
           className="floating-map-btn" 
+          data-tutorial="mobile-map-btn"
           onClick={openMapModal} 
           title="Open map"
           style={{

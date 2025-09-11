@@ -6,8 +6,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.localslocalmarket.model.Service;
 import org.localslocalmarket.model.Shop;
 import org.localslocalmarket.repo.ShopRepository;
+import org.localslocalmarket.repository.ServiceRepository;
 import org.localslocalmarket.service.SearchEngineNotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
@@ -31,7 +33,11 @@ public class SitemapController {
     @Autowired
     private SearchEngineNotificationService searchEngineNotificationService;
 
+    @Autowired
+    private ServiceRepository serviceRepository;
+
     private static final int SHOPS_PER_SITEMAP = 1000; // Max 50,000 URLs per sitemap (Google's limit)
+    private static final int SERVICES_PER_SITEMAP = 1000;
     private static final String BASE_URL = "https://localslocalmarket.com";
     private static final String SITEMAP_BASE_URL = BASE_URL + "/api/sitemap";
 
@@ -63,6 +69,16 @@ public class SitemapController {
             for (int i = 0; i < totalShopSitemaps; i++) {
                 sitemapIndex.append("  <sitemap>\n");
                 sitemapIndex.append("    <loc>").append(SITEMAP_BASE_URL).append("/shops-").append(i).append(".xml</loc>\n");
+                sitemapIndex.append("    <lastmod>").append(currentDate).append("</lastmod>\n");
+                sitemapIndex.append("  </sitemap>\n");
+            }
+
+            // Add service sitemaps
+            long totalServices = serviceRepository.count();
+            int totalServiceSitemaps = (int) Math.ceil((double) totalServices / SERVICES_PER_SITEMAP);
+            for (int i = 0; i < totalServiceSitemaps; i++) {
+                sitemapIndex.append("  <sitemap>\n");
+                sitemapIndex.append("    <loc>").append(SITEMAP_BASE_URL).append("/services-").append(i).append(".xml</loc>\n");
                 sitemapIndex.append("    <lastmod>").append(currentDate).append("</lastmod>\n");
                 sitemapIndex.append("  </sitemap>\n");
             }
@@ -145,10 +161,7 @@ public class SitemapController {
             System.out.println("Generating shop sitemap for page: " + page);
             String currentDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
             
-            // Calculate offset and limit for this page
-            int offset = page * SHOPS_PER_SITEMAP;
-            int limit = SHOPS_PER_SITEMAP;
-            
+            // Fetch shops with pagination
             System.out.println("Fetching shops for page: " + page + ", size: " + SHOPS_PER_SITEMAP);
             
             // Get shops for this page using Spring Data JPA pagination
@@ -183,9 +196,47 @@ public class SitemapController {
                     
         } catch (Exception e) {
             System.err.println("Error generating shop sitemap for page " + page + ": " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(500)
                     .body("Error generating shop sitemap: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Service sitemaps - paginated
+     */
+    @Cacheable(cacheNames = "sitemap", key = "'services_' + #page")
+    @GetMapping(value = "/sitemap/services-{page}.xml", produces = MediaType.APPLICATION_XML_VALUE)
+    public ResponseEntity<String> generateServicesSitemap(@PathVariable("page") int page) {
+        try {
+            String currentDate = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
+
+            Page<Service> servicePage = serviceRepository.findByIsActiveTrue(PageRequest.of(page, SERVICES_PER_SITEMAP));
+            List<Service> services = servicePage.getContent();
+
+            StringBuilder sitemap = new StringBuilder();
+            sitemap.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            sitemap.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+
+            for (Service svc : services) {
+                String serviceUrl = BASE_URL + "/services/" + svc.getId();
+                sitemap.append("  <url>\n");
+                sitemap.append("    <loc>").append(serviceUrl).append("</loc>\n");
+                sitemap.append("    <lastmod>").append(currentDate).append("</lastmod>\n");
+                sitemap.append("    <changefreq>weekly</changefreq>\n");
+                sitemap.append("    <priority>0.7</priority>\n");
+                sitemap.append("  </url>\n");
+            }
+
+            sitemap.append("</urlset>");
+
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/xml; charset=utf-8")
+                    .header("Cache-Control", "public, max-age=3600")
+                    .header("X-Robots-Tag", "index, follow")
+                    .body(sitemap.toString());
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body("Error generating services sitemap: " + e.getMessage());
         }
     }
 
@@ -333,7 +384,6 @@ public class SitemapController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             System.err.println("Test sitemap error: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(500)
                     .body(Map.of("error", e.getMessage()));
         }

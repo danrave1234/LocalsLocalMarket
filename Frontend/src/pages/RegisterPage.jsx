@@ -13,6 +13,7 @@ export default function RegisterPage() {
     })
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const [acceptedTerms, setAcceptedTerms] = useState(false)
     const [error, setError] = useState('')
     const { register } = useAuth()
     const navigate = useNavigate()
@@ -28,6 +29,10 @@ export default function RegisterPage() {
         e.preventDefault()
         setError('')
         
+        if (!acceptedTerms) {
+            return setError('Please accept the Terms of Agreement to continue')
+        }
+
         if (formData.password !== formData.confirmPassword) {
             return setError('Passwords do not match')
         }
@@ -203,8 +208,27 @@ export default function RegisterPage() {
                                 </button>
                             </div>
                         </div>
+
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="tos">
+                                <input
+                                    id="tos"
+                                    name="tos"
+                                    type="checkbox"
+                                    checked={acceptedTerms}
+                                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                                    className="auth-checkbox"
+                                    required
+                                />
+                                <span style={{ marginLeft: 8 }}>
+                                    I agree to the
+                                    {' '}<a className="auth-link" href="/terms">Terms</a>{' '}and{' '}
+                                    <a className="auth-link" href="/privacy">Privacy Policy</a>
+                                </span>
+                            </label>
+                        </div>
                         
-                        <button type="submit" className="auth-submit-btn">
+                        <button type="submit" className="auth-submit-btn" disabled={!acceptedTerms} aria-disabled={!acceptedTerms}>
                             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M15 3L21 12L15 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 <path d="M3 12H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

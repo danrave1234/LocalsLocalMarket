@@ -35,6 +35,51 @@ const TermsPage = () => {
       {/* Terms Content */}
       <section className="terms-content">
         <div className="terms-section">
+          <h2 className="section-title">How LocalsLocalMarket Works</h2>
+          <div className="section-content">
+            <p>
+              We are a local marketplace and directory. Information you choose to publish about your shop
+              or services is shown publicly so customers can find you on your profile, in search, and on maps.
+            </p>
+            <ul className="terms-list">
+              <li>Public shop info: name, address, coordinates, hours, categories, descriptions, photos.</li>
+              <li>Public activity: listings, ratings, and reviews may appear on-site and in previews.</li>
+              <li>Location features: we use shop coordinates or your chosen location to show nearby results; we may use map providers to render maps.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="terms-section">
+          <h2 className="section-title">Content, Rights, and Moderation</h2>
+          <div className="section-content">
+            <ul className="terms-list">
+              <li>Only post content you have the right to share. You retain ownership of your content.</li>
+              <li>By posting, you grant us a limited license to host, display, and technically adapt your content.</li>
+              <li>We may remove or restrict content that violates these terms or local laws.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="terms-section">
+          <h2 className="section-title">Communications</h2>
+          <div className="section-content">
+            <p>
+              We send essential emails or notifications about your account and shop activity. You can manage
+              marketing preferences separately.
+            </p>
+          </div>
+        </div>
+
+        <div className="terms-section">
+          <h2 className="section-title">Data Retention and Deletion</h2>
+          <div className="section-content">
+            <p>
+              You may request deletion of your account. Some records may be retained where required by law,
+              dispute resolution, or security.
+            </p>
+          </div>
+        </div>
+        <div className="terms-section">
           <h2 className="section-title">Acceptance of Terms</h2>
           <div className="section-content">
             <p>
@@ -264,7 +309,7 @@ const TermsPage = () => {
 
       {/* Last Updated */}
       <div className="last-updated">
-        <p>Last updated: December 2024</p>
+        <p>Last updated: September 2025</p>
       </div>
       </main>
     </>

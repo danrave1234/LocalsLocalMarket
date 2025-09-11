@@ -1,0 +1,158 @@
+/* Tutorial Trigger Styles */
+.tutorial-trigger {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 1000;
+}
+
+.tutorial-trigger-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+}
+
+.tutorial-trigger-btn:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.tutorial-trigger-menu {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  min-width: 200px;
+  animation: tutorial-menu-fade-in 0.2s ease-out;
+}
+
+@keyframes tutorial-menu-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tutorial-trigger-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tutorial-trigger-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tutorial-trigger-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.tutorial-trigger-close:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.tutorial-trigger-options {
+  padding: 0.5rem;
+}
+
+.tutorial-trigger-option {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: none;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin-bottom: 0.25rem;
+}
+
+.tutorial-trigger-option:hover {
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.tutorial-trigger-option--secondary {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.tutorial-trigger-option--secondary:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .tutorial-trigger {
+    bottom: 5rem; /* Above the floating map button */
+    left: 0.5rem;
+  }
+  
+  .tutorial-trigger-btn {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .tutorial-trigger-menu {
+    min-width: 180px;
+  }
+}
+
+/* Ensure it doesn't interfere with other floating elements */
+@media (min-width: 1061px) {
+  .tutorial-trigger {
+    bottom: 1rem;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .tutorial-trigger-btn {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  
+  .tutorial-trigger-btn:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  }
+  
+  .tutorial-trigger-menu {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+}

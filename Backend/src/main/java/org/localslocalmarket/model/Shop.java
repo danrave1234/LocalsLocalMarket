@@ -69,6 +69,9 @@ public class Shop {
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive;
+
     public Shop() {}
 
     public Long getId() {
@@ -144,6 +147,8 @@ public class Shop {
         return createdAt;
     }
 
+    public Boolean getIsActive() { return isActive != null ? isActive : true; }
+
     // Setters for controller usage
     public void setOwner(User owner) { this.owner = owner; }
     public void setName(String name) { this.name = name; }
@@ -163,6 +168,7 @@ public class Shop {
     public void setAdsImagePathsJson(String adsImagePathsJson) { this.adsImagePathsJson = adsImagePathsJson; }
     public void setAdsEnabled(Boolean adsEnabled) { this.adsEnabled = adsEnabled; }
     public void setBusinessHoursJson(String businessHoursJson) { this.businessHoursJson = businessHoursJson; }
+    public void setIsActive(Boolean active) { this.isActive = active; }
 
     @PrePersist
     void prePersist(){
@@ -171,6 +177,9 @@ public class Shop {
         }
         if(adsEnabled==null){
             adsEnabled = false;
+        }
+        if(isActive == null){
+            isActive = true;
         }
     }
 }

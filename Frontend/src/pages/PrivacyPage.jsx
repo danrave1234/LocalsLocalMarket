@@ -38,23 +38,25 @@ const PrivacyPage = () => {
           <h2 className="section-title">Information We Collect</h2>
           <div className="section-content">
             <p>
-              We collect information you provide directly to us, such as when you create an account, 
-              list a business, or contact us for support. This may include:
+              We collect information you provide directly to us, such as when you create an account,
+              create or manage a shop/listing, leave a review, or contact us for support. This may include:
             </p>
             <ul className="privacy-list">
-              <li>Name, email address, and contact information</li>
-              <li>Business details and descriptions</li>
-              <li>Photos and media you upload</li>
-              <li>Payment and billing information</li>
-              <li>Communications with the developer</li>
+              <li>Name, email address, and basic profile info</li>
+              <li>Shop details (name, address, hours, categories, descriptions)</li>
+              <li>Map/location coordinates you choose for your shop</li>
+              <li>Photos and other media you upload</li>
+              <li>Ratings, reviews, and other public content you submit</li>
+              <li>Communications you send to the developer</li>
             </ul>
             <p>
               We also automatically collect certain information when you use our platform, including:
             </p>
             <ul className="privacy-list">
-              <li>Device information and IP addresses</li>
-              <li>Usage data and analytics</li>
-              <li>Cookies and similar tracking technologies</li>
+              <li>Device information, IP address, and browser type</li>
+              <li>Usage data such as pages viewed and actions taken</li>
+              <li>Cookies and similar technologies for essential functionality and analytics</li>
+              <li>Approximate location when you interact with map features</li>
             </ul>
           </div>
         </div>
@@ -63,15 +65,16 @@ const PrivacyPage = () => {
           <h2 className="section-title">How We Use Your Information</h2>
           <div className="section-content">
             <p>
-              We use the information we collect to provide, maintain, and improve our services, including:
+              We use the information we collect to operate and improve LocalsLocalMarket, including:
             </p>
             <ul className="privacy-list">
-              <li>Processing your account registration and business listings</li>
-              <li>Facilitating communication between users</li>
-              <li>Providing customer support and responding to inquiries</li>
-              <li>Analyzing usage patterns to improve our platform</li>
-              <li>Sending important updates and notifications</li>
-              <li>Preventing fraud and ensuring platform security</li>
+              <li>Creating and managing your account</li>
+              <li>Publishing shop profiles, listings, and reviews that you choose to make public</li>
+              <li>Powering search, discovery, and map features to help users find local shops</li>
+              <li>Providing support and responding to requests</li>
+              <li>Sending essential account and activity notifications (marketing preferences can be managed separately)</li>
+              <li>Monitoring, preventing, and addressing security, abuse, and policy violations</li>
+              <li>Understanding usage to improve performance and features</li>
             </ul>
           </div>
         </div>
@@ -80,20 +83,17 @@ const PrivacyPage = () => {
           <h2 className="section-title">Information Sharing</h2>
           <div className="section-content">
             <p>
-              We do not sell, trade, or otherwise transfer your personal information to third parties 
-              without your consent, except in the following circumstances:
+              We do not sell your personal information. We share information only as needed to provide our services, such as:
             </p>
             <ul className="privacy-list">
-              <li>With your explicit permission</li>
-              <li>To comply with legal obligations</li>
-              <li>To protect our rights and safety</li>
-              <li>With trusted service providers who assist in operating our platform</li>
+              <li>Public content you post (shop details, listings, reviews) is visible to all users and may appear in search/social previews.</li>
+              <li>Service providers for hosting, analytics, email delivery, and map rendering.</li>
+              <li>When required by law, to protect rights and safety, or to prevent abuse.</li>
             </ul>
             <div className="privacy-highlight">
               <h3 className="highlight-title">Your Control</h3>
               <p className="highlight-content">
-                You have the right to access, update, or delete your personal information at any time 
-                through your account settings or by contacting us directly.
+                You can access, update, or request deletion of your account information by contacting us.
               </p>
             </div>
           </div>
@@ -119,18 +119,16 @@ const PrivacyPage = () => {
           <h2 className="section-title">Cookies and Tracking</h2>
           <div className="section-content">
             <p>
-              We use cookies and similar technologies to enhance your experience on our platform. 
-              These technologies help us:
+              We use cookies and similar technologies for essential functionality (like session management) and to understand usage.
+              We may also use third-party scripts to render maps and display ads, which can set their own cookies.
             </p>
             <ul className="privacy-list">
-              <li>Remember your preferences and settings</li>
-              <li>Analyze how our platform is used</li>
-              <li>Provide personalized content and recommendations</li>
-              <li>Improve our services and user experience</li>
+              <li>Essential: keep you signed in, remember preferences</li>
+              <li>Analytics: measure traffic and feature usage</li>
+              <li>Maps/Ads: enable map tiles and advertising components</li>
             </ul>
             <p>
-              You can control cookie settings through your browser preferences, though disabling 
-              certain cookies may affect platform functionality.
+              You can control cookies via your browser settings; disabling some cookies may impact functionality.
             </p>
           </div>
         </div>
@@ -139,12 +137,15 @@ const PrivacyPage = () => {
           <h2 className="section-title">Third-Party Services</h2>
           <div className="section-content">
             <p>
-              Our platform may integrate with third-party services, such as payment processors, 
-              analytics providers, and social media platforms. These services have their own 
-              privacy policies, and we encourage you to review them.
+              Our platform uses third-party services to operate key features. Examples include:
             </p>
+            <ul className="privacy-list">
+              <li>Map providers (e.g., Google Maps) to display locations</li>
+              <li>Analytics and advertising services to understand usage and support the platform</li>
+              <li>Hosting/CDN and email delivery providers</li>
+            </ul>
             <p>
-              We are not responsible for the privacy practices of these third-party services.
+              These services have their own privacy policies; we encourage you to review them.
             </p>
           </div>
         </div>
@@ -212,7 +213,7 @@ const PrivacyPage = () => {
 
       {/* Last Updated */}
       <div className="last-updated">
-        <p>Last updated: December 2024</p>
+        <p>Last updated: September 2025</p>
       </div>
       </main>
     </>

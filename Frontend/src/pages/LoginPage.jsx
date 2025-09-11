@@ -141,7 +141,7 @@ export default function LoginPage() {
                             </div>
                         </div>
                         
-                        <div className="form-group">
+                        <div className="form-group forgot-password-group">
                             <div className="password-actions">
                                 <button 
                                     type="button" 

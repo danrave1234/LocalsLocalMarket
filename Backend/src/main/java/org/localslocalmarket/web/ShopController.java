@@ -11,8 +11,10 @@ import org.localslocalmarket.security.AuditService;
 import org.localslocalmarket.security.InputValidationService;
 import org.localslocalmarket.service.CacheInvalidationService;
 import org.localslocalmarket.service.SearchEngineNotificationService;
+import org.localslocalmarket.service.EmailService;
 import org.localslocalmarket.service.SitemapService;
 import org.localslocalmarket.web.dto.ShopDtos;
+import org.localslocalmarket.web.dto.SuggestionDtos;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
@@ -38,6 +40,7 @@ public class ShopController {
     private final CacheInvalidationService cacheInvalidationService;
     private final SearchEngineNotificationService searchEngineNotificationService;
     private final SitemapService sitemapService;
+    private final EmailService emailService;
 
     public ShopController(ShopRepository shops, UserRepository users, 
                          AuthorizationService authorizationService, 
@@ -47,7 +50,8 @@ public class ShopController {
                          UnauthenticatedShopReviewRepository unauthReviews,
                          CacheInvalidationService cacheInvalidationService,
                          SearchEngineNotificationService searchEngineNotificationService,
-                         SitemapService sitemapService){
+                         SitemapService sitemapService,
+                         EmailService emailService){
         this.shops = shops;
         this.users = users;
         this.authorizationService = authorizationService;
@@ -58,6 +62,7 @@ public class ShopController {
         this.cacheInvalidationService = cacheInvalidationService;
         this.searchEngineNotificationService = searchEngineNotificationService;
         this.sitemapService = sitemapService;
+        this.emailService = emailService;
     }
 
     @PostMapping
@@ -202,6 +207,21 @@ public class ShopController {
         return shopPage.map(ShopDtos.ShopResponse::fromShop);
     }
 
+    @GetMapping("/suggest")
+    public java.util.List<SuggestionDtos.SuggestionItem> suggest(
+            @RequestParam("q") String q,
+            @RequestParam(value = "limit", defaultValue = "5") int limit){
+        if(q == null || q.trim().isEmpty()){
+            return java.util.Collections.emptyList();
+        }
+        if(limit < 1) limit = 5;
+        if(limit > 20) limit = 20;
+        var page = shops.suggestShops(q.trim(), PageRequest.of(0, limit));
+        return page.getContent().stream()
+                .map(SuggestionDtos.SuggestionItem::fromShop)
+                .toList();
+    }
+
     // Simple paginated endpoint for landing page
     @Cacheable(cacheNames = "shops_paginated", key = "'simple_page=' + #page + '&size=' + #size")
     @GetMapping("/paginated")
@@ -273,6 +293,7 @@ public class ShopController {
                 shop.getBusinessHoursJson(),
                 shop.getCreatedAt(),
                 shop.getOwner() != null ? shop.getOwner().getId() : null,
+                shop.getIsActive(),
                 avgRating,
                 totalReviews
             );
@@ -368,6 +389,7 @@ public class ShopController {
                 if(req.adsImagePathsJson() != null) shop.setAdsImagePathsJson(req.adsImagePathsJson());
                 if(req.adsEnabled() != null) shop.setAdsEnabled(req.adsEnabled());
                 if(req.businessHoursJson() != null) shop.setBusinessHoursJson(req.businessHoursJson());
+                if(req.isActive() != null) shop.setIsActive(req.isActive());
                 shops.save(shop);
                 
                 // Smart cache invalidation
@@ -381,6 +403,77 @@ public class ShopController {
             }).orElseGet(() -> ResponseEntity.notFound().build());
         } catch (SecurityException e) {
             auditService.logPermissionDenied("unknown", "/api/shops/" + slug, "UPDATE");
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+    }
+
+    @PostMapping("/{slug}/warn")
+    public ResponseEntity<?> warnShopOwner(@PathVariable("slug") String slug, @RequestBody Map<String, String> payload) {
+        try {
+            User actor = authorizationService.getCurrentUserOrThrow();
+            if (actor.getRole() != User.Role.ADMIN) {
+                return ResponseEntity.status(403).body("Forbidden");
+            }
+
+            Optional<Shop> shopOpt = shops.findByNameIgnoreCase(slug);
+            if (shopOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Shop shop = shopOpt.get();
+            User owner = shop.getOwner();
+            if (owner == null || owner.getEmail() == null) {
+                return ResponseEntity.badRequest().body("Shop owner email not available");
+            }
+
+            String reason = payload != null ? payload.getOrDefault("reason", "") : "";
+            try {
+                emailService.sendShopWarningEmail(owner.getEmail(), owner.getName(), shop.getName(), reason);
+            } catch (Exception e) {
+                return ResponseEntity.status(500).body("Failed to send warning email: " + e.getMessage());
+            }
+
+            auditService.logUserAction(AuditService.AuditEventType.SUSPICIOUS_ACTIVITY,
+                    actor.getId().toString(), "WARN", "shop:" + shop.getId());
+
+            return ResponseEntity.ok(Map.of("message", "Warning sent to shop owner"));
+        } catch (SecurityException e) {
+            auditService.logPermissionDenied("unknown", "/api/shops/" + slug + "/warn", "CREATE");
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+    }
+
+    @PatchMapping("/{slug}/status")
+    public ResponseEntity<?> updateShopStatus(@PathVariable("slug") String slug, @RequestBody Map<String, Boolean> payload) {
+        try {
+            User actor = authorizationService.getCurrentUserOrThrow();
+            if (actor.getRole() != User.Role.ADMIN) {
+                return ResponseEntity.status(403).body("Forbidden");
+            }
+
+            Optional<Shop> shopOpt = shops.findByNameIgnoreCase(slug);
+            if (shopOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Boolean isActive = payload != null ? payload.get("isActive") : null;
+            if (isActive == null) {
+                return ResponseEntity.badRequest().body("isActive is required");
+            }
+
+            Shop shop = shopOpt.get();
+            shop.setIsActive(isActive);
+            shops.save(shop);
+
+            auditService.logUserAction(AuditService.AuditEventType.SUSPICIOUS_ACTIVITY,
+                    actor.getId().toString(), isActive ? "ENABLE" : "DISABLE", "shop:" + shop.getId());
+
+            // Smart cache invalidation
+            cacheInvalidationService.onShopDataChanged();
+
+            return ResponseEntity.ok(Map.of("message", "Shop status updated", "isActive", shop.getIsActive()));
+        } catch (SecurityException e) {
+            auditService.logPermissionDenied("unknown", "/api/shops/" + slug + "/status", "UPDATE");
             return ResponseEntity.status(401).body("Unauthorized");
         }
     }

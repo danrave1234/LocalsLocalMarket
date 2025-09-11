@@ -70,8 +70,10 @@ if (!import.meta.env.DEV) {
 
 export async function apiRequest(path, { method = 'GET', body, token, headers } = {}) {
   const isFormData = body instanceof FormData;
+  // Fallback to token from localStorage if not provided
+  const effectiveToken = token ?? (typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null)
   const requestHeaders = {
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
     ...headers,
   };
   

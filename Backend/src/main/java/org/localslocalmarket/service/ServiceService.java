@@ -15,6 +15,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
+import org.localslocalmarket.web.dto.SuggestionDtos;
+
 @org.springframework.stereotype.Service
 public class ServiceService {
     
@@ -315,5 +317,20 @@ public class ServiceService {
             servicePage.hasPrevious(),
             servicePage.getNumberOfElements()
         );
+    }
+
+    /**
+     * Suggestions (autocomplete) for services
+     */
+    public java.util.List<SuggestionDtos.SuggestionItem> suggestServices(String q, int limit){
+        if(q == null || q.trim().isEmpty()){
+            return java.util.Collections.emptyList();
+        }
+        if(limit < 1) limit = 5;
+        if(limit > 20) limit = 20;
+        Page<Service> page = serviceRepository.suggestServices(q.trim(), PageRequest.of(0, limit));
+        return page.getContent().stream()
+            .map(SuggestionDtos.SuggestionItem::fromService)
+            .toList();
     }
 }

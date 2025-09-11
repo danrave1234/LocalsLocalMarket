@@ -18,6 +18,8 @@ import Modal from '../components/Modal.jsx'
 import ItemCard from '../components/ItemCard.jsx'
 import ItemForm from '../components/ItemForm.jsx'
 import { useAuth } from '../auth/AuthContext.jsx'
+import { useTutorial } from '../contexts/TutorialContext.jsx'
+import { shopManagementTutorialSteps } from '../components/TutorialSteps.js'
 import { extractShopIdFromSlug } from '../utils/slugUtils.js'
 import { 
   fetchProductsByShopId, 
@@ -43,6 +45,7 @@ export default function ShopManagementPage() {
   const { shopId: shopSlug } = useParams()
   const navigate = useNavigate()
   const { token, user } = useAuth()
+  const { setTutorialSteps } = useTutorial()
   
   // Extract shop ID from slug
   const shopId = extractShopIdFromSlug(shopSlug)
@@ -76,6 +79,9 @@ export default function ShopManagementPage() {
 
   // Load data when component mounts or dependencies change
   useEffect(() => {
+    // Set tutorial steps for shop management
+    setTutorialSteps(shopManagementTutorialSteps)
+    
     if (shopId && token) {
       loadData()
     } else if (!shopId) {
@@ -85,7 +91,7 @@ export default function ShopManagementPage() {
       setError('Authentication required')
       setLoading(false)
     }
-  }, [shopId, token, shopSlug])
+  }, [shopId, token, shopSlug, setTutorialSteps])
 
 
   // Update items per page based on screen size
@@ -412,7 +418,7 @@ export default function ShopManagementPage() {
       {/* Main Container */}
       <div className="management-container">
         {/* Header Section */}
-        <div className="management-header">
+        <div className="management-header" data-tutorial="management-header">
           <div className="header-info">
             <h1>Manage Shop</h1>
             <p className="header-description">
@@ -429,6 +435,7 @@ export default function ShopManagementPage() {
             </button>
             <button 
               className="btn btn-primary"
+              data-tutorial="add-item-btn"
               onClick={() => setShowAddModal(true)}
             >
               <Plus size={16} />
@@ -438,7 +445,7 @@ export default function ShopManagementPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="tab-navigation">
+        <div className="tab-navigation" data-tutorial="tab-navigation">
           <div className="tab-list">
             <button
               className={`tab-item ${activeTab === 'products' ? 'active' : ''}`}
@@ -460,7 +467,7 @@ export default function ShopManagementPage() {
         </div>
 
         {/* Search and Filters */}
-        <div className="search-filters-section">
+        <div className="search-filters-section" data-tutorial="search-filters">
           <div className="search-container">
             <div className="search-input-wrapper">
               <Search size={18} />
@@ -566,7 +573,7 @@ export default function ShopManagementPage() {
                 </div>
               </div>
 
-              <div className="items-grid">
+              <div className="items-grid" data-tutorial="item-cards">
                 {paginatedItems.map(item => (
                   <ItemCard
                     key={item.id}

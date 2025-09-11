@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import SEOHead from '../components/SEOHead.jsx';
 import FeedbackButton from '../components/FeedbackButton.jsx';
 import '../support.css';
-import { BookOpen, DollarSign, Wrench, Smartphone, Lock, FileText, Video, MessageCircle } from 'lucide-react';
+import { BookOpen, Wrench, Lock, MessageCircle, Mail } from 'lucide-react';
 
 // Inline icon components to match landing page consistency
 function StoreIcon(props) {
@@ -38,10 +38,6 @@ const SupportPage = ({ onOpenFeedback }) => {
     {
       question: "How do I contact customer support?",
       answer: "You can contact the developer through the contact form on our Contact page or email danrave.keh@localslocalmarket.com directly."
-    },
-    {
-      question: "What payment methods do you accept?",
-      answer: "Currently, payments are handled off-platform. Sellers can provide their own payment methods such as cash on delivery, bank transfers, or other local payment solutions."
     },
     {
       question: "How do I update my business information?",
@@ -87,7 +83,15 @@ const SupportPage = ({ onOpenFeedback }) => {
                 "name": "How do I list my business?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "After creating an account, go to your dashboard and click 'Add Business'. Fill in your business details, upload photos, and submit for review. We'll approve your listing within 24-48 hours."
+                  "text": "After creating an account, go to your dashboard and click 'Create Shop'. Fill in your shop details, upload photos, and your listing will be live immediately."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How do I contact customer support?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "You can contact the developer through the contact form on our Contact page or email danrave.keh@localslocalmarket.com directly."
                 }
               }
             ]
@@ -144,14 +148,6 @@ const SupportPage = ({ onOpenFeedback }) => {
           <div className="category-count">Shop management</div>
         </div>
 
-        <div className="support-category">
-          <div className="category-icon"><DollarSign size={24} /></div>
-          <h3 className="category-title">Payments & Billing</h3>
-          <p className="category-description">
-            Everything you need to know about payments, billing, and subscription management.
-          </p>
-          <div className="category-count">Payment info</div>
-        </div>
 
         <div className="support-category">
           <div className="category-icon"><Wrench size={24} /></div>
@@ -162,14 +158,6 @@ const SupportPage = ({ onOpenFeedback }) => {
           <div className="category-count">Technical help</div>
         </div>
 
-        <div className="support-category">
-          <div className="category-icon"><Smartphone size={24} /></div>
-          <h3 className="category-title">Mobile App</h3>
-          <p className="category-description">
-            Using our mobile app? Find guides and tips for mobile users.
-          </p>
-          <div className="category-count">Coming soon</div>
-        </div>
 
         <div className="support-category">
           <div className="category-icon"><Lock size={24} /></div>
@@ -206,19 +194,6 @@ const SupportPage = ({ onOpenFeedback }) => {
         </div>
       </section>
 
-      {/* Help Resources */}
-      <section className="help-resources">
-        <div className="resource-card">
-          <div className="resource-icon"><FileText size={24} /></div>
-          <h3 className="resource-title">Platform Documentation</h3>
-          <p className="resource-description">
-            Basic documentation for using the LocalsLocalMarket platform.
-          </p>
-          <p className="resource-note">
-            <em>Note: This is a personal project. Documentation is limited but growing.</em>
-          </p>
-        </div>
-      </section>
 
       {/* Contact Support */}
       <section className="support-contact">
@@ -227,8 +202,12 @@ const SupportPage = ({ onOpenFeedback }) => {
           Can't find what you're looking for? Our support team is here to help.
         </p>
         <div className="contact-buttons">
+          <a href="mailto:danrave.keh@localslocalmarket.com" className="contact-button">
+            <Mail size={16} />
+            Email Support
+          </a>
           <a href="/contact" className="contact-button">
-            Contact Support
+            Contact Form
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>

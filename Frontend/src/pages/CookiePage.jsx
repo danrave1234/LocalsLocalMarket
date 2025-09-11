@@ -1,14 +1,29 @@
 import React from 'react';
+import SEOHead from '../components/SEOHead.jsx';
 import '../cookie.css';
 
 const CookiePage = () => {
   return (
-    <main className="cookie-container">
+    <>
+      <SEOHead 
+        title="Cookie Policy - LocalsLocalMarket"
+        description="Learn how LocalsLocalMarket uses cookies and similar technologies to enhance your experience on our local business marketplace platform."
+        keywords="cookie policy, privacy, local business marketplace, data protection, cookies, tracking, analytics"
+        url="https://localslocalmarket.com/cookies"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "WebPage",
+          "name": "Cookie Policy - LocalsLocalMarket",
+          "description": "Information about how we use cookies on our local business marketplace platform",
+          "url": "https://localslocalmarket.com/cookies"
+        }}
+      />
+      <main className="cookie-container">
       {/* Hero Section */}
       <section className="cookie-header">
         <h1 className="cookie-title">Cookie Policy</h1>
         <p className="cookie-subtitle">
-          Learn how we use cookies and similar technologies to enhance your experience on our platform.
+          Learn how LocalsLocalMarket uses cookies and similar technologies to enhance your experience on our local business marketplace platform.
         </p>
       </section>
 
@@ -18,9 +33,9 @@ const CookiePage = () => {
           <h2 className="section-title">What Are Cookies?</h2>
           <div className="section-content">
             <p>
-              Cookies are small text files that are stored on your device when you visit our website. 
+              Cookies are small text files that are stored on your device when you visit LocalsLocalMarket. 
               They help us provide you with a better experience by remembering your preferences, 
-              analyzing how you use our site, and personalizing content.
+              analyzing how you use our local business marketplace, and personalizing content and business recommendations.
             </p>
           </div>
         </div>
@@ -29,13 +44,13 @@ const CookiePage = () => {
           <h2 className="section-title">How We Use Cookies</h2>
           <div className="section-content">
             <p>
-              We use cookies for several purposes:
+              LocalsLocalMarket uses cookies for several purposes to enhance our local business marketplace:
             </p>
             <ul className="cookie-list">
-              <li><strong>Essential Cookies:</strong> Required for basic website functionality</li>
-              <li><strong>Performance Cookies:</strong> Help us understand how visitors use our site</li>
-              <li><strong>Functional Cookies:</strong> Remember your preferences and settings</li>
-              <li><strong>Marketing Cookies:</strong> Deliver relevant advertisements</li>
+              <li><strong>Essential Cookies:</strong> Required for basic marketplace functionality, user authentication, and business listing management</li>
+              <li><strong>Performance Cookies:</strong> Help us understand how users interact with our local business marketplace</li>
+              <li><strong>Functional Cookies:</strong> Remember your preferences, location settings, and business search history</li>
+              <li><strong>Marketing Cookies:</strong> Deliver relevant local business advertisements and promotions</li>
             </ul>
           </div>
         </div>
@@ -46,45 +61,46 @@ const CookiePage = () => {
             <div className="cookie-type">
               <h3 className="cookie-type-title">Essential Cookies</h3>
               <p className="cookie-type-description">
-                These cookies are necessary for the website to function properly. They enable basic functions 
-                like page navigation, access to secure areas, and form submissions. The website cannot function 
-                properly without these cookies.
+                These cookies are necessary for LocalsLocalMarket to function properly. They enable basic functions 
+                like user authentication, business listing management, secure marketplace interactions, and form submissions. 
+                The platform cannot function properly without these cookies.
               </p>
               <div className="cookie-examples">
-                <strong>Examples:</strong> Authentication, security, shopping cart functionality
+                <strong>Examples:</strong> User authentication, business listing management, secure transactions, marketplace security
               </div>
             </div>
 
             <div className="cookie-type">
               <h3 className="cookie-type-title">Performance Cookies</h3>
               <p className="cookie-type-description">
-                These cookies help us understand how visitors interact with our website by collecting and 
-                reporting information anonymously. This helps us improve our website and user experience.
+                These cookies help us understand how users interact with our local business marketplace by collecting and 
+                reporting information anonymously. This helps us improve our platform, business listings, and user experience.
               </p>
               <div className="cookie-examples">
-                <strong>Examples:</strong> Google Analytics, page load times, user behavior tracking
+                <strong>Examples:</strong> Google Analytics, page load times, business search patterns, marketplace usage statistics
               </div>
             </div>
 
             <div className="cookie-type">
               <h3 className="cookie-type-title">Functional Cookies</h3>
               <p className="cookie-type-description">
-                These cookies enable enhanced functionality and personalization, such as remembering your 
-                language preferences, login status, and other settings.
+                These cookies enable enhanced functionality and personalization for our marketplace, such as remembering your 
+                location preferences, favorite businesses, search history, and account settings.
               </p>
               <div className="cookie-examples">
-                <strong>Examples:</strong> Language preferences, user preferences, login status
+                <strong>Examples:</strong> Location preferences, favorite businesses, search history, business listing preferences, login status
               </div>
             </div>
 
             <div className="cookie-type">
               <h3 className="cookie-type-title">Marketing Cookies</h3>
               <p className="cookie-type-description">
-                These cookies are used to track visitors across websites to display relevant and engaging 
-                advertisements. They may also be used to limit the number of times you see an advertisement.
+                These cookies are used to track visitors across websites to display relevant local business 
+                advertisements and promotions. They help us show you businesses and services that match your interests 
+                and location.
               </p>
               <div className="cookie-examples">
-                <strong>Examples:</strong> Social media pixels, advertising networks, remarketing
+                <strong>Examples:</strong> Social media pixels, advertising networks, local business remarketing, location-based promotions
               </div>
             </div>
           </div>
@@ -94,13 +110,14 @@ const CookiePage = () => {
           <h2 className="section-title">Third-Party Cookies</h2>
           <div className="section-content">
             <p>
-              We may use third-party services that place cookies on your device. These services include:
+              LocalsLocalMarket may use third-party services that place cookies on your device to enhance our 
+              local business marketplace functionality:
             </p>
             <ul className="cookie-list">
-              <li><strong>Analytics Services:</strong> Google Analytics, Facebook Pixel</li>
-              <li><strong>Advertising Networks:</strong> Google Ads, Facebook Ads</li>
-              <li><strong>Social Media:</strong> Facebook, Twitter, Instagram</li>
-              <li><strong>Payment Processors:</strong> Stripe, PayPal</li>
+              <li><strong>Analytics Services:</strong> Google Analytics, Facebook Pixel for marketplace insights</li>
+              <li><strong>Advertising Networks:</strong> Google Ads, Facebook Ads for local business promotions</li>
+              <li><strong>Social Media:</strong> Facebook, Twitter, Instagram for business sharing and reviews</li>
+              <li><strong>Maps & Location:</strong> Google Maps for business locations and directions</li>
             </ul>
             <p>
               These third-party services have their own privacy policies and cookie practices. 
@@ -172,9 +189,10 @@ const CookiePage = () => {
             <div className="cookie-highlight">
               <h3 className="highlight-title">Contact Information</h3>
               <p className="highlight-content">
-                Email: privacy@localslocalmarket.com<br />
-                Phone: +1 (555) 123-4567<br />
-                Address: 123 Main Street, City, State 12345
+                Email: danrave.keh@localslocalmarket.com<br />
+                <br />
+                This is a personal project developed by Danrave Keh. For questions about cookies 
+                and privacy on our local business marketplace platform, please contact the developer directly.
               </p>
             </div>
           </div>
@@ -252,10 +270,10 @@ const CookiePage = () => {
       <section className="cookie-contact">
         <h2 className="contact-title">Questions About Cookies?</h2>
         <p className="contact-description">
-          Our privacy team is here to help with any questions about our cookie policy.
+          The developer is here to help with any questions about our cookie policy on LocalsLocalMarket.
         </p>
         <a href="/contact" className="contact-button">
-          Contact Privacy Team
+          Contact Developer
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -267,6 +285,7 @@ const CookiePage = () => {
         <p>Last updated: December 2024</p>
       </div>
     </main>
+    </>
   );
 };
 

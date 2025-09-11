@@ -10,7 +10,7 @@ const EnhancedProtectedRoute = ({
   redirectTo = '/login',
   showUnauthorizedPage = true 
 }) => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const location = useLocation();
 
   // Show loading state while checking authentication
@@ -29,7 +29,8 @@ const EnhancedProtectedRoute = ({
     );
   }
 
-  // Check if user is authenticated
+  // Check if user is authenticated (derive from token)
+  const isAuthenticated = !!token;
   if (!isAuthenticated) {
     // Use custom fallback component if provided
     if (fallbackComponent) {
@@ -56,9 +57,12 @@ const EnhancedProtectedRoute = ({
 
   // Check if user has required roles
   if (requiredRoles.length > 0) {
-    const userRoles = user?.roles || [];
+    // Normalize roles to support either `role` as string or `roles` as array
+    const normalizedRoles = Array.isArray(user?.roles) && user.roles.length > 0
+      ? user.roles
+      : (user?.role ? [user.role, `ROLE_${user.role}`] : []);
     const hasRequiredRole = requiredRoles.some(role => 
-      userRoles.includes(role) || userRoles.includes(`ROLE_${role}`)
+      normalizedRoles.includes(role) || normalizedRoles.includes(`ROLE_${role}`)
     );
 
     if (!hasRequiredRole) {

@@ -42,7 +42,8 @@ public class ShopDtos {
             String twitter,
             String adsImagePathsJson,
             Boolean adsEnabled,
-            String businessHoursJson
+            String businessHoursJson,
+            Boolean isActive
     ){}
     
     public record ShopResponse(
@@ -65,7 +66,8 @@ public class ShopDtos {
             Boolean adsEnabled,
             String businessHoursJson,
             java.time.Instant createdAt,
-            Long ownerId
+            Long ownerId,
+            Boolean isActive
     ){
         public static ShopResponse fromShop(Shop shop) {
             return new ShopResponse(
@@ -88,7 +90,8 @@ public class ShopDtos {
                 shop.getAdsEnabled(),
                 shop.getBusinessHoursJson(),
                 shop.getCreatedAt(),
-                shop.getOwner() != null ? shop.getOwner().getId() : null
+                shop.getOwner() != null ? shop.getOwner().getId() : null,
+                shop.getIsActive()
             );
         }
     }
@@ -114,6 +117,7 @@ public class ShopDtos {
             String businessHoursJson,
             java.time.Instant createdAt,
             Long ownerId,
+            Boolean isActive,
             Double averageRating,
             Long reviewCount
     ){}

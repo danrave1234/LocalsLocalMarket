@@ -12,6 +12,7 @@ import org.localslocalmarket.repo.ShopRepository;
 import org.localslocalmarket.security.AuthorizationService;
 import org.localslocalmarket.service.ServiceService;
 import org.localslocalmarket.web.dto.ServiceDtos;
+import org.localslocalmarket.web.dto.SuggestionDtos;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -83,6 +84,13 @@ public class ServiceController {
         }
         
         return ResponseEntity.ok(services);
+    }
+    
+    @GetMapping("/suggest")
+    public List<SuggestionDtos.SuggestionItem> suggestServices(
+            @RequestParam("q") String q,
+            @RequestParam(value = "limit", defaultValue = "5") int limit){
+        return serviceService.suggestServices(q, limit);
     }
     
     @PostMapping

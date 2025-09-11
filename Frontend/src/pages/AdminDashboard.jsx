@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { Link } from 'react-router-dom'
 import SEOHead from '../components/SEOHead.jsx'
-import AdminCategoryManager from '../components/AdminCategoryManager.jsx'
-import { fetchDashboardStats, fetchRecentActivity } from '../api/admin.js'
+import { warnShopOwner, fetchUsers, updateUserStatus } from '../api/admin.js'
 import '../components/AdminDashboard.css'
-import { BarChart3, Users, Package, Tags, TrendingUp, Bell, Clipboard, UserPlus, User, Map } from 'lucide-react'
+import { BarChart3, Users as UsersIcon, Package, Tags, TrendingUp, Bell, Clipboard, UserPlus, User, Map, Lock, Unlock } from 'lucide-react'
 
 // Inline icon components to match landing page consistency
 function StoreIcon(props) {
@@ -23,70 +22,7 @@ function StoreIcon(props) {
 
 export default function AdminDashboard() {
     const { user } = useAuth()
-    const [activeTab, setActiveTab] = useState('overview')
-    const [loading, setLoading] = useState(true)
-    const [stats, setStats] = useState({
-        totalUsers: 0,
-        totalShops: 0,
-        totalProducts: 0,
-        activeUsers: 0,
-        pendingShops: 0,
-        lowStockProducts: 0,
-        outOfStockProducts: 0,
-        newProductsThisWeek: 0,
-        totalSales: '₱0',
-        salesThisMonth: '₱0'
-    })
-    const [recentActivity, setRecentActivity] = useState([])
-
-    useEffect(() => {
-        if (user?.role === 'ADMIN') {
-            loadDashboardStats()
-        }
-    }, [user])
-
-    const loadDashboardStats = async () => {
-        try {
-            setLoading(true)
-            const [statsResponse, activityResponse] = await Promise.all([
-                fetchDashboardStats(),
-                fetchRecentActivity()
-            ])
-            
-            setStats({
-                totalUsers: statsResponse.data.totalUsers || 0,
-                totalShops: statsResponse.data.totalShops || 0,
-                totalProducts: statsResponse.data.totalProducts || 0,
-                activeUsers: statsResponse.data.activeUsers || 0,
-                pendingShops: statsResponse.data.pendingShops || 0,
-                lowStockProducts: statsResponse.data.lowStockProducts || 0,
-                outOfStockProducts: statsResponse.data.outOfStockProducts || 0,
-                newProductsThisWeek: statsResponse.data.newProductsThisWeek || 0,
-                totalSales: statsResponse.data.totalSales || '₱0',
-                salesThisMonth: statsResponse.data.salesThisMonth || '₱0'
-            })
-            
-            // Store recent activity for use in overview tab
-            setRecentActivity(activityResponse.data || [])
-        } catch (error) {
-            console.error('Failed to load dashboard stats:', error)
-            // Fallback to mock data if API fails
-            setStats({
-                totalUsers: 1250,
-                totalShops: 89,
-                totalProducts: 1247,
-                activeUsers: 892,
-                pendingShops: 12,
-                lowStockProducts: 45,
-                outOfStockProducts: 23,
-                newProductsThisWeek: 89,
-                totalSales: '₱2.4M',
-                salesThisMonth: '₱450K'
-            })
-        } finally {
-            setLoading(false)
-        }
-    }
+    const [activeTab, setActiveTab] = useState('shops')
 
     if (user?.role !== 'ADMIN') {
         return (
@@ -106,33 +42,21 @@ export default function AdminDashboard() {
     }
 
     const tabs = [
-        { id: 'overview', label: 'Overview', icon: <BarChart3 size={16} /> },
-        { id: 'users', label: 'User Management', icon: <Users size={16} /> },
         { id: 'shops', label: 'Shop Management', icon: <StoreIcon width={16} height={16} /> },
-        { id: 'products', label: 'Product Management', icon: <Package size={16} /> },
-        { id: 'categories', label: 'Category Management', icon: <Tags size={16} /> },
-        { id: 'reports', label: 'Reports & Analytics', icon: <TrendingUp size={16} /> },
-        { id: 'settings', label: 'System Settings', icon: '⚙️' }
+        { id: 'users', label: 'User Management', icon: <UsersIcon size={16} /> },
+        { id: 'products', label: 'Product Management', icon: <Package size={16} /> }
     ]
 
     const renderTabContent = () => {
         switch (activeTab) {
-            case 'overview':
-                return <OverviewTab stats={stats} loading={loading} recentActivity={recentActivity} />
-            case 'users':
-                return <UserManagementTab />
             case 'shops':
                 return <ShopManagementTab />
+            case 'users':
+                return <UserManagementTab />
             case 'products':
                 return <ProductManagementTab />
-            case 'categories':
-                return <CategoryManagementTab />
-            case 'reports':
-                return <ReportsTab />
-            case 'settings':
-                return <SettingsTab />
             default:
-                return <OverviewTab stats={stats} loading={loading} />
+                return <ShopManagementTab />
         }
     }
 
@@ -148,14 +72,7 @@ export default function AdminDashboard() {
                         <h1>Admin Dashboard</h1>
                         <p>Welcome back, {user?.name || user?.email}</p>
                     </div>
-                    <div className="admin-header-actions">
-                        <button className="btn btn-secondary">
-                            <BarChart3 size={16} /> Export Data
-                        </button>
-                        <button className="btn btn-primary">
-                            <Bell size={16} /> Notifications
-                        </button>
-                    </div>
+                    <div className="admin-header-actions"></div>
                 </div>
 
                 <div className="admin-content">
@@ -183,159 +100,159 @@ export default function AdminDashboard() {
     )
 }
 
-// Overview Tab Component
-function OverviewTab({ stats, loading, recentActivity }) {
-    return (
-        <div className="overview-tab">
-            <div className="overview-header">
-                <h2>Dashboard Overview</h2>
-                <p>System statistics and recent activity</p>
-            </div>
-
-            {loading ? (
-                <div className="loading-spinner">Loading dashboard data...</div>
-            ) : (
-                <>
-                    <div className="stats-grid">
-                        <div className="stat-card">
-                            <div className="stat-icon"><Users size={24} /></div>
-                            <div className="stat-content">
-                                <h3>{stats.totalUsers.toLocaleString()}</h3>
-                                <p>Total Users</p>
-                                <small>{stats.activeUsers} active</small>
-                            </div>
-                        </div>
-
-                        <div className="stat-card">
-                            <div className="stat-icon"><StoreIcon width={24} height={24} /></div>
-                            <div className="stat-content">
-                                <h3>{stats.totalShops.toLocaleString()}</h3>
-                                <p>Total Shops</p>
-                                <small>{stats.pendingShops} pending approval</small>
-                            </div>
-                        </div>
-
-                        <div className="stat-card">
-                            <div className="stat-icon"><Package size={24} /></div>
-                            <div className="stat-content">
-                                <h3>{stats.totalProducts.toLocaleString()}</h3>
-                                <p>Total Products</p>
-                                <small>{stats.lowStockProducts} low stock</small>
-                            </div>
-                        </div>
-
-                        <div className="stat-card">
-                            <div className="stat-icon"><TrendingUp size={24} /></div>
-                            <div className="stat-content">
-                                <h3>{stats.totalSales}</h3>
-                                <p>Total Sales</p>
-                                <small>This month</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="overview-sections">
-                        <div className="overview-section">
-                            <h3>Recent Activity</h3>
-                            <div className="activity-list">
-                                {recentActivity.length > 0 ? (
-                                    recentActivity.map((activity, index) => (
-                                        <div key={index} className="activity-item">
-                                            <div className="activity-icon">{activity.icon || <Clipboard size={16} />}</div>
-                                            <div className="activity-content">
-                                                <p>{activity.message}</p>
-                                                <small>{new Date(activity.timestamp).toLocaleString()}</small>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="activity-item">
-                                        <div className="activity-icon"><Clipboard size={16} /></div>
-                                        <div className="activity-content">
-                                            <p>No recent activity</p>
-                                            <small>Activity will appear here</small>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="overview-section">
-                            <h3>Quick Actions</h3>
-                            <div className="quick-actions">
-                                <button className="btn btn-secondary">
-                                    <Users size={16} /> Review Pending Users
-                                </button>
-                                <button className="btn btn-secondary">
-                                    <StoreIcon width={16} height={16} /> Approve Shops
-                                </button>
-                                <button className="btn btn-secondary">
-                                    <Package size={16} /> Check Low Stock
-                                </button>
-                                <button className="btn btn-secondary">
-                                    <BarChart3 size={16} /> Generate Report
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </>
-            )}
-        </div>
-    )
-}
+// Removed Overview/Users/Reports/Settings/Category tabs to declutter
 
 // User Management Tab Component
 function UserManagementTab() {
     const [users, setUsers] = useState([])
+    const [page, setPage] = useState(0)
+    const [size, setSize] = useState(20)
+    const [totalPages, setTotalPages] = useState(0)
+    const [search, setSearch] = useState('')
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState('')
+
+    const load = async (p = page, s = size, q = search) => {
+        setLoading(true)
+        setError('')
+        try {
+            const res = await fetchUsers(p, s, q && q.trim() ? q.trim() : null)
+            // Expect Spring Page response
+            setUsers(res.content || [])
+            setTotalPages(res.totalPages ?? 0)
+            setPage(res.number ?? p)
+        } catch (e) {
+            setError(e?.message || 'Failed to load users')
+        } finally {
+            setLoading(false)
+        }
+    }
 
     useEffect(() => {
-        // TODO: Implement user fetching
-        setLoading(false)
+        load(0, size, search)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
+
+    const onSearch = () => load(0, size, search)
+
+    const toggleUser = async (u, disable) => {
+        const prev = [...users]
+        try {
+            // Optimistic UI
+            setUsers(users.map(x => x.id === u.id ? { ...x, enabled: !disable } : x))
+            const status = disable ? 'DISABLED' : 'ACTIVE'
+            await updateUserStatus(u.id, status)
+            // Reload to ensure consistency
+            load(page, size, search)
+        } catch (e) {
+            setUsers(prev)
+            alert(e?.message || 'Failed to update user')
+        }
+    }
 
     return (
         <div className="user-management-tab">
             <div className="tab-header">
                 <h2>User Management</h2>
-                <div className="tab-actions">
-                    <input 
-                        type="text" 
-                        placeholder="Search users..." 
+                <div className="tab-actions" style={{ display: 'flex', gap: 8 }}>
+                    <input
                         className="input"
+                        placeholder="Search by name or email"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+                        style={{ minWidth: 240 }}
                     />
-                    <button className="btn btn-primary">
-                        <UserPlus size={16} /> Add User
-                    </button>
+                    <button className="btn" onClick={onSearch}>Search</button>
                 </div>
             </div>
 
+            {error && <div className="error-text" style={{ marginTop: 8 }}>{error}</div>}
             {loading ? (
-                <div className="loading-spinner">Loading users...</div>
+                <div className="empty-state">Loading users...</div>
+            ) : users.length === 0 ? (
+                <div className="empty-state">No users found.</div>
             ) : (
-                <div className="user-list">
-                    <div className="user-item">
-                        <div className="user-info">
-                            <div className="user-avatar"><User size={20} /></div>
-                            <div className="user-details">
-                                <h4>John Doe</h4>
-                                <p>john.doe@example.com</p>
-                                <span className="user-role">USER</span>
-                            </div>
-                        </div>
-                        <div className="user-actions">
-                            <button className="btn btn-secondary">Edit</button>
-                            <button className="btn btn-danger">Suspend</button>
-                        </div>
-                    </div>
+                <div className="card" style={{ overflowX: 'auto' }}>
+                    <table className="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Enabled</th>
+                                <th>Active</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {users.map(u => (
+                                <tr key={u.id}>
+                                    <td>{u.id}</td>
+                                    <td>{u.name}</td>
+                                    <td>{u.email}</td>
+                                    <td>{String(u.enabled ?? u.enabled === true)}</td>
+                                    <td>{String(u.isActive ?? u.isActive === true)}</td>
+                                    <td>
+                                        {u.enabled ? (
+                                            <button className="btn btn-danger" onClick={() => toggleUser(u, true)}>
+                                                <Lock size={14} /> Disable
+                                            </button>
+                                        ) : (
+                                            <button className="btn btn-secondary" onClick={() => toggleUser(u, false)}>
+                                                <Unlock size={14} /> Enable
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             )}
+
+            <div className="pagination" style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
+                <button className="btn" disabled={page <= 0} onClick={() => load(page - 1, size, search)}>Prev</button>
+                <span>Page {page + 1} of {Math.max(totalPages, 1)}</span>
+                <button className="btn" disabled={page + 1 >= totalPages} onClick={() => load(page + 1, size, search)}>Next</button>
+                <select className="input" value={size} onChange={(e) => { const s = parseInt(e.target.value, 10); setSize(s); load(0, s, search) }}>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                </select>
+            </div>
         </div>
     )
 }
 
 // Shop Management Tab Component
 function ShopManagementTab() {
+    const [slugInput, setSlugInput] = useState('')
+    const [reason, setReason] = useState('')
+    const [sending, setSending] = useState(false)
+    const [message, setMessage] = useState('')
+    const [disableSlug, setDisableSlug] = useState('')
+    const [toggling, setToggling] = useState(false)
+    const [toggleMsg, setToggleMsg] = useState('')
+
+    const handleWarn = async () => {
+        setMessage('')
+        if (!slugInput.trim()) {
+            setMessage('Please enter the shop slug.')
+            return
+        }
+        setSending(true)
+        try {
+            await warnShopOwner(slugInput.trim(), reason.trim())
+            setMessage('Warning sent successfully.')
+            setReason('')
+        } catch (e) {
+            setMessage(e?.message || 'Failed to send warning.')
+        } finally {
+            setSending(false)
+        }
+    }
+
     return (
         <div className="shop-management-tab">
             <div className="tab-header">
@@ -352,24 +269,78 @@ function ShopManagementTab() {
                     </button>
                 </div>
             </div>
-
-            <div className="shop-stats">
-                <div className="stat-item">
-                    <h3>89</h3>
-                    <p>Total Shops</p>
+            <div className="empty-state">Shop statistics will appear here once connected.</div>
+            <div className="warn-card" style={{ marginTop: 16 }}>
+                <h3>Warn Shop Owner</h3>
+                <div className="form-row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <input 
+                        className="input" 
+                        placeholder="Shop slug"
+                        value={slugInput}
+                        onChange={(e) => setSlugInput(e.target.value)}
+                        style={{ minWidth: 200 }}
+                    />
+                    <input 
+                        className="input" 
+                        placeholder="Reason (optional)"
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        style={{ flex: 1, minWidth: 260 }}
+                    />
+                    <button className="btn btn-danger" onClick={handleWarn} disabled={sending}>
+                        {sending ? 'Sending...' : 'Send Warning'}
+                    </button>
                 </div>
-                <div className="stat-item">
-                    <h3>12</h3>
-                    <p>Pending Approval</p>
+                {message && <div className="info-text" style={{ marginTop: 8 }}>{message}</div>}
+            </div>
+            <div className="status-card" style={{ marginTop: 16 }}>
+                <h3>Disable/Enable Shop</h3>
+                <div className="form-row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <input
+                        className="input"
+                        placeholder="Shop slug"
+                        value={disableSlug}
+                        onChange={(e) => setDisableSlug(e.target.value)}
+                        style={{ minWidth: 200 }}
+                    />
+                    <button className="btn btn-danger" onClick={async () => {
+                        setToggleMsg('')
+                        if (!disableSlug.trim()) {
+                            setToggleMsg('Please enter the shop slug.')
+                            return
+                        }
+                        setToggling(true)
+                        try {
+                            const res = await import('../api/shops.js').then(m => m.updateShopStatusBySlug(disableSlug.trim(), false))
+                            setToggleMsg('Shop disabled successfully.')
+                        } catch (e) {
+                            setToggleMsg(e?.message || 'Failed to disable shop.')
+                        } finally {
+                            setToggling(false)
+                        }
+                    }} disabled={toggling}>
+                        {toggling ? 'Working...' : (<><Lock size={16} /> Disable</>)}
+                    </button>
+                    <button className="btn btn-secondary" onClick={async () => {
+                        setToggleMsg('')
+                        if (!disableSlug.trim()) {
+                            setToggleMsg('Please enter the shop slug.')
+                            return
+                        }
+                        setToggling(true)
+                        try {
+                            const res = await import('../api/shops.js').then(m => m.updateShopStatusBySlug(disableSlug.trim(), true))
+                            setToggleMsg('Shop enabled successfully.')
+                        } catch (e) {
+                            setToggleMsg(e?.message || 'Failed to enable shop.')
+                        } finally {
+                            setToggling(false)
+                        }
+                    }} disabled={toggling}>
+                        {toggling ? 'Working...' : (<><Unlock size={16} /> Enable</>)}
+                    </button>
                 </div>
-                <div className="stat-item">
-                    <h3>67</h3>
-                    <p>Active Shops</p>
-                </div>
-                <div className="stat-item">
-                    <h3>10</h3>
-                    <p>Suspended</p>
-                </div>
+                {toggleMsg && <div className="info-text" style={{ marginTop: 8 }}>{toggleMsg}</div>}
             </div>
         </div>
     )
@@ -377,6 +348,72 @@ function ShopManagementTab() {
 
 // Product Management Tab Component
 function ProductManagementTab() {
+    const [productIdInput, setProductIdInput] = useState('')
+    const [loading, setLoading] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [statusMsg, setStatusMsg] = useState('')
+    const [product, setProduct] = useState(null)
+
+    const loadProduct = async () => {
+        setStatusMsg('')
+        const id = parseInt(productIdInput, 10)
+        if (!id || Number.isNaN(id)) { setStatusMsg('Enter a valid product ID.'); return }
+        setLoading(true)
+        try {
+            const api = await import('../api/products.js')
+            const res = await api.getProductById(id)
+            setProduct(res)
+        } catch (e) {
+            setProduct(null)
+            setStatusMsg(e?.message || 'Failed to load product.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const saveProduct = async () => {
+        if (!product) return
+        setSaving(true)
+        setStatusMsg('')
+        try {
+            const api = await import('../api/products.js')
+            const updated = await api.updateProduct(product.id, {
+                title: product.title,
+                description: product.description,
+                price: product.price,
+                stockCount: product.stockCount,
+                imagePathsJson: product.imagePathsJson,
+                category: product.category,
+                mainCategory: product.mainCategory,
+                subcategory: product.subcategory,
+                customCategory: product.customCategory,
+                isActive: product.isActive,
+            })
+            setProduct(updated)
+            setStatusMsg('Product saved successfully.')
+        } catch (e) {
+            setStatusMsg(e?.message || 'Failed to save product.')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const toggleActive = async (active) => {
+        if (!product) return
+        setSaving(true)
+        setStatusMsg('')
+        try {
+            const api = await import('../api/products.js')
+            const updated = await api.updateProduct(product.id, { isActive: active })
+            setProduct(updated)
+            setStatusMsg(active ? 'Product enabled.' : 'Product disabled.')
+        } catch (e) {
+            setStatusMsg(e?.message || 'Failed to update status.')
+        } finally {
+            setSaving(false)
+        }
+    }
+
     return (
         <div className="product-management-tab">
             <div className="tab-header">
@@ -384,151 +421,94 @@ function ProductManagementTab() {
                 <div className="tab-actions">
                     <input 
                         type="text" 
-                        placeholder="Search products..." 
+                        placeholder="Enter product ID" 
                         className="input"
+                        value={productIdInput}
+                        onChange={(e) => setProductIdInput(e.target.value)}
+                        style={{ minWidth: 180 }}
                     />
-                    <button className="btn btn-primary">
-                        <Package size={16} /> View All Products
+                    <button className="btn btn-primary" onClick={loadProduct} disabled={loading}>
+                        {loading ? 'Loading...' : 'Load Product'}
                     </button>
                 </div>
             </div>
 
-            <div className="product-stats">
-                <div className="stat-item">
-                    <h3>1,247</h3>
-                    <p>Total Products</p>
+            {statusMsg && <div className="info-text" style={{ marginTop: 8 }}>{statusMsg}</div>}
+
+            {!product ? (
+                <div className="empty-state">Load a product by ID to edit or disable it.</div>
+            ) : (
+                <div className="product-editor" style={{ marginTop: 16, display: 'grid', gap: 12 }}>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        <div style={{ minWidth: 260, flex: 1 }}>
+                            <label>Title</label>
+                            <input className="input" value={product.title || ''} onChange={(e) => setProduct({ ...product, title: e.target.value })} />
+                        </div>
+                        <div>
+                            <label>Price</label>
+                            <input className="input" type="number" step="0.01" value={product.price || 0} onChange={(e) => setProduct({ ...product, price: Number(e.target.value) })} />
+                        </div>
+                        <div>
+                            <label>Stock</label>
+                            <input className="input" type="number" value={product.stockCount || 0} onChange={(e) => setProduct({ ...product, stockCount: parseInt(e.target.value || '0', 10) })} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <label>Status</label>
+                            <span className={`badge ${product.isActive ? 'badge-success' : 'badge-danger'}`}>{product.isActive ? 'Active' : 'Disabled'}</span>
+                            <button className="btn btn-danger" onClick={() => toggleActive(false)} disabled={saving || !product.isActive}>
+                                <Lock size={16} /> Disable
+                            </button>
+                            <button className="btn btn-secondary" onClick={() => toggleActive(true)} disabled={saving || product.isActive}>
+                                <Unlock size={16} /> Enable
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label>Description</label>
+                        <textarea className="input" rows={4} value={product.description || ''} onChange={(e) => setProduct({ ...product, description: e.target.value })} />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        <div>
+                            <label>Category (legacy)</label>
+                            <input className="input" value={product.category || ''} onChange={(e) => setProduct({ ...product, category: e.target.value })} />
+                        </div>
+                        <div>
+                            <label>Main Category</label>
+                            <input className="input" value={product.mainCategory || ''} onChange={(e) => setProduct({ ...product, mainCategory: e.target.value })} />
+                        </div>
+                        <div>
+                            <label>Subcategory</label>
+                            <input className="input" value={product.subcategory || ''} onChange={(e) => setProduct({ ...product, subcategory: e.target.value })} />
+                        </div>
+                        <div>
+                            <label>Custom Category</label>
+                            <input className="input" value={product.customCategory || ''} onChange={(e) => setProduct({ ...product, customCategory: e.target.value })} />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label>Images JSON</label>
+                        <textarea className="input" rows={3} value={product.imagePathsJson || ''} onChange={(e) => setProduct({ ...product, imagePathsJson: e.target.value })} />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn btn-primary" onClick={saveProduct} disabled={saving}>
+                            {saving ? 'Saving...' : 'Save Changes'}
+                        </button>
+                    </div>
                 </div>
-                <div className="stat-item">
-                    <h3>45</h3>
-                    <p>Low Stock</p>
-                </div>
-                <div className="stat-item">
-                    <h3>23</h3>
-                    <p>Out of Stock</p>
-                </div>
-                <div className="stat-item">
-                    <h3>89</h3>
-                    <p>New This Week</p>
-                </div>
-            </div>
+            )}
         </div>
     )
 }
 
 // Category Management Tab Component
-function CategoryManagementTab() {
-    return (
-        <div className="category-management-tab">
-            <div className="tab-header">
-                <h2>Category Management</h2>
-                <p>Manage product and shop categories</p>
-            </div>
-            <AdminCategoryManager />
-        </div>
-    )
-}
+function CategoryManagementTab() { return null }
 
 // Reports Tab Component
-function ReportsTab() {
-    return (
-        <div className="reports-tab">
-            <div className="tab-header">
-                <h2>Reports & Analytics</h2>
-                <div className="tab-actions">
-                    <button className="btn btn-secondary">
-                        <BarChart3 size={16} /> Generate Report
-                    </button>
-                    <button className="btn btn-primary">
-                        <TrendingUp size={16} /> View Analytics
-                    </button>
-                </div>
-            </div>
-
-            <div className="reports-grid">
-                <div className="report-card">
-                    <h3>User Growth</h3>
-                    <div className="report-chart">
-                        <TrendingUp size={24} /> Chart placeholder
-                    </div>
-                </div>
-                <div className="report-card">
-                    <h3>Sales Analytics</h3>
-                    <div className="report-chart">
-                        <BarChart3 size={24} /> Chart placeholder
-                    </div>
-                </div>
-                <div className="report-card">
-                    <h3>Popular Categories</h3>
-                    <div className="report-chart">
-                        <Tags size={24} /> Chart placeholder
-                    </div>
-                </div>
-                <div className="report-card">
-                    <h3>Geographic Distribution</h3>
-                    <div className="report-chart">
-                        <Map size={24} /> Chart placeholder
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
+function ReportsTab() { return null }
 
 // Settings Tab Component
-function SettingsTab() {
-    return (
-        <div className="settings-tab">
-            <div className="tab-header">
-                <h2>System Settings</h2>
-                <p>Configure system-wide settings and preferences</p>
-            </div>
-
-            <div className="settings-sections">
-                <div className="settings-section">
-                    <h3>General Settings</h3>
-                    <div className="setting-item">
-                        <label>Site Name</label>
-                        <input type="text" className="input" defaultValue="Locals Local Market" readOnly />
-                    </div>
-                    <div className="setting-item">
-                        <label>Contact Email</label>
-                        <input type="email" className="input" defaultValue="admin@localslocalmarket.com" readOnly />
-                    </div>
-                    <div className="setting-item">
-                        <label>Maintenance Mode</label>
-                        <input type="checkbox" />
-                    </div>
-                </div>
-
-                <div className="settings-section">
-                    <h3>Security Settings</h3>
-                    <div className="setting-item">
-                        <label>Session Timeout (minutes)</label>
-                        <input type="number" className="input" defaultValue="30" readOnly />
-                    </div>
-                    <div className="setting-item">
-                        <label>Require Email Verification</label>
-                        <input type="checkbox" defaultChecked />
-                    </div>
-                </div>
-
-                <div className="settings-section">
-                    <h3>Notification Settings</h3>
-                    <div className="setting-item">
-                        <label>Email Notifications</label>
-                        <input type="checkbox" defaultChecked />
-                    </div>
-                    <div className="setting-item">
-                        <label>SMS Notifications</label>
-                        <input type="checkbox" />
-                    </div>
-                </div>
-            </div>
-
-            <div className="settings-actions">
-                <button className="btn btn-primary">Save Settings</button>
-                <button className="btn btn-secondary">Reset to Default</button>
-            </div>
-        </div>
-    )
-}
+function SettingsTab() { return null }

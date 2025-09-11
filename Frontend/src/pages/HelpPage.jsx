@@ -8,6 +8,7 @@ export default function HelpPage() {
       <SEOHead 
         title="Help & FAQ"
         description="Share LocalsLocalMarket with friends and find answers to frequently asked questions."
+        url="https://localslocalmarket.com/help"
       />
       <main className="help-container">
         {/* Hero Section */}

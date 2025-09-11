@@ -1,0 +1,251 @@
+/* Tutorial Demo Styles */
+.tutorial-demo {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 1000;
+}
+
+.tutorial-demo-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.tutorial-demo-trigger:hover {
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.tutorial-demo-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.tutorial-demo-content {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  animation: tutorial-demo-fade-in 0.3s ease-out;
+}
+
+@keyframes tutorial-demo-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.tutorial-demo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tutorial-demo-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tutorial-demo-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1.5rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.tutorial-demo-close:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.tutorial-demo-body {
+  padding: 1.5rem;
+}
+
+.tutorial-demo-section {
+  margin-bottom: 1.5rem;
+}
+
+.tutorial-demo-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.tutorial-demo-section h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tutorial-demo-section p {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.tutorial-demo-section ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.tutorial-demo-section li {
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.tutorial-demo-section strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tutorial-demo-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.tutorial-demo-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  flex: 1;
+  justify-content: center;
+}
+
+.tutorial-demo-btn--primary {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: white;
+  border-color: var(--accent);
+}
+
+.tutorial-demo-btn--primary:hover {
+  background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent-hover) 100%);
+  border-color: var(--accent-2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.tutorial-demo-btn--secondary {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.tutorial-demo-btn--secondary:hover {
+  background: var(--card);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .tutorial-demo {
+    bottom: 5rem; /* Above the floating map button */
+    right: 0.5rem;
+  }
+  
+  .tutorial-demo-trigger {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  .tutorial-demo-trigger span {
+    display: none;
+  }
+  
+  .tutorial-demo-content {
+    margin: 0.5rem;
+    max-height: 90vh;
+  }
+  
+  .tutorial-demo-header {
+    padding: 1rem;
+  }
+  
+  .tutorial-demo-body {
+    padding: 1rem;
+  }
+  
+  .tutorial-demo-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .tutorial-demo-btn {
+    width: 100%;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .tutorial-demo-trigger {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  .tutorial-demo-trigger:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+  
+  .tutorial-demo-content {
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  }
+}

@@ -2,14 +2,17 @@ import { Routes, Route, Navigate } from "react-router-dom"
 import { Suspense, lazy, useState } from "react"
 import "./App.css"
 import { AuthProvider } from "./auth/AuthContext.jsx"
+import { TutorialProvider } from "./contexts/TutorialContext.jsx"
 import ProtectedRoute from "./auth/ProtectedRoute.jsx"
 import EnhancedProtectedRoute from "./components/EnhancedProtectedRoute.jsx"
 import Header from "./components/Header.jsx"
 import Footer from "./components/Footer.jsx"
 import Breadcrumbs from "./components/Breadcrumbs.jsx"
 import ErrorBoundary from "./components/ErrorBoundary.jsx"
-import FloatingFeedbackButton from "./components/FloatingFeedbackButton.jsx"
 import FeedbackModal from "./components/FeedbackModal.jsx"
+import TutorialOverlay from "./components/TutorialOverlay.jsx"
+import TutorialTrigger from "./components/TutorialTrigger.jsx"
+import TutorialPrompt from "./components/TutorialPrompt.jsx"
 
 // Route-based code splitting
 const LandingPage = lazy(() => import("./pages/LandingPage.jsx"))
@@ -27,6 +30,7 @@ const PrivacyPage = lazy(() => import("./pages/PrivacyPage.jsx"))
 const TermsPage = lazy(() => import("./pages/TermsPage.jsx"))
 const CookiesPage = lazy(() => import("./pages/CookiesPage.jsx"))
 const GDPRPage = lazy(() => import("./pages/GDPRPage.jsx"))
+const ServiceDetailsPage = lazy(() => import("./pages/ServiceDetailsPage.jsx"))
 const ShopEditPage = lazy(() => import("./pages/ShopEditPage.jsx"))
 const ShopCreatePage = lazy(() => import("./pages/ShopCreatePage.jsx"))
 const HelpPage = lazy(() => import("./pages/HelpPage.jsx"))
@@ -34,6 +38,7 @@ const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"))
 const ShopManagementPage = lazy(() => import("./pages/ShopManagementPage.jsx"))
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage.jsx"))
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage.jsx"))
+const SearchResultsPage = lazy(() => import("./pages/SearchResultsPage.jsx"))
 
 function App() {
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
@@ -43,87 +48,93 @@ function App() {
 
   return (
     <AuthProvider>
-      <div className="app-container">
-        <Header onOpenFeedback={openFeedbackModal} />
-        <main className="main-content">
-          <Breadcrumbs />
-          <ErrorBoundary>
-            <Suspense fallback={<div className="page-loading">Loading...</div>}>
-              <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/shops" element={<Navigate to="/" replace />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/shops/create" element={
-                <ProtectedRoute>
-                  <ShopCreatePage />
-                </ProtectedRoute>
-              } />
-              <Route path="/shops/:slug/edit" element={
-                <ProtectedRoute>
-                  <ShopEditPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/shops/:slug" element={<ShopPage />} />
-              <Route path="/donate" element={<DonationsPage />} />
-              <Route path="/about" element={<AboutPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/support" element={<SupportPage onOpenFeedback={openFeedbackModal} />} />
-              <Route path="/help" element={<HelpPage />} />
-              <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/terms" element={<TermsPage />} />
-              <Route path="/cookies" element={<CookiesPage />} />
-              <Route path="/gdpr" element={<GDPRPage />} />
-              <Route
-                path="/dashboard"
-                element={
+      <TutorialProvider>
+        <div className="app-container">
+          <Header onOpenFeedback={openFeedbackModal} />
+          <main className="main-content">
+            <Breadcrumbs />
+            <ErrorBoundary>
+              <Suspense fallback={<div className="page-loading">Loading...</div>}>
+                <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/shops" element={<Navigate to="/" replace />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/shops/create" element={
                   <ProtectedRoute>
-                    <DashboardPage />
+                    <ShopCreatePage />
                   </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
+                } />
+                <Route path="/shops/:slug/edit" element={
                   <ProtectedRoute>
-                    <ProfilePage />
+                    <ShopEditPage />
                   </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute>
-                    <SettingsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <EnhancedProtectedRoute requiredRoles={['ADMIN']}>
-                    <AdminDashboard />
-                  </EnhancedProtectedRoute>
-                }
-              />
-              <Route
-                path="/shop-management/:shopId"
-                element={
-                  <ProtectedRoute>
-                    <ShopManagementPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </Suspense>
-          </ErrorBoundary>
-        </main>
-        <Footer onOpenFeedback={openFeedbackModal} />
-        <FloatingFeedbackButton onOpenFeedback={openFeedbackModal} />
-        <FeedbackModal isOpen={isFeedbackModalOpen} onClose={closeFeedbackModal} />
-      </div>
+                } />
+                <Route path="/shops/:slug" element={<ShopPage />} />
+                <Route path="/services/:serviceId" element={<ServiceDetailsPage />} />
+                <Route path="/donate" element={<DonationsPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/support" element={<SupportPage onOpenFeedback={openFeedbackModal} />} />
+                <Route path="/help" element={<HelpPage />} />
+                <Route path="/search" element={<SearchResultsPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/terms" element={<TermsPage />} />
+                <Route path="/cookies" element={<CookiesPage />} />
+                <Route path="/gdpr" element={<GDPRPage />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <SettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <EnhancedProtectedRoute requiredRoles={['ADMIN']}>
+                      <AdminDashboard />
+                    </EnhancedProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/shop-management/:shopId"
+                  element={
+                    <ProtectedRoute>
+                      <ShopManagementPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </Suspense>
+            </ErrorBoundary>
+          </main>
+          <Footer onOpenFeedback={openFeedbackModal} />
+          <FeedbackModal isOpen={isFeedbackModalOpen} onClose={closeFeedbackModal} />
+          <TutorialOverlay />
+          <TutorialPrompt />
+          <TutorialTrigger />
+        </div>
+      </TutorialProvider>
     </AuthProvider>
   )
 }

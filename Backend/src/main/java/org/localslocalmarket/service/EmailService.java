@@ -96,6 +96,36 @@ public class EmailService {
         }
     }
 
+    public void sendShopWarningEmail(String toEmail, String userName, String shopName, String reason) {
+        if (!emailEnabled) {
+            System.out.println("Email disabled - would send shop warning email to: " + toEmail + " reason: " + reason);
+            return;
+        }
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Important Notice Regarding Your Shop - " + shopName);
+
+            String htmlContent = "<html><body>"
+                + "<h2>Notice regarding your shop: " + shopName + "</h2>"
+                + "<p>Hi " + (userName != null ? userName : "there") + ",</p>"
+                + "<p>This is a warning from LocalsLocalMarket administration regarding your shop.</p>"
+                + (reason != null && !reason.trim().isEmpty() ? ("<p><strong>Reason:</strong> " + reason + "</p>") : "")
+                + "<p>Please address this promptly to avoid further action.</p>"
+                + "<p>Regards,<br/>LocalsLocalMarket Admin</p>"
+                + "</body></html>";
+            helper.setText(htmlContent, true);
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send shop warning email", e);
+        }
+    }
+
     public void sendFeedbackEmail(String fromEmail, String fromName, String subject, String message, String userEmail) {
         if (!emailEnabled) {
             System.out.println("Email disabled - would send feedback email from: " + fromEmail + " to: Danravekeh123@gmail.com");

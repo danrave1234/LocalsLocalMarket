@@ -9,6 +9,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ShopRepository extends JpaRepository<Shop, Long>, JpaSpecificationExecutor<Shop> {
     List<Shop> findByOwner(User owner);
@@ -19,4 +21,13 @@ public interface ShopRepository extends JpaRepository<Shop, Long>, JpaSpecificat
      * Ordered by ID for consistent pagination across sitemap pages
      */
     Page<Shop> findAllByOrderByIdAsc(Pageable pageable);
+
+    /**
+     * Suggestions (autocomplete) for shops
+     */
+    @Query("SELECT s FROM Shop s WHERE s.isActive = true AND (" +
+           "LOWER(s.name) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+           "LOWER(s.description) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+           "LOWER(s.category) LIKE LOWER(CONCAT('%', :q, '%'))) ")
+    Page<Shop> suggestShops(@Param("q") String q, Pageable pageable);
 }

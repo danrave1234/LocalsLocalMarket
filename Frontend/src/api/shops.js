@@ -59,4 +59,9 @@ export async function fetchCategories() {
     return api.get('/shops/categories')
 }
 
+// Admin-only: update shop active status by slug
+export async function updateShopStatusBySlug(slug, isActive) {
+    return api.patch(`/shops/${slug}/status`, { isActive })
+}
+
 

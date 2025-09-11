@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { generateShopSlug } from '../utils/slugUtils.js';
+import SEOHead from '../components/SEOHead.jsx'
 import './ServiceDetailsPage.css';
 
 const ServiceDetailsPage = () => {
@@ -52,6 +53,27 @@ const ServiceDetailsPage = () => {
   }
 
   return (
+    <>
+      <SEOHead
+        title={service.title}
+        description={service.description?.slice(0, 150) || 'Service details'}
+        url={`https://localslocalmarket.com/services/${service.id}`}
+        image={service.imageUrl || undefined}
+        type="product"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": service.title,
+          "description": service.description,
+          "image": service.imageUrl || undefined,
+          "offers": {
+            "@type": "Offer",
+            "price": service.price,
+            "priceCurrency": "PHP",
+            "availability": service.status === 'AVAILABLE' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
+          }
+        }}
+      />
     <div className="service-details-page">
       <div className="service-details">
         <div className="service-info">
@@ -113,6 +135,7 @@ const ServiceDetailsPage = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

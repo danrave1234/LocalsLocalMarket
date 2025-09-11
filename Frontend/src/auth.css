@@ -768,8 +768,8 @@ html body button[type="submit"].auth-submit-btn:hover {
 .password-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 0.25rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0.125rem;
+  margin-bottom: 0.125rem;
 }
 
 .forgot-password-btn {
@@ -792,6 +792,11 @@ html body button[type="submit"].auth-submit-btn:hover {
   background: rgba(99, 102, 241, 0.1);
   text-decoration: none;
   opacity: 1;
+}
+
+/* Reduce spacing for forgot password form group */
+.form-group.forgot-password-group {
+  margin-bottom: 0;
 }
 
 /* Modal-specific input styling for more compact appearance */

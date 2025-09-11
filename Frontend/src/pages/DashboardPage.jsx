@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { ArrowUp, MapPin, Image } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
+import { useTutorial } from '../contexts/TutorialContext.jsx'
+import { dashboardTutorialSteps } from '../components/TutorialSteps.js'
 import Modal from '../components/Modal.jsx'
 import CategorySelector from '../components/CategorySelector.jsx'
 import LocationMap from '../components/LocationMap.jsx'
@@ -38,6 +40,7 @@ function StoreIcon(props) {
 
 export default function DashboardPage() {
     const { user, token } = useAuth()
+    const { setTutorialSteps, isTutorialActive } = useTutorial()
     const [shops, setShops] = useState([])
     const [showCreateShop, setShowCreateShop] = useState(false)
     const [showEditShop, setShowEditShop] = useState(false)
@@ -47,6 +50,55 @@ export default function DashboardPage() {
     const [categories, setCategories] = useState([])
     const [uploading, setUploading] = useState(false)
     const [showBackToTop, setShowBackToTop] = useState(false)
+
+    // Mock shops for tutorial demonstration
+    const mockShops = [
+        {
+            id: 'mock-1',
+            name: 'Sample Coffee Shop',
+            description: 'A cozy neighborhood coffee shop serving premium coffee and pastries.',
+            category: 'Food & Beverage',
+            addressLine: '123 Main Street, Downtown',
+            phone: '+1 (555) 123-4567',
+            website: 'https://samplecoffee.com',
+            email: 'info@samplecoffee.com',
+            logoPath: '/default-shop-logo.png',
+            coverPath: '/default-shop-cover.jpg',
+            lat: 10.3157,
+            lng: 123.8854,
+            isMock: true
+        },
+        {
+            id: 'mock-2',
+            name: 'Local Art Gallery',
+            description: 'Showcasing local artists and hosting community art events.',
+            category: 'Arts & Culture',
+            addressLine: '456 Art District, Midtown',
+            phone: '+1 (555) 987-6543',
+            website: 'https://localartgallery.com',
+            email: 'contact@localartgallery.com',
+            logoPath: '/default-shop-logo.png',
+            coverPath: '/default-shop-cover.jpg',
+            lat: 10.3200,
+            lng: 123.8900,
+            isMock: true
+        },
+        {
+            id: 'mock-3',
+            name: 'Green Thumb Garden Center',
+            description: 'Your one-stop shop for plants, gardening tools, and expert advice.',
+            category: 'Home & Garden',
+            addressLine: '789 Garden Way, Uptown',
+            phone: '+1 (555) 456-7890',
+            website: 'https://greenthumbgardens.com',
+            email: 'hello@greenthumbgardens.com',
+            logoPath: '/default-shop-logo.png',
+            coverPath: '/default-shop-cover.jpg',
+            lat: 10.3100,
+            lng: 123.8800,
+            isMock: true
+        }
+    ]
 
     // Shop form state
     const [shopForm, setShopForm] = useState({
@@ -68,9 +120,12 @@ export default function DashboardPage() {
     })
 
     useEffect(() => {
+        // Set tutorial steps for dashboard
+        setTutorialSteps(dashboardTutorialSteps)
+        
         fetchUserShops()
         fetchCategoriesData()
-    }, [])
+    }, [setTutorialSteps])
 
     useEffect(() => {
         const onScroll = () => setShowBackToTop(window.scrollY > 300)
@@ -361,6 +416,7 @@ export default function DashboardPage() {
                     </div>
                     <button 
                         className="seller-btn seller-btn-primary create-shop-btn"
+                        data-tutorial="create-shop-btn"
                         onClick={() => window.location.href = '/shops/create'}
                     >
                         <span className="seller-btn-icon"><StoreIcon width={16} height={16} /></span>
@@ -382,9 +438,9 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            <div className="shops-grid">
-                {shops.length === 0 ? (
-                    <div className="no-shops-state">
+            <div className="shops-grid" data-tutorial="shops-grid">
+                {shops.length === 0 && !isTutorialActive ? (
+                    <div className="no-shops-state" data-tutorial="no-shops-state">
                         <div className="no-shops-icon"><StoreIcon width={48} height={48} /></div>
                         <h3>No shops yet</h3>
                         <p className="muted">
@@ -399,14 +455,20 @@ export default function DashboardPage() {
                         </button>
                     </div>
                 ) : (
-                    shops.map((shop) => (
-                        <div key={shop.id} className="shop-card" 
-                             style={{ cursor: 'pointer' }}
-                             onClick={() => window.open(generateShopUrl(shop.name, shop.id), '_blank')}>
+                    // Show mock shops during tutorial if user has no shops, otherwise show real shops
+                    (shops.length === 0 && isTutorialActive ? mockShops : shops).map((shop) => (
+                        <div key={shop.id} className={`shop-card ${shop.isMock ? 'mock-shop' : ''}`} 
+                             style={{ cursor: shop.isMock ? 'default' : 'pointer' }}
+                             onClick={shop.isMock ? undefined : () => window.open(generateShopUrl(shop.name, shop.id), '_blank')}>
+                            {shop.isMock && (
+                                <div className="mock-shop-badge">
+                                    <span className="mock-badge-text">Demo Shop</span>
+                                </div>
+                            )}
                             <div className="shop-image">
                                 {shop.coverPath ? (
                                     <img 
-                                        src={getImageUrl(shop.coverPath)} 
+                                        src={shop.isMock ? shop.coverPath : getImageUrl(shop.coverPath)} 
                                         alt={shop.name}
                                         className="shop-cover"
                                     />
@@ -414,7 +476,7 @@ export default function DashboardPage() {
                                     <div className="shop-image-placeholder"><StoreIcon width={24} height={24} /></div>
                                 )}
                                 <img 
-                                    src={shop.logoPath ? getImageUrl(shop.logoPath) : '/default-shop-logo.png'} 
+                                    src={shop.isMock ? shop.logoPath : (shop.logoPath ? getImageUrl(shop.logoPath) : '/default-shop-logo.png')} 
                                     alt={`${shop.name} logo`}
                                     className="shop-logo"
                                     onError={(e) => {
@@ -437,47 +499,55 @@ export default function DashboardPage() {
                                 <p className="shop-description">
                                     {shop.description || 'No description available'}
                                 </p>
-                                <div className="shop-actions">
+                                <div className="shop-actions" data-tutorial="shop-actions">
                                     <button 
-                                        className="seller-btn seller-btn-primary seller-btn-sm"
-                                        onClick={() => window.open(generateShopUrl(shop.name, shop.id), '_blank')}
+                                        className={`seller-btn seller-btn-primary seller-btn-sm ${shop.isMock ? 'disabled' : ''}`}
+                                        onClick={shop.isMock ? undefined : () => window.open(generateShopUrl(shop.name, shop.id), '_blank')}
+                                        disabled={shop.isMock}
+                                        title={shop.isMock ? 'Demo shop - not interactive' : 'View shop'}
                                     >
                                         <svg className="seller-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                             <circle cx="12" cy="12" r="3"/>
                                         </svg>
-                                        View Shop
+                                        {shop.isMock ? 'Demo View' : 'View Shop'}
                                     </button>
                                     <button 
-                                        className="seller-btn seller-btn-primary seller-btn-sm"
-                                        onClick={() => openManageShop(shop)}
+                                        className={`seller-btn seller-btn-primary seller-btn-sm ${shop.isMock ? 'disabled' : ''}`}
+                                        onClick={shop.isMock ? undefined : () => openManageShop(shop)}
+                                        disabled={shop.isMock}
+                                        title={shop.isMock ? 'Demo shop - not interactive' : 'Manage shop'}
                                     >
                                         <svg className="seller-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
                                             <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
                                         </svg>
-                                        Manage Shop
+                                        {shop.isMock ? 'Demo Manage' : 'Manage Shop'}
                                     </button>
                                     <button 
-                                        className="seller-btn seller-btn-secondary seller-btn-sm"
-                                        onClick={() => window.location.href = `/shops/${generateShopSlug(shop.name, shop.id)}/edit`}
+                                        className={`seller-btn seller-btn-secondary seller-btn-sm ${shop.isMock ? 'disabled' : ''}`}
+                                        onClick={shop.isMock ? undefined : () => window.location.href = `/shops/${generateShopSlug(shop.name, shop.id)}/edit`}
+                                        disabled={shop.isMock}
+                                        title={shop.isMock ? 'Demo shop - not interactive' : 'Edit shop'}
                                     >
                                         <svg className="seller-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                                             <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                         </svg>
-                                        Edit
+                                        {shop.isMock ? 'Demo Edit' : 'Edit'}
                                     </button>
                                     <button 
-                                        className="seller-btn seller-btn-danger seller-btn-sm"
-                                        onClick={() => handleDeleteShop(shop.id)}
+                                        className={`seller-btn seller-btn-danger seller-btn-sm ${shop.isMock ? 'disabled' : ''}`}
+                                        onClick={shop.isMock ? undefined : () => handleDeleteShop(shop.id)}
+                                        disabled={shop.isMock}
+                                        title={shop.isMock ? 'Demo shop - not interactive' : 'Delete shop'}
                                     >
                                         <svg className="seller-btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                             <path d="M3 6h18"/>
                                             <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
                                             <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                                         </svg>
-                                        Delete
+                                        {shop.isMock ? 'Demo Delete' : 'Delete'}
                                     </button>
                                 </div>
                             </div>

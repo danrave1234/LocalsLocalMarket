@@ -118,3 +118,8 @@ export async function exportSalesReport(format = 'csv', days = 30) {
         responseType: 'blob'
     })
 }
+
+// Admin action: warn shop owner via email
+export async function warnShopOwner(slug, reason = '') {
+    return api.post(`/shops/${slug}/warn`, { reason })
+}

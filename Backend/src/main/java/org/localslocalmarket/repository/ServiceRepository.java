@@ -36,14 +36,22 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
     Page<Service> findByTitleContainingIgnoreCaseAndIsActiveTrue(String title, Pageable pageable);
     Page<Service> findByShopIdAndTitleContainingIgnoreCaseAndIsActiveTrue(Long shopId, String title, Pageable pageable);
     
+    // Suggestions (autocomplete)
+    @Query("SELECT s FROM Service s WHERE s.isActive = true AND (" +
+           "LOWER(s.title) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+           "LOWER(s.description) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+           "LOWER(s.mainCategory) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+           "LOWER(s.subcategory) LIKE LOWER(CONCAT('%', :q, '%')))")
+    Page<Service> suggestServices(@Param("q") String q, Pageable pageable);
+    
     // Advanced search with multiple criteria
     @Query("SELECT s FROM Service s WHERE s.isActive = true " +
            "AND (:shopId IS NULL OR s.shop.id = :shopId) " +
            "AND (:status IS NULL OR s.status = :status) " +
            "AND (:mainCategory IS NULL OR s.mainCategory = :mainCategory) " +
            "AND (:subcategory IS NULL OR s.subcategory = :subcategory) " +
-           "AND (:searchTerm IS NULL OR LOWER(s.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
-           "OR LOWER(s.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+           "AND ( :searchTerm IS NULL OR (LOWER(s.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "OR LOWER(s.description) LIKE LOWER(CONCAT('%', :searchTerm, '%')) ) )")
     Page<Service> findServicesWithFilters(@Param("shopId") Long shopId,
                                         @Param("status") ServiceStatus status,
                                         @Param("mainCategory") String mainCategory,

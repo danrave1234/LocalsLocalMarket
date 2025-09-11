@@ -2670,7 +2670,7 @@
   padding: 0 0.5rem;
 }
 
-.search-input-wrapper {
+.products-search-container .search-input-wrapper {
   position: relative;
   max-width: 500px;
   margin: 0 auto;
@@ -2731,7 +2731,7 @@
     margin: 0.75rem 0;
   }
   
-  .search-input-wrapper {
+  .products-search-container .search-input-wrapper {
     max-width: 100%;
   }
   

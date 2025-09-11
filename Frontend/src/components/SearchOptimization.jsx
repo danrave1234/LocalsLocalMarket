@@ -5,7 +5,7 @@ import { useDebounce } from '../hooks/useDebounce.js'
 import categoriesCache from '../utils/categoriesCache.js'
 import { Utensils, ShoppingCart, Palette, Wrench, Smartphone, Shirt, Heart, Home } from 'lucide-react'
 
-const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation, compactFilter = false }) => {
+const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation, compactFilter = false, navigateOnSubmit = false }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchSuggestions, setSearchSuggestions] = useState([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -112,9 +112,17 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
 
   const handleSearch = (searchTerm) => {
     if (searchTerm.trim()) {
-      setLocalQuery(searchTerm.trim())
+      const trimmed = searchTerm.trim()
+      setLocalQuery(trimmed)
       setShowSuggestions(false)
       setIsExpanded(false)
+      if (navigateOnSubmit) {
+        const params = new URLSearchParams()
+        params.set('q', trimmed)
+        params.set('type', 'shops')
+        window.location.href = `/search?${params.toString()}`
+        return
+      }
     }
   }
 
@@ -259,18 +267,7 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
           </button>
         </div>
 
-        {/* Active Filters Display - Only show search query, not category */}
-        {localQuery && (
-          <div className="active-filters">
-            <div className="filter-tag">
-              <span>"{localQuery}"</span>
-              <button onClick={() => setLocalQuery('')}>×</button>
-            </div>
-            <button onClick={clearFilters} className="clear-all">
-              Clear all
-            </button>
-          </div>
-        )}
+        {/* Removed active filters pill display per request */}
       </div>
 
       {/* Expanded Search Panel */}
