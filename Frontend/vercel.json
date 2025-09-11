@@ -11,12 +11,13 @@
   ],
   "redirects": [
     {
-      "source": "http://(.*)",
-      "destination": "https://localslocalmarket.com/$1",
-      "permanent": true
-    },
-    {
-      "source": "https://www.localslocalmarket.com/(.*)",
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.localslocalmarket.com"
+        }
+      ],
       "destination": "https://localslocalmarket.com/$1",
       "permanent": true
     },
