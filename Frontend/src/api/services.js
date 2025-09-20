@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
+import { API_BASE } from './client.js'
 
 // Helper function to handle API responses
 const handleResponse = async (response) => {
@@ -50,7 +50,7 @@ export const fetchServices = async (params = {}) => {
   if (minPrice) queryParams.append('minPrice', minPrice)
   if (maxPrice) queryParams.append('maxPrice', maxPrice)
 
-  const response = await fetch(`${API_BASE_URL}/api/services/paginated?${queryParams}`)
+  const response = await fetch(`${API_BASE}/services/paginated?${queryParams}`)
   return handleResponse(response)
 }
 
@@ -79,7 +79,7 @@ export const fetchServicesByShopId = async (shopId, params = {}) => {
   if (minPrice) queryParams.append('minPrice', minPrice)
   if (maxPrice) queryParams.append('maxPrice', maxPrice)
 
-  const response = await fetch(`${API_BASE_URL}/api/services/shop/${shopId}/paginated?${queryParams}`)
+  const response = await fetch(`${API_BASE}/services/shop/${shopId}/paginated?${queryParams}`)
   return handleResponse(response)
 }
 
@@ -108,7 +108,7 @@ export const fetchServicesByCategory = async (category, params = {}) => {
   if (minPrice) queryParams.append('minPrice', minPrice)
   if (maxPrice) queryParams.append('maxPrice', maxPrice)
 
-  const response = await fetch(`${API_BASE_URL}/api/services/category/${encodeURIComponent(category)}/paginated?${queryParams}`)
+  const response = await fetch(`${API_BASE}/services/category/${encodeURIComponent(category)}/paginated?${queryParams}`)
   return handleResponse(response)
 }
 
@@ -145,7 +145,7 @@ export const searchServices = async (params = {}) => {
   if (minPrice) queryParams.append('minPrice', minPrice)
   if (maxPrice) queryParams.append('maxPrice', maxPrice)
 
-  const response = await fetch(`${API_BASE_URL}/api/services/search/paginated?${queryParams}`)
+  const response = await fetch(`${API_BASE}/services/search/paginated?${queryParams}`)
   return handleResponse(response)
 }
 
@@ -153,7 +153,7 @@ export const searchServices = async (params = {}) => {
  * Fetch a single service by ID
  */
 export const fetchServiceById = async (serviceId) => {
-  const response = await fetch(`${API_BASE_URL}/api/services/${serviceId}`)
+  const response = await fetch(`${API_BASE}/services/${serviceId}`)
   return handleResponse(response)
 }
 
@@ -161,7 +161,7 @@ export const fetchServiceById = async (serviceId) => {
  * Create a new service
  */
 export const createService = async (serviceData, token) => {
-  const response = await fetch(`${API_BASE_URL}/api/services`, {
+  const response = await fetch(`${API_BASE}/services`, {
     method: 'POST',
     headers: getAuthHeaders(token),
     body: JSON.stringify(serviceData)
@@ -173,7 +173,7 @@ export const createService = async (serviceData, token) => {
  * Update an existing service
  */
 export const updateService = async (serviceId, serviceData, token) => {
-  const response = await fetch(`${API_BASE_URL}/api/services/${serviceId}`, {
+  const response = await fetch(`${API_BASE}/services/${serviceId}`, {
     method: 'PUT',
     headers: getAuthHeaders(token),
     body: JSON.stringify(serviceData)
@@ -185,7 +185,7 @@ export const updateService = async (serviceId, serviceData, token) => {
  * Update service images immediately
  */
 export const updateServiceImages = async (serviceId, imageUrl, token) => {
-  const response = await fetch(`${API_BASE_URL}/api/services/${serviceId}/images`, {
+  const response = await fetch(`${API_BASE}/services/${serviceId}/images`, {
     method: 'PATCH',
     headers: getAuthHeaders(token),
     body: JSON.stringify({ imageUrl })
@@ -197,7 +197,7 @@ export const updateServiceImages = async (serviceId, imageUrl, token) => {
  * Delete a service (soft delete - sets isActive to false)
  */
 export const deleteService = async (serviceId, token) => {
-  const response = await fetch(`${API_BASE_URL}/api/services/${serviceId}`, {
+  const response = await fetch(`${API_BASE}/services/${serviceId}`, {
     method: 'DELETE',
     headers: getAuthHeaders(token)
   })
@@ -208,7 +208,7 @@ export const deleteService = async (serviceId, token) => {
  * Update service status
  */
 export const updateServiceStatus = async (serviceId, status, token) => {
-  const response = await fetch(`${API_BASE_URL}/api/services/${serviceId}`, {
+  const response = await fetch(`${API_BASE}/services/${serviceId}`, {
     method: 'PUT',
     headers: getAuthHeaders(token),
     body: JSON.stringify({ status })
@@ -229,7 +229,7 @@ export const fetchAllServices = async (params = {}) => {
   if (category) queryParams.append('category', category)
   if (shopId) queryParams.append('shopId', shopId)
 
-  const url = `${API_BASE_URL}/api/services${queryParams.toString() ? `?${queryParams}` : ''}`
+  const url = `${API_BASE}/services${queryParams.toString() ? `?${queryParams}` : ''}`
   const response = await fetch(url)
   return handleResponse(response)
 }
@@ -241,7 +241,7 @@ export const fetchServicesByShopIdLegacy = async (shopId, status = null) => {
   const queryParams = new URLSearchParams()
   if (status) queryParams.append('status', status)
   
-  const url = `${API_BASE_URL}/api/services/shop/${shopId}${queryParams.toString() ? `?${queryParams}` : ''}`
+  const url = `${API_BASE}/services/shop/${shopId}${queryParams.toString() ? `?${queryParams}` : ''}`
   const response = await fetch(url)
   return handleResponse(response)
 }
@@ -253,7 +253,7 @@ export const fetchServicesByCategoryLegacy = async (category, status = null) => 
   const queryParams = new URLSearchParams()
   if (status) queryParams.append('status', status)
   
-  const url = `${API_BASE_URL}/api/services/category/${encodeURIComponent(category)}${queryParams.toString() ? `?${queryParams}` : ''}`
+  const url = `${API_BASE}/services/category/${encodeURIComponent(category)}${queryParams.toString() ? `?${queryParams}` : ''}`
   const response = await fetch(url)
   return handleResponse(response)
 }
@@ -266,7 +266,7 @@ export const fetchServicesByCategoryLegacy = async (category, status = null) => 
 export const getServiceCategories = async () => {
   // For now, we'll use the same categories as products
   // In the future, this could be a separate service categories endpoint
-  const response = await fetch(`${API_BASE_URL}/api/categories`)
+  const response = await fetch(`${API_BASE}/categories`)
   return handleResponse(response)
 }
 

@@ -1,4 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  fetchServicesByShopId,
+  createService,
+  updateService,
+  deleteService
+} from '../api/services.js'
 import ServiceCard from './ServiceCard';
 import ServiceForm from './ServiceForm';
 import Modal from './Modal';
@@ -19,11 +25,7 @@ const ServiceManagement = ({ shopId }) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/services/shop/${shopId}`);
-      if (!response.ok) {
-        throw new Error('Failed to load services');
-      }
-      const data = await response.json();
+      const data = await fetchServicesByShopId(shopId);
       setServices(data);
     } catch (error) {
       console.error('Failed to load services:', error);
@@ -35,19 +37,7 @@ const ServiceManagement = ({ shopId }) => {
 
   const handleAddService = async (serviceData) => {
     try {
-      const response = await fetch('/api/services', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ ...serviceData, shopId })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to create service');
-      }
-      
+      await createService({ ...serviceData, shopId }, localStorage.getItem('token'))
       await loadServices();
       setShowAddService(false);
     } catch (error) {
@@ -58,19 +48,7 @@ const ServiceManagement = ({ shopId }) => {
 
   const handleEditService = async (serviceData) => {
     try {
-      const response = await fetch(`/api/services/${editingService.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(serviceData)
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update service');
-      }
-      
+      await updateService(editingService.id, serviceData, localStorage.getItem('token'))
       await loadServices();
       setEditingService(null);
     } catch (error) {
@@ -85,17 +63,7 @@ const ServiceManagement = ({ shopId }) => {
     }
     
     try {
-      const response = await fetch(`/api/services/${serviceId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to delete service');
-      }
-      
+      await deleteService(serviceId, localStorage.getItem('token'))
       await loadServices();
     } catch (error) {
       console.error('Failed to delete service:', error);

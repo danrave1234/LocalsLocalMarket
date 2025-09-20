@@ -29,12 +29,19 @@ export default defineConfig({
       process.env.VITE_API_BASE || (
         process.env.NODE_ENV === 'production' 
           ? 'https://api.localslocalmarket.com/api'
-          : 'http://localhost:8080/api'
+          : '/api'
       )
     ),
+    'import.meta.env.VITE_ENABLE_LOGS': JSON.stringify(process.env.VITE_ENABLE_LOGS || 'false')
   },
   server: {
-    // Proxy removed since we're using direct localhost:8080 URLs
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   },
   build: {
     minify: 'terser',

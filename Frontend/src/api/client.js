@@ -8,8 +8,8 @@ function getApiBase() {
     (window.navigator.userAgent.includes('Android') || 
      window.navigator.userAgent.includes('Mobile'))
   
-  // For Android devices, implement fallback logic
-  if (isAndroid && typeof window !== 'undefined') {
+  // For Android devices, implement fallback logic (dev only)
+  if (import.meta.env.DEV && isAndroid && typeof window !== 'undefined') {
     const currentHost = window.location.hostname
     
     // If we're in production but the API domain is not accessible, try localhost
@@ -46,11 +46,22 @@ function getApiBase() {
   return apiBase
 }
 
+import { logger } from '../utils/logger.js'
 export const API_BASE = getApiBase()
+
+// Cross-browser timeout helper
+const createTimeoutSignal = (ms) => {
+  if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+    return AbortSignal.timeout(ms)
+  }
+  const controller = new AbortController()
+  setTimeout(() => controller.abort(), ms)
+  return controller.signal
+}
 
 // Log API configuration in development
 if (import.meta.env.DEV) {
-  console.log('🔧 API Configuration:', {
+  logger.info('🔧 API Configuration:', {
     environment: 'Development',
     apiBase: API_BASE,
     viteApiBase: import.meta.env.VITE_API_BASE
@@ -59,7 +70,7 @@ if (import.meta.env.DEV) {
 
 // Also log in production for debugging
 if (!import.meta.env.DEV) {
-  console.log('🚀 Production API Configuration:', {
+  logger.info('🚀 Production API Configuration:', {
     environment: 'Production',
     apiBase: API_BASE,
     viteApiBase: import.meta.env.VITE_API_BASE,
@@ -92,7 +103,7 @@ export async function apiRequest(path, { method = 'GET', body, token, headers } 
       headers: requestHeaders,
       body: isFormData ? body : body ? JSON.stringify(body) : undefined,
       credentials: 'include',
-      signal: AbortSignal.timeout ? AbortSignal.timeout(30000) : undefined,
+      signal: createTimeoutSignal(30000),
     })
     
     if (!res.ok) {

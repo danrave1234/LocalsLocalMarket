@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { generateShopSlug } from '../utils/slugUtils.js';
+import { fetchServiceById } from '../api/services.js'
 import SEOHead from '../components/SEOHead.jsx'
 import './ServiceDetailsPage.css';
 
@@ -18,11 +19,7 @@ const ServiceDetailsPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/services/${serviceId}`);
-      if (!response.ok) {
-        throw new Error('Service not found');
-      }
-      const data = await response.json();
+      const data = await fetchServiceById(serviceId);
       setService(data);
     } catch (error) {
       console.error('Failed to load service:', error);

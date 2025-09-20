@@ -13,16 +13,21 @@ Currently, two official plugins are available:
 ## Expanding the ESLint configuration
 ## Backend API configuration
 
-Set the API base URL via environment variable:
+The app automatically configures API endpoints:
+
+- **Development**: Uses `/api` with Vite proxy to `http://localhost:8080`
+- **Production**: Uses `https://api.localslocalmarket.com/api`
+
+You can override with environment variable:
 
 ```
-VITE_API_BASE=/api
+VITE_API_BASE=https://your-api-domain.com/api
 ```
 
-For local development against Spring Boot on port 8080, you can use:
+To enable production logging, set:
 
 ```
-VITE_API_BASE=http://localhost:8080/api
+VITE_ENABLE_LOGS=true
 ```
 
 

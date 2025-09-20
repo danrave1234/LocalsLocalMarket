@@ -16,8 +16,8 @@ export function getImageUrl(path) {
     return path
   }
   
-  // Get the base URL without the /api suffix for uploads
-  const baseUrl = API_BASE.replace('/api', '')
+  // Get the base URL without the trailing /api suffix for uploads
+  const baseUrl = API_BASE.replace(/\/api$/, '')
   
   // If it starts with a slash, it's a relative path
   if (path.startsWith('/')) {

@@ -163,10 +163,21 @@ export default function LocationMap({ onLocationSelect, initialLat = 10.3157, in
   }, [initialLat, initialLng])
 
   const handleLocationChange = async (lat, lng) => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=en&zoom=18`
-      )
+    // Debounce geocoding calls
+    if (window.geocodeTimeout) {
+      clearTimeout(window.geocodeTimeout)
+    }
+    
+    window.geocodeTimeout = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=en&zoom=18`,
+          {
+            headers: {
+              'User-Agent': 'LocalsLocalMarket/1.0 (contact: support@localslocalmarket.com)'
+            }
+          }
+        )
       
       if (!response.ok) {
         throw new Error('Geocoding request failed')
@@ -214,17 +225,18 @@ export default function LocationMap({ onLocationSelect, initialLat = 10.3157, in
         addressLine: data.display_name || '',
         fullAddress: data.display_name || ''
       })
-    } catch (err) {
-      console.error('Error in reverse geocoding:', err)
-      onLocationSelect({
-        lat,
-        lng,
-        barangay: '',
-        city: '',
-        addressLine: '',
-        fullAddress: ''
-      })
-    }
+      } catch (err) {
+        console.error('Error in reverse geocoding:', err)
+        onLocationSelect({
+          lat,
+          lng,
+          barangay: '',
+          city: '',
+          addressLine: '',
+          fullAddress: ''
+        })
+      }
+    }, 500) // 500ms debounce
   }
 
   const handleCurrentLocation = () => {
