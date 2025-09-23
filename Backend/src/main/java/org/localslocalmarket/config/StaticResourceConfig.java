@@ -2,6 +2,7 @@ package org.localslocalmarket.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -11,7 +12,8 @@ import java.nio.file.Paths;
 @Configuration
 public class StaticResourceConfig implements WebMvcConfigurer {
 
-    @Value("${llm.uploads.dir}")
+    // Make uploads dir configurable with a safe default (relative ./uploads)
+    @Value("${llm.uploads.dir:uploads}")
     private String uploadsDir;
 
     @Override
@@ -19,7 +21,8 @@ public class StaticResourceConfig implements WebMvcConfigurer {
         Path uploadPath = Paths.get(uploadsDir).toAbsolutePath();
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:" + uploadPath.toString() + "/")
-                .setCachePeriod(31536000) // cache 1 year in seconds
+                // Use revalidation to avoid stale/broken cached images across refreshes
+                .setCacheControl(CacheControl.noCache().cachePublic().mustRevalidate())
                 .resourceChain(true);
     }
 }

@@ -8,7 +8,7 @@ import {
     initializeCategories 
 } from '../api/categories.js'
 import './AdminCategoryManager.css'
-import { Utensils } from 'lucide-react'
+import * as LucideIcons from 'lucide-react'
 
 const AdminCategoryManager = () => {
     const { user, token } = useAuth()
@@ -27,6 +27,104 @@ const AdminCategoryManager = () => {
         subcategoriesJson: '',
         sortOrder: 0
     })
+    const getLucideIcon = (iconName) => {
+        if (!iconName) return null
+        const name = String(iconName).trim()
+        const direct = LucideIcons[name]
+        if (direct) return direct
+        // Try a couple of normalizations
+        const pascal = name
+            .toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .filter(Boolean)
+            .map(s => s.charAt(0).toUpperCase() + s.slice(1))
+            .join('')
+        return LucideIcons[pascal] || null
+    }
+
+    // Curated lucide icon choices grouped by likely category
+    const ICON_CHOICES = [
+        { group: 'Food & Beverages', options: [
+            { label: 'Utensils', value: 'Utensils' },
+            { label: 'Coffee', value: 'Coffee' },
+            { label: 'Beer', value: 'Beer' },
+            { label: 'Wine', value: 'Wine' },
+            { label: 'IceCream', value: 'IceCream' },
+            { label: 'Cookie', value: 'Cookie' },
+            { label: 'Fish', value: 'Fish' },
+            { label: 'Leaf', value: 'Leaf' }
+        ]},
+        { group: 'Automotive & Transportation', options: [
+            { label: 'Car', value: 'Car' },
+            { label: 'Truck', value: 'Truck' },
+            { label: 'Wrench', value: 'Wrench' },
+            { label: 'Fuel', value: 'Fuel' },
+            { label: 'Bolt', value: 'Bolt' },
+            { label: 'Wheelchair', value: 'Wheelchair' }
+        ]},
+        { group: 'Electronics & Technology', options: [
+            { label: 'Smartphone', value: 'Smartphone' },
+            { label: 'Monitor', value: 'Monitor' },
+            { label: 'Laptop', value: 'Laptop' },
+            { label: 'Headphones', value: 'Headphones' },
+            { label: 'Gamepad', value: 'Gamepad' },
+            { label: 'Camera', value: 'Camera' },
+            { label: 'Cpu', value: 'Cpu' },
+            { label: 'Database', value: 'Database' },
+            { label: 'Printer', value: 'Printer' }
+        ]},
+        { group: 'Fashion & Beauty', options: [
+            { label: 'ShoppingBag', value: 'ShoppingBag' },
+            { label: 'Scissors', value: 'Scissors' },
+            { label: 'Brush', value: 'Brush' },
+            { label: 'Paintbrush', value: 'Paintbrush' },
+            { label: 'Sparkles', value: 'Sparkles' }
+        ]},
+        { group: 'Home & Garden', options: [
+            { label: 'Home', value: 'Home' },
+            { label: 'Bed', value: 'Bed' },
+            { label: 'Lamp', value: 'Lamp' },
+            { label: 'Hammer', value: 'Hammer' },
+            { label: 'Plug', value: 'Plug' },
+            { label: 'Lightbulb', value: 'Lightbulb' },
+            { label: 'Sprout', value: 'Sprout' }
+        ]},
+        { group: 'Health & Wellness', options: [
+            { label: 'Stethoscope', value: 'Stethoscope' },
+            { label: 'Pill', value: 'Pill' },
+            { label: 'HeartPulse', value: 'HeartPulse' },
+            { label: 'Dumbbell', value: 'Dumbbell' }
+        ]},
+        { group: 'Services', options: [
+            { label: 'Briefcase', value: 'Briefcase' },
+            { label: 'Wrench', value: 'Wrench' },
+            { label: 'Clipboard', value: 'Clipboard' },
+            { label: 'ShieldCheck', value: 'ShieldCheck' },
+            { label: 'CalendarCheck2', value: 'CalendarCheck2' }
+        ]},
+        { group: 'Entertainment & Recreation', options: [
+            { label: 'Ticket', value: 'Ticket' },
+            { label: 'Music', value: 'Music' },
+            { label: 'Clapperboard', value: 'Clapperboard' },
+            { label: 'Gamepad', value: 'Gamepad' },
+            { label: 'Bicycle', value: 'Bicycle' },
+            { label: 'MountainSnow', value: 'MountainSnow' }
+        ]},
+        { group: 'Business & Professional', options: [
+            { label: 'Building2', value: 'Building2' },
+            { label: 'Calculator', value: 'Calculator' },
+            { label: 'CreditCard', value: 'CreditCard' },
+            { label: 'FileBarChart2', value: 'FileBarChart2' },
+            { label: 'ChartBar', value: 'ChartBar' }
+        ]},
+        { group: 'Specialty & Niche', options: [
+            { label: 'Palette', value: 'Palette' },
+            { label: 'Gem', value: 'Gem' },
+            { label: 'ScrollText', value: 'ScrollText' },
+            { label: 'Globe', value: 'Globe' },
+            { label: 'Wand2', value: 'Wand2' }
+        ]}
+    ]
 
     useEffect(() => {
         if (user?.role === 'ADMIN') {
@@ -65,6 +163,25 @@ const AdminCategoryManager = () => {
         e.preventDefault()
         try {
             setLoading(true)
+            // Validate lucide icon name if provided
+            if (formData.icon && !getLucideIcon(formData.icon)) {
+                setError('Icon must be a valid Lucide icon name (e.g., Utensils, Tag, Wrench).')
+                setLoading(false)
+                return
+            }
+            // Validate subcategories JSON when creating MAIN category
+            if (formData.type === 'MAIN' && formData.subcategoriesJson) {
+                try {
+                    const parsed = JSON.parse(formData.subcategoriesJson)
+                    if (!Array.isArray(parsed)) {
+                        throw new Error('Subcategories must be a JSON array')
+                    }
+                } catch (jsonErr) {
+                    setError('Subcategories must be a valid JSON array, e.g. ["Foo", "Bar"]')
+                    setLoading(false)
+                    return
+                }
+            }
             await createCategory(formData, token)
             await loadCategories()
             setShowCreateForm(false)
@@ -82,6 +199,25 @@ const AdminCategoryManager = () => {
         e.preventDefault()
         try {
             setLoading(true)
+            // Validate lucide icon name if provided
+            if (formData.icon && !getLucideIcon(formData.icon)) {
+                setError('Icon must be a valid Lucide icon name (e.g., Utensils, Tag, Wrench).')
+                setLoading(false)
+                return
+            }
+            // Validate subcategories JSON when updating MAIN category
+            if (formData.type === 'MAIN' && formData.subcategoriesJson) {
+                try {
+                    const parsed = JSON.parse(formData.subcategoriesJson)
+                    if (!Array.isArray(parsed)) {
+                        throw new Error('Subcategories must be a JSON array')
+                    }
+                } catch (jsonErr) {
+                    setError('Subcategories must be a valid JSON array, e.g. ["Foo", "Bar"]')
+                    setLoading(false)
+                    return
+                }
+            }
             await updateCategory(editingCategory.id, formData, token)
             await loadCategories()
             setEditingCategory(null)
@@ -138,6 +274,7 @@ const AdminCategoryManager = () => {
             subcategoriesJson: category.subcategoriesJson || '',
             sortOrder: category.sortOrder
         })
+        setShowCreateForm(true)
     }
 
     const handleCancelEdit = () => {
@@ -247,13 +384,30 @@ const AdminCategoryManager = () => {
                             <div className="form-row">
                                 <div className="form-group">
                                     <label className="form-label">Icon</label>
-                                    <input
-                                        type="text"
-                                        className="input"
+                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                        <select
+                                            className="input"
                                         value={formData.icon}
-                                        onChange={(e) => setFormData({...formData, icon: e.target.value})}
-                                        placeholder="e.g., <Utensils />"
-                                    />
+                                        onChange={(e) => setFormData({ ...formData, icon: e.target.value.trim() })}
+                                            style={{ minWidth: 240 }}
+                                        >
+                                            <option value="">Select an icon</option>
+                                            {ICON_CHOICES.map(group => (
+                                                <optgroup key={group.group} label={group.group}>
+                                                    {group.options.map(opt => (
+                                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                    ))}
+                                                </optgroup>
+                                            ))}
+                                        </select>
+                                        <div style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text)' }}>
+                                            {(() => {
+                                                const IconCmp = getLucideIcon(formData.icon)
+                                                return IconCmp ? <IconCmp size={20} /> : <span style={{ fontSize: 12, color: 'var(--muted)' }}>No icon</span>
+                                            })()}
+                                        </div>
+                                    </div>
+                                    <small className="help-text">Choose a Lucide icon that best represents the category.</small>
                                 </div>
                                 
                                 <div className="form-group">
@@ -266,6 +420,7 @@ const AdminCategoryManager = () => {
                                         <option value="MAIN">Main Category</option>
                                         <option value="SUB">Subcategory</option>
                                     </select>
+                                    <small className="help-text">MAIN: top-level category. SUB: must select a parent.</small>
                                 </div>
                                 
                                 <div className="form-group">
@@ -296,6 +451,7 @@ const AdminCategoryManager = () => {
                                             </option>
                                         ))}
                                     </select>
+                                    <small className="help-text">Choose which MAIN category this subcategory belongs to.</small>
                                 </div>
                             )}
 
@@ -309,7 +465,7 @@ const AdminCategoryManager = () => {
                                         placeholder='["Subcategory 1", "Subcategory 2", "Subcategory 3"]'
                                         rows={3}
                                     />
-                                    <small className="help-text">JSON array of subcategory names</small>
+                                    <small className="help-text">Paste a JSON array of names (e.g., ["Burgers", "Pasta"]).</small>
                                 </div>
                             )}
 
@@ -346,7 +502,9 @@ const AdminCategoryManager = () => {
                         {categories?.categories?.map(category => (
                             <div key={category.id} className="category-card">
                                 <div className="category-header">
-                                    <div className="category-icon">{category.icon}</div>
+                                    <div className="category-icon">
+                                        {(() => { const I = getLucideIcon(category.icon); return I ? <I size={18} /> : null })()}
+                                    </div>
                                     <div className="category-info">
                                         <h4>{category.displayName}</h4>
                                         <p className="category-name">{category.name}</p>

@@ -1,15 +1,29 @@
-const shouldLog = !import.meta.env.PROD || import.meta.env.VITE_ENABLE_LOGS === 'true'
+// Simple logger utility to avoid build-time import errors and provide consistent logging
+// Usage: import { logger } from '../utils/logger.js'
 
-const format = (level, args) => [
-  `[LLM:${level}]`,
-  ...args
-]
-
-export const logger = {
-  info: (...args) => { if (shouldLog) console.info(...format('INFO', args)) },
-  warn: (...args) => { if (shouldLog) console.warn(...format('WARN', args)) },
-  error: (...args) => { console.error(...format('ERROR', args)) },
-  debug: (...args) => { if (shouldLog) console.debug(...format('DEBUG', args)) },
+let isDev = false
+try {
+  // import.meta is available in Vite/browser ESM
+  // Guarded access to avoid syntax/runtime issues in other environments
+  // eslint-disable-next-line no-undef
+  isDev = !!(import.meta && import.meta.env && import.meta.env.DEV)
+} catch (_) {
+  isDev = false
 }
 
-
+export const logger = {
+  info: (...args) => {
+    try { console.info(...args) } catch { /* noop */ }
+  },
+  warn: (...args) => {
+    try { console.warn(...args) } catch { /* noop */ }
+  },
+  error: (...args) => {
+    try { console.error(...args) } catch { /* noop */ }
+  },
+  debug: (...args) => {
+    try {
+      if (isDev) console.debug(...args)
+    } catch { /* noop */ }
+  }
+}

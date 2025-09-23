@@ -65,7 +65,7 @@ public class UploadController {
             }
             
             // Determine folder based on type
-            String folder = getFolderForType(type);
+            String folder = getFolderForType(type) + "/users/" + userId;
             String cloudUrl = cloudStorageService.uploadFile(file, folder);
             return ResponseEntity.ok(Map.of("path", cloudUrl));
         } catch (Exception e) {
@@ -100,6 +100,13 @@ public class UploadController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Cloud storage is not enabled"));
             }
             
+            // Enforce user-scoped path: must include /users/{userId}/
+            if (!imageUrl.contains("/users/" + userId + "/")) {
+                auditService.logSecurityEvent(AuditService.AuditEventType.SUSPICIOUS_ACTIVITY, 
+                    userId, "Attempt to delete file outside user scope: " + imageUrl);
+                return ResponseEntity.status(403).body(Map.of("error", "Forbidden: cannot delete files you do not own"));
+            }
+
             // Delete from cloud storage
             cloudStorageService.deleteFileByUrl(imageUrl);
             

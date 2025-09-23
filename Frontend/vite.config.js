@@ -1,11 +1,20 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { minify as minifyHtml } from 'html-minifier-terser'
+import compression from 'vite-plugin-compression'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
+    // Precompress assets to .gz for nginx gzip_static
+    compression({
+      algorithm: 'gzip',
+      ext: '.gz',
+      threshold: 1024,
+      deleteOriginFile: false,
+      filter: (file) => /\.(js|css|svg|json|txt|xml|ico|webmanifest)$/i.test(file)
+    }),
     {
       name: 'html-minify',
       apply: 'build',

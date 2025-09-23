@@ -1667,20 +1667,21 @@ h3 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border);
-  background: linear-gradient(135deg, var(--card) 0%, var(--card-2) 100%);
-  color: var(--text);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--accent);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: white;
+  box-shadow: 0 12px 28px rgba(99, 102, 241, 0.35);
   cursor: pointer;
   z-index: 1000;
   transition: all 0.2s ease;
+  font-size: 1.35rem; /* Ensure the arrow is clearly visible */
 }
 
 .back-to-top-btn:hover {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent-hover) 100%);
   color: white;
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 14px 32px rgba(99, 102, 241, 0.45);
 }
 
 .back-to-top-btn:focus-visible {

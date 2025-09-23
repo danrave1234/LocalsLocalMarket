@@ -5,6 +5,7 @@ import SEOHead from '../components/SEOHead.jsx'
 import { warnShopOwner, fetchUsers, updateUserStatus } from '../api/admin.js'
 import '../components/AdminDashboard.css'
 import { BarChart3, Users as UsersIcon, Package, Tags, TrendingUp, Bell, Clipboard, UserPlus, User, Map, Lock, Unlock } from 'lucide-react'
+import AdminCategoryManager from '../components/AdminCategoryManager.jsx'
 
 // Inline icon components to match landing page consistency
 function StoreIcon(props) {
@@ -44,7 +45,8 @@ export default function AdminDashboard() {
     const tabs = [
         { id: 'shops', label: 'Shop Management', icon: <StoreIcon width={16} height={16} /> },
         { id: 'users', label: 'User Management', icon: <UsersIcon size={16} /> },
-        { id: 'products', label: 'Product Management', icon: <Package size={16} /> }
+        { id: 'products', label: 'Product Management', icon: <Package size={16} /> },
+        { id: 'categories', label: 'Categories', icon: <Tags size={16} /> }
     ]
 
     const renderTabContent = () => {
@@ -55,6 +57,8 @@ export default function AdminDashboard() {
                 return <UserManagementTab />
             case 'products':
                 return <ProductManagementTab />
+            case 'categories':
+                return <CategoryManagementTab />
             default:
                 return <ShopManagementTab />
         }
@@ -505,7 +509,16 @@ function ProductManagementTab() {
 }
 
 // Category Management Tab Component
-function CategoryManagementTab() { return null }
+function CategoryManagementTab() {
+    return (
+        <div className="category-management-tab">
+            <div className="tab-header">
+                <h2>Category Management</h2>
+            </div>
+            <AdminCategoryManager />
+        </div>
+    )
+}
 
 // Reports Tab Component
 function ReportsTab() { return null }

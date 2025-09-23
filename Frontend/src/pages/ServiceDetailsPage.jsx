@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { sanitizeText } from '../utils/sanitize.js'
 import { generateShopSlug } from '../utils/slugUtils.js';
 import { fetchServiceById } from '../api/services.js'
 import SEOHead from '../components/SEOHead.jsx'
@@ -52,16 +53,16 @@ const ServiceDetailsPage = () => {
   return (
     <>
       <SEOHead
-        title={service.title}
-        description={service.description?.slice(0, 150) || 'Service details'}
+        title={sanitizeText(service.title)}
+        description={sanitizeText(service.description?.slice(0, 150) || 'Service details')}
         url={`https://localslocalmarket.com/services/${service.id}`}
         image={service.imageUrl || undefined}
         type="product"
         structuredData={{
           "@context": "https://schema.org",
           "@type": "Product",
-          "name": service.title,
-          "description": service.description,
+          "name": sanitizeText(service.title),
+          "description": sanitizeText(service.description),
           "image": service.imageUrl || undefined,
           "offers": {
             "@type": "Offer",
@@ -75,7 +76,7 @@ const ServiceDetailsPage = () => {
       <div className="service-details">
         <div className="service-info">
           <div className="service-header">
-            <h1>{service.title}</h1>
+            <h1>{sanitizeText(service.title)}</h1>
             <div className="service-header-right">
               <p className="price">₱{service.price}</p>
               <span className={`service-status ${service.status.toLowerCase()}`}>
@@ -84,7 +85,7 @@ const ServiceDetailsPage = () => {
             </div>
           </div>
           
-          <p className="description">{service.description}</p>
+          <p className="description">{sanitizeText(service.description)}</p>
           
           <div className="service-meta">
             <div className="meta-item">
@@ -108,8 +109,8 @@ const ServiceDetailsPage = () => {
         
         {service.shop && (
           <div className="shop-info">
-            <h3>Offered by: {service.shop.name}</h3>
-            <p>{service.shop.description}</p>
+            <h3>Offered by: {sanitizeText(service.shop.name)}</h3>
+            <p>{sanitizeText(service.shop.description)}</p>
             <Link to={`/shops/${generateShopSlug(service.shop.name, service.shop.id)}`} className="view-shop-btn">
               View Shop
             </Link>

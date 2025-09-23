@@ -47,8 +47,16 @@
 /* Ensure cards don't stretch too wide when there are few items */
 @media (min-width: 1200px) {
   .landing-page-container .shops-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1rem;
+  }
+}
+
+/* 24-inch monitors and larger - optimize spacing */
+@media (min-width: 1440px) {
+  .landing-page-container .shops-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.25rem;
   }
 }
 

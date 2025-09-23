@@ -165,12 +165,68 @@ export const shopPageTutorialSteps = [
     action: 'Scroll down to see more details about this shop.'
   },
   {
-    id: 'shop-gallery',
-    target: '[data-tutorial="shop-gallery"]',
-    title: 'Shop Gallery 📸',
-    description: 'Browse through photos of the shop, products, and services. Click on images to view them in full size.',
+    id: 'products-services-tabs',
+    target: '[data-tutorial="products-services-tabs"]',
+    title: 'Products & Services 📦',
+    description: 'Switch between viewing products and services offered by this shop. Each tab shows different items you can purchase.',
     placement: 'bottom',
-    action: 'Images help you get a feel for what the shop offers.'
+    action: 'Click on "Products" or "Services" to see what\'s available.'
+  },
+  {
+    id: 'add-to-cart-button',
+    target: '[data-tutorial="add-to-cart-btn"]',
+    title: 'Add to Cart 🛒',
+    description: 'Click this button to add items to your cart without immediately ordering. You can add multiple items and review them later.',
+    placement: 'top',
+    action: 'Try adding a product or service to your cart to see how it works!'
+  },
+  {
+    id: 'order-now-button',
+    target: '[data-tutorial="order-now-btn"]',
+    title: 'Order Now ⚡',
+    description: 'Click this button to immediately add an item to your cart and open the ordering form. Perfect for quick purchases.',
+    placement: 'top',
+    action: 'Use "Order Now" when you\'re ready to purchase an item right away.'
+  },
+  {
+    id: 'review-button',
+    target: '[data-tutorial="review-btn"]',
+    title: 'Review This Shop ⭐',
+    description: 'Click this button to leave a star rating and review for this shop. Your feedback helps other customers make informed decisions.',
+    placement: 'bottom',
+    action: 'You can rate the shop from 1 to 5 stars and add optional comments about your experience.'
+  },
+  {
+    id: 'floating-cart-button',
+    target: '[data-tutorial="floating-cart-btn"]',
+    title: 'Your Shopping Cart 🛍️',
+    description: 'This floating cart button shows how many items you have. Click it to view your cart, adjust quantities, or place your order.',
+    placement: 'left',
+    action: 'The number in parentheses shows your total items. Click to manage your cart!'
+  },
+  {
+    id: 'cart-management',
+    target: '[data-tutorial="cart-management"]',
+    title: 'Cart Management 🔧',
+    description: 'In your cart, you can adjust quantities, remove items, and see the total price. Everything is saved automatically.',
+    placement: 'top',
+    action: 'Use the + and - buttons to change quantities, or click "Remove" to delete items.'
+  },
+  {
+    id: 'place-order',
+    target: '[data-tutorial="place-order-btn"]',
+    title: 'Place Your Order 📝',
+    description: 'When ready, click "Place Order" to finalize your purchase. You\'ll need to provide your email and any special instructions.',
+    placement: 'top',
+    action: 'The shop will contact you via email to confirm details and arrange payment/delivery.'
+  },
+  {
+    id: 'order-confirmation',
+    target: '[data-tutorial="order-confirmation"]',
+    title: 'Order Confirmation ✅',
+    description: 'After placing your order, you\'ll see a confirmation message. The shop owner will contact you to arrange payment and delivery.',
+    placement: 'center',
+    action: 'Keep your email handy - the shop will reach out to you soon!'
   },
   {
     id: 'contact-info',
@@ -178,7 +234,7 @@ export const shopPageTutorialSteps = [
     title: 'Contact & Visit 🚶‍♂️',
     description: 'Find the shop\'s phone number, email, address, and business hours. Use the directions button to get navigation help.',
     placement: 'left',
-    action: 'Call or visit the shop to make purchases or get more information.'
+    action: 'You can also call or visit the shop directly for in-person purchases.'
   },
   {
     id: 'reviews',

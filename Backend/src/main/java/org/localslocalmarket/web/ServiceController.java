@@ -189,10 +189,32 @@ public class ServiceController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteService(@PathVariable Long id,
                                          @RequestHeader("Authorization") String token) {
-        // TODO: Validate shop ownership
-        serviceService.deleteService(id);
-        serviceService.clearAllServiceCaches(); // Clear caches when service is deleted
-        return ResponseEntity.ok().build();
+        try {
+            // Ensure authenticated
+            var actor = authorizationService.getCurrentUserOrThrow();
+
+            // Load service and verify ownership/admin before deletion
+            Service existingService = serviceService.getServiceById(id);
+            if (existingService == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            boolean isOwner = existingService.getShop() != null &&
+                    existingService.getShop().getOwner() != null &&
+                    existingService.getShop().getOwner().getId().equals(actor.getId());
+            boolean isAdmin = actor.getRole() == org.localslocalmarket.model.User.Role.ADMIN;
+            if (!(isOwner || isAdmin)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Forbidden");
+            }
+
+            serviceService.deleteService(id);
+            serviceService.clearAllServiceCaches();
+            return ResponseEntity.noContent().build();
+        } catch (SecurityException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Unauthorized");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal server error");
+        }
     }
     
     // ========== PAGINATED ENDPOINTS ==========

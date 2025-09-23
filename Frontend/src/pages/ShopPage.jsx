@@ -4,7 +4,6 @@ import { useAuth } from '../auth/AuthContext.jsx'
 import SEOHead from '../components/SEOHead.jsx'
 import SocialSharing from '../components/SocialSharing.jsx'
 import RelatedShops from '../components/RelatedShops.jsx'
-import ShopReviews from '../components/ShopReviews.jsx'
 import CategorySelector from '../components/CategorySelector.jsx'
 import OptimizedSearch from '../components/OptimizedSearch.jsx'
 import OptimizedImage from '../components/OptimizedImage.jsx'
@@ -12,13 +11,16 @@ import ServiceCard from '../components/ServiceCard.jsx'
 import ServiceForm from '../components/ServiceForm.jsx'
 import { fetchShopById } from '../api/shops.js'
 import shopCache from '../utils/shopCache.js'
-import { Store, MapPin, Check, Copy, Phone, Globe, BarChart3, Package, Search, DollarSign, Camera, Trash2, ShoppingCart, Plus, Info, Star, ThumbsUp, ThumbsDown, Crosshair, Wrench, Share2 } from 'lucide-react'
+import { Store, MapPin, Check, Copy, Phone, Globe, BarChart3, Package, Search, DollarSign, Camera, Trash2, ShoppingCart, Plus, Info, Star, ThumbsUp, ThumbsDown, Crosshair, Wrench, Share2, MessageSquare } from 'lucide-react'
 
 
 import { fetchProducts, fetchProductsByShopIdPaginated, createProduct, updateProduct, deleteProduct, updateProductStock } from '../api/products.js'
 import { fetchServicesByShopId, fetchServicesByShopIdLegacy, createService, updateService, deleteService } from '../api/services.js'
 import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
+import OrderModal from '../components/OrderModal.jsx'
+import ReviewModal from '../components/ReviewModal.jsx'
+import ShopReviews from '../components/ShopReviews.jsx'
 import { extractShopIdFromSlug, extractShopNameFromSlug, generateShopSlug } from '../utils/slugUtils.js'
 import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
 import { getImageUrl } from '../utils/imageUtils.js'
@@ -30,8 +32,10 @@ import { useDebounce } from '../hooks/useDebounce.js'
 import { useScroll } from '../hooks/useEvents.js'
 import { useClipboard } from '../hooks/useStorage.js'
 import { useLocalStorage } from '../hooks/useStorage.js'
+import { getShopRating, getUserReview, recordUserOrder } from '../utils/shopRatings.js'
 import './ShopPage.css'
 import { Clock, MapPin as MapPinIcon } from 'lucide-react'
+import { sanitizeText } from '../utils/sanitize.js'
 
 export default function ShopPage() {
   const { slug } = useParams()
@@ -65,6 +69,24 @@ export default function ShopPage() {
   const mobileMapRef = useRef(null)
   const mobileMapInstanceRef = useRef(null)
   const isMobileDevice = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator.userAgent)
+
+  // Lightweight cart/order state stored per shop in localStorage
+  const [cartItems, setCartItems] = useLocalStorage(`shop_${shopId}_cart`, [])
+  const [showOrderModal, setShowOrderModal] = useState(false)
+  const [senderEmail, setSenderEmail] = useState('')
+  const [orderMessage, setOrderMessage] = useState('')
+  const [placingOrder, setPlacingOrder] = useState(false)
+  const [orderError, setOrderError] = useState('')
+  const [orderSuccess, setOrderSuccess] = useState('')
+  const [orderPlacedPopup, setOrderPlacedPopup] = useState(false)
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [localShopRating, setLocalShopRating] = useState({ averageRating: 0, reviewCount: 0, hasUserReviewed: false })
+  const scrollToReviews = () => {
+    const el = document.getElementById('shop-reviews')
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
 
   // Function to fetch products with pagination
   const fetchProductsWithPagination = useCallback(async (page = 0, shopId = null) => {
@@ -198,14 +220,19 @@ export default function ShopPage() {
   // Prevent duplicate API calls
   const shopLoadingRef = useRef(false)
 
-
-  // Debug logging for image paths
-
-  // Debug logging for image paths
+  // Load local shop rating when shop changes
   useEffect(() => {
-    if (shop && process.env.NODE_ENV === 'development') {
-    
+    if (shop?.id) {
+      const rating = getShopRating(shop.id, user?.id)
+      setLocalShopRating(rating)
+    }
+  }, [shop?.id, user?.id])
 
+
+  // Debug logging for image paths (development only)
+  useEffect(() => {
+    if (shop && import.meta && import.meta.env && import.meta.env.DEV) {
+      // place any dev-only logging here if needed
     }
   }, [shop])
 
@@ -815,16 +842,229 @@ export default function ShopPage() {
     setShowEditProduct(true)
   }
 
-  const handleOrderNow = (product) => {
-    // TODO: Implement order now functionality
-    console.log('Order Now clicked for product:', product.title)
-    alert(`Order Now: ${product.title} - ₱${product.price}`)
+  // --- Cart & Order helpers ---
+  const makeCartItem = (item) => {
+    const priceNum = item && item.price != null ? parseFloat(item.price) : 0
+    // Derive a thumbnail image if available (for products). Services will show a placeholder.
+    let imageUrl = null
+    try {
+      if (item) {
+        // Prefer JSON array from DB
+        if (item.imagePathsJson) {
+          const imgs = JSON.parse(item.imagePathsJson)
+          if (Array.isArray(imgs) && imgs.length > 0) {
+            imageUrl = getImageUrl(imgs[0])
+          }
+        }
+        // Alternate shapes some APIs use
+        if (!imageUrl && Array.isArray(item.imagePaths) && item.imagePaths.length > 0) {
+          imageUrl = getImageUrl(item.imagePaths[0])
+        }
+        if (!imageUrl && Array.isArray(item.images) && item.images.length > 0) {
+          imageUrl = getImageUrl(item.images[0])
+        }
+        if (!imageUrl && (item.primaryImage || item.image || item.thumbnail)) {
+          const raw = item.primaryImage || item.image || item.thumbnail
+          imageUrl = (raw && (raw.startsWith('http') || raw.startsWith('/'))) ? getImageUrl(raw) : raw
+        }
+      }
+    } catch (e) {
+      // ignore parse error; fallback to null
+    }
+    if (!imageUrl && item && item.imageUrl) {
+      // Fallback if a direct imageUrl exists
+      try {
+        imageUrl = getImageUrl(item.imageUrl)
+      } catch {
+        imageUrl = item.imageUrl
+      }
+    }
+    return {
+      serviceId: item?.id, // use same field for products/services
+      name: item?.title || item?.name || 'Item',
+      unitPrice: isNaN(priceNum) ? 0 : priceNum,
+      quantity: 1,
+      imageUrl,
+    }
   }
 
-  const handleAddToCart = (product) => {
-    // TODO: Implement add to cart functionality
-    console.log('Add to Cart clicked for product:', product.title)
-    alert(`Added to Cart: ${product.title} - ₱${product.price}`)
+  // Resolve the best display URL for a cart item thumbnail
+  const resolveCartImage = (ci) => {
+    if (!ci) return null
+    const normalize = (p) => {
+      if (!p) return null
+      try {
+        // If already http(s), return as is
+        if (typeof p === 'string' && (p.startsWith('http://') || p.startsWith('https://'))) return p
+        return getImageUrl(p)
+      } catch {
+        return p
+      }
+    }
+    // 1) If cart already has a usable URL/path
+    let url = normalize(ci.imageUrl || ci.imagePath || ci.thumbnail)
+    if (url) return url
+
+    // 2) Try to hydrate from current products list
+    const prod = Array.isArray(products) ? products.find(p => p.id === ci.serviceId) : null
+    if (prod) {
+      // try various fields on product
+      try {
+        if (prod.imagePathsJson) {
+          const imgs = JSON.parse(prod.imagePathsJson)
+          if (Array.isArray(imgs) && imgs.length > 0) return normalize(imgs[0])
+        }
+      } catch {}
+      if (Array.isArray(prod.imagePaths) && prod.imagePaths.length > 0) return normalize(prod.imagePaths[0])
+      if (Array.isArray(prod.images) && prod.images.length > 0) return normalize(prod.images[0])
+      return normalize(prod.primaryImage || prod.image || prod.thumbnail)
+    }
+
+    // 3) Services typically have no images; return null -> placeholder will render
+    return null
+  }
+
+  // Hydrate any legacy cart items without imageUrl whenever the Order modal opens
+  useEffect(() => {
+    if (!showOrderModal) return
+    try {
+      setCartItems((prev) => {
+        if (!Array.isArray(prev) || prev.length === 0) return prev
+        let changed = false
+        const updated = prev.map(ci => {
+          const url = resolveCartImage(ci)
+          if (url && ci.imageUrl !== url) {
+            changed = true
+            return { ...ci, imageUrl: url }
+          }
+          return ci
+        })
+        return changed ? updated : prev
+      })
+    } catch {}
+  }, [showOrderModal, products, services, setCartItems])
+
+  const addItemToCart = (item) => {
+    const newItem = makeCartItem(item)
+    setCartItems((prev) => {
+      const idx = prev.findIndex(ci => ci.serviceId === newItem.serviceId)
+      if (idx >= 0) {
+        const updated = [...prev]
+        updated[idx] = { ...updated[idx], quantity: (updated[idx].quantity || 0) + 1 }
+        return updated
+      }
+      return [...prev, newItem]
+    })
+  }
+
+  const incrementQty = (serviceId) => {
+    setCartItems(prev => prev.map(ci => ci.serviceId === serviceId ? { ...ci, quantity: (ci.quantity || 1) + 1 } : ci))
+  }
+
+  const decrementQty = (serviceId) => {
+    setCartItems(prev => prev.flatMap(ci => {
+      if (ci.serviceId !== serviceId) return [ci]
+      const nextQty = (ci.quantity || 1) - 1
+      return nextQty > 0 ? [{ ...ci, quantity: nextQty }] : []
+    }))
+  }
+
+  const removeFromCart = (serviceId) => {
+    setCartItems(prev => prev.filter(ci => ci.serviceId !== serviceId))
+  }
+
+  const getCartTotal = () => {
+    try {
+      return cartItems.reduce((acc, ci) => acc + (Number(ci.unitPrice || 0) * Number(ci.quantity || 0)), 0)
+    } catch {
+      return 0
+    }
+  }
+
+  const handleAddToCart = (item) => {
+    addItemToCart(item)
+    setOrderSuccess(`${item?.title || item?.name || 'Item'} added to cart`)
+    setTimeout(() => setOrderSuccess(''), 1500)
+  }
+
+  const handleOrderNow = (item) => {
+    addItemToCart(item)
+    setShowOrderModal(true)
+  }
+
+  const handleReviewSubmitted = (rating, comment) => {
+    // Update local rating state
+    const updatedRating = getShopRating(shop.id, user?.id)
+    setLocalShopRating(updatedRating)
+    
+    // Show success message
+    setOrderSuccess('Thank you for your review!')
+    setTimeout(() => setOrderSuccess(''), 3000)
+  }
+
+  const submitOrder = async (e) => {
+    if (e && e.preventDefault) e.preventDefault()
+    setOrderError('')
+    setOrderSuccess('')
+
+    if (!senderEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderEmail)) {
+      setOrderError('Please enter a valid email address')
+      return
+    }
+    if (!Array.isArray(cartItems) || cartItems.length === 0) {
+      setOrderError('Your cart is empty')
+      return
+    }
+
+    const payload = {
+      shopId: shop?.id || shopId,
+      senderEmail: senderEmail.trim(),
+      message: orderMessage || '',
+      items: cartItems.map(ci => ({
+        serviceId: ci.serviceId,
+        name: ci.name,
+        quantity: ci.quantity,
+        unitPrice: Number(ci.unitPrice || 0)
+      }))
+    }
+
+    try {
+      setPlacingOrder(true)
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      const data = await (async () => { try { return await res.json() } catch { return {} } })()
+
+      if (res.ok) {
+        // Record the order for review eligibility
+        if (user?.id && shop?.id) {
+          const orderItems = cartItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+          }))
+          recordUserOrder(user.id, shop.id, orderItems)
+        }
+        
+        // Show centered success popup that auto fades
+        setCartItems([])
+        setShowOrderModal(false)
+        setOrderSuccess('')
+        setOrderPlacedPopup(true)
+        setTimeout(() => setOrderPlacedPopup(false), 2600)
+      } else {
+        setOrderError(data?.message || 'Failed to place order')
+      }
+    } catch (err) {
+      console.error('Order submission failed:', err)
+      setOrderError('Failed to place order. Please try again later.')
+    } finally {
+      setPlacingOrder(false)
+    }
   }
 
   const handleUpdateProduct = async (e) => {
@@ -1202,7 +1442,7 @@ export default function ShopPage() {
                         {[1, 2, 3, 4, 5].map((star) => (
                           <span 
                             key={star} 
-                            className={`rating-star ${star <= Math.round(shop.averageRating || 0) ? 'filled' : ''}`}
+                            className={`rating-star ${star <= Math.round(localShopRating.averageRating || shop.averageRating || 0) ? 'filled' : ''}`}
                           >
                             ★
                           </span>
@@ -1210,13 +1450,20 @@ export default function ShopPage() {
                       </div>
                       <div className="rating-info">
                         <span className="rating-score">
-                          {shop.averageRating ? shop.averageRating.toFixed(1) : '--'}
+                          {localShopRating.averageRating || shop.averageRating ? (localShopRating.averageRating || shop.averageRating).toFixed(1) : '--'}
                         </span>
-                        <span className="rating-count">
-                          {shop.reviewCount ? `(${shop.reviewCount} reviews)` : '(No reviews yet)'}
-                        </span>
+                        <button
+                          type="button"
+                          className="link-button rating-count"
+                          onClick={scrollToReviews}
+                          title="View reviews"
+                          style={{ background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: 0, marginLeft: '0.5rem' }}
+                        >
+                          View reviews{(localShopRating.reviewCount || shop.reviewCount) ? ` (${localShopRating.reviewCount || shop.reviewCount})` : ''}
+                        </button>
                       </div>
                     </div>
+                  </div>
                     
                     {/* Address under reviews for desktop */}
                     {shop.addressLine && (
@@ -1240,8 +1487,24 @@ export default function ShopPage() {
                   
 
                 </div>
-                {/* Desktop actions: Share only */}
+                {/* Desktop actions: Share and Review */}
                 <div className="desktop-actions desktop-only">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => setShowReviewModal(true)}
+                    disabled={!shop}
+                    aria-label={localShopRating.hasUserReviewed ? "Edit your review" : (user ? "Review this shop" : "Login required to review")}
+                    data-tutorial="review-btn"
+                    title={
+                      !user ? "Please log in to leave a review" :
+                      localShopRating.hasUserReviewed ? "Edit your review" :
+                      "Leave a review for this shop"
+                    }
+                  >
+                    <MessageSquare size={16} style={{ marginRight: '0.4rem' }} /> 
+                    {!user ? 'Login to Review' : localShopRating.hasUserReviewed ? 'Edit Review' : 'Write Review'}
+                  </button>
                   <button
                     type="button"
                     className="btn btn-outline"
@@ -1373,8 +1636,19 @@ export default function ShopPage() {
                   </div>
                 )}
               </Modal>
-                {/* Global Share Button */}
+                {/* Global Share, Review, and Hours Buttons */}
                 <div className="shop-actions-row mobile-only">
+                  <button 
+                    type="button" 
+                    className="btn btn-outline" 
+                    onClick={() => setShowReviewModal(true)} 
+                    disabled={!shop}
+                    data-tutorial="review-btn"
+                    title={!user ? "Please log in to leave a review" : (localShopRating.hasUserReviewed ? "Edit your review" : "Leave a review for this shop")}
+                  >
+                    <MessageSquare size={16} style={{ marginRight: '0.4rem' }} /> 
+                    {!user ? 'Login to Review' : localShopRating.hasUserReviewed ? 'Edit Review' : 'Review'}
+                  </button>
                   <button type="button" className="btn btn-primary" onClick={() => { console.log('Share click'); setShareOpen(true) }} disabled={!shop}>
                     <Share2 size={16} style={{ marginRight: '0.4rem' }} /> Share
                   </button>
@@ -1402,7 +1676,7 @@ export default function ShopPage() {
                     <span className="btn-icon"><BarChart3 size={16} /></span>
                     Go to Dashboard
                   </button>
-                  {process.env.NODE_ENV === 'development' && (
+                  {import.meta && import.meta.env && import.meta.env.DEV && (
                     <button 
                       className="btn btn-outline"
                       onClick={() => window.location.reload()}
@@ -1413,7 +1687,7 @@ export default function ShopPage() {
                   )}
                 </div>
               )}
-            </div>
+            
 
             {/* Contact & Social - Collapsible */}
               {(shop.phone || shop.website || shop.email || shop.facebook || shop.instagram || shop.twitter) && (
@@ -1581,7 +1855,7 @@ export default function ShopPage() {
       {/* Products & Services Section - Full Width */}
       <section className="products-section-full-width">
         {/* Tab Navigation */}
-        <div className="items-tab-navigation">
+        <div className="items-tab-navigation" data-tutorial="products-services-tabs">
           <button
             className={`tab-btn ${activeTab === 'products' ? 'active' : ''}`}
             onClick={() => setActiveTab('products')}
@@ -1891,13 +2165,13 @@ export default function ShopPage() {
                         <Info size={16} />
                       </div>
                       <div className="description-tooltip">
-                        {product.description}
+                        {sanitizeText(product.description)}
                       </div>
                     </div>
                   )}
                 </div>
                 <div className="product-content">
-                  <div className="product-title">{product.title}</div>
+                  <div className="product-title">{sanitizeText(product.title)}</div>
                   
                   <div className="product-price-stock">
                     <div className="product-price">
@@ -2007,6 +2281,7 @@ export default function ShopPage() {
                         <button 
                           className="btn btn-primary btn-sm order-now-btn"
                           onClick={() => handleOrderNow(product)}
+                          data-tutorial="order-now-btn"
                         >
                           <ShoppingCart size={20} />
                           Order Now
@@ -2014,6 +2289,7 @@ export default function ShopPage() {
                         <button 
                           className="btn btn-outline btn-sm add-to-cart-btn"
                           onClick={() => handleAddToCart(product)}
+                          data-tutorial="add-to-cart-btn"
                         >
                           <Plus size={20} />
                           Add to Cart
@@ -2078,14 +2354,26 @@ export default function ShopPage() {
                           </button>
                         </>
                       ) : (
-                        <button 
-                          className={`btn btn-primary btn-sm ${service.status !== 'AVAILABLE' ? 'disabled' : ''}`}
-                          onClick={() => service.status === 'AVAILABLE' && console.log('View service:', service)}
-                          disabled={service.status !== 'AVAILABLE'}
-                        >
-                          <Info size={20} />
-                          {service.status === 'AVAILABLE' ? 'View Details' : 'Unavailable'}
-                        </button>
+                        <>
+                          <button 
+                            className="btn btn-primary btn-sm order-now-btn"
+                            onClick={() => handleOrderNow(service)}
+                            disabled={service.status !== 'AVAILABLE'}
+                            data-tutorial="order-now-btn"
+                          >
+                            <ShoppingCart size={20} />
+                            Order Now
+                          </button>
+                          <button 
+                            className="btn btn-outline btn-sm add-to-cart-btn"
+                            onClick={() => handleAddToCart(service)}
+                            disabled={service.status !== 'AVAILABLE'}
+                            data-tutorial="add-to-cart-btn"
+                          >
+                            <Plus size={20} />
+                            Add to Cart
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -2133,7 +2421,17 @@ export default function ShopPage() {
           </div>
         )}
          
-        {/* Bottom ad after products */}
+        {/* Reviews Section - below products, above ads */}
+        <section id="shop-reviews" className="card" style={{ marginTop: '2rem' }}>
+          <ShopReviews 
+            shopId={shop?.id}
+            shopName={shop?.name}
+            averageRating={localShopRating.averageRating || shop.averageRating || 0}
+            reviewCount={localShopRating.reviewCount || shop.reviewCount || 0}
+          />
+        </section>
+
+        {/* Bottom ad after products and reviews */}
         <div className="bottom-ad">
           <ResponsiveAd />
         </div>
@@ -2156,13 +2454,6 @@ export default function ShopPage() {
       {/* Related Shops */}
       <RelatedShops currentShop={shop} />
 
-              {/* Shop Reviews */}
-        <ShopReviews 
-          shopId={shop.id} 
-          shopName={shop.name}
-          averageRating={shop.averageRating}
-          reviewCount={shop.reviewCount}
-        />
 
       {/* Add Product Modal */}
       <Modal 
@@ -2674,6 +2965,99 @@ export default function ShopPage() {
         </form>
       </Modal>
 
+      {/* Order Modal (Dedicated component, not using centralized modal) */}
+      <OrderModal 
+        isOpen={showOrderModal}
+        onClose={() => setShowOrderModal(false)}
+        title={`Order from ${shop?.name || 'Shop'}`}
+        size="large"
+      >
+        <div className="order-modal">
+          {orderError && (
+            <div className="om-error-banner" role="alert">
+              {orderError}
+            </div>
+          )}
+
+          <form className="order-form" onSubmit={submitOrder}>
+            {/* Customer details on top */}
+            <div className="form-row">
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="muted form-label" htmlFor="orderEmail">Your Email *</label>
+                <input id="orderEmail" type="email" className="input" value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} required />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="muted form-label" htmlFor="orderMessage">Message (optional)</label>
+              <textarea id="orderMessage" className="input" value={orderMessage} onChange={(e) => setOrderMessage(e.target.value)} rows={3} />
+            </div>
+
+            {/* Cart items below details */}
+            {(!cartItems || cartItems.length === 0) ? (
+              <div className="card empty-cart">
+                <p>Your cart is empty.</p>
+              </div>
+            ) : (
+              <div className="cart-list" data-tutorial="cart-management">
+                {cartItems.map(ci => (
+                  <div key={ci.serviceId} className="cart-item">
+                    <div className="item-thumb">
+                      {resolveCartImage(ci) ? (
+                        <img src={resolveCartImage(ci)} alt={ci.name} />
+                      ) : (
+                        <div className="thumb-placeholder"><Camera size={16} /></div>
+                      )}
+                    </div>
+                    <div className="item-info">
+                      <div className="item-name">{ci.name}</div>
+                      <div className="item-price muted">₱{Number(ci.unitPrice || 0).toFixed(2)}</div>
+                    </div>
+                    <div className="qty-stepper" role="group" aria-label={`Quantity for ${ci.name}`}>
+                      <button type="button" className="qty-btn minus" onClick={() => decrementQty(ci.serviceId)} aria-label={`Decrease ${ci.name} quantity`}>-</button>
+                      <span className="qty-display" aria-live="polite">{ci.quantity || 1}</span>
+                      <button type="button" className="qty-btn plus" onClick={() => incrementQty(ci.serviceId)} aria-label={`Increase ${ci.name} quantity`}>+</button>
+                    </div>
+                    <div className="item-line-total">₱{(Number(ci.unitPrice || 0) * Number(ci.quantity || 0)).toFixed(2)}</div>
+                    <div className="item-remove">
+                      <button type="button" className="remove-btn" onClick={() => removeFromCart(ci.serviceId)}>
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="order-summary">
+              <div className="total-label">Total</div>
+              <div className="total-amount">₱{getCartTotal().toFixed(2)}</div>
+            </div>
+
+            <div className="order-actions">
+              <button type="button" className="om-btn-secondary om-cancel-btn" onClick={() => setShowOrderModal(false)}>Cancel</button>
+              <button type="submit" className="om-btn-primary om-submit-btn" disabled={placingOrder || !cartItems || cartItems.length === 0} data-tutorial="place-order-btn">
+                {placingOrder ? 'Placing...' : 'Place Order'}
+              </button>
+            </div>
+          </form>
+          <p className="order-note muted">
+            Note: No stocks are reduced automatically. The shop will contact you via your email to confirm and arrange payment/delivery.
+          </p>
+        </div>
+      </OrderModal>
+
+      {/* Floating Cart Button */}
+      <button 
+        type="button"
+        className="shop-cart-fab"
+        onClick={() => setShowOrderModal(true)}
+        aria-label="Open cart and place order"
+        data-tutorial="floating-cart-btn"
+      >
+        <ShoppingCart size={20} />
+        <span className="shop-cart-fab-label">Cart ({Array.isArray(cartItems) ? cartItems.reduce((sum, ci) => sum + (ci.quantity || 0), 0) : 0})</span>
+      </button>
+
       {/* Floating mini map and minimizer removed */}
 
       {/* Back to Top Button */}
@@ -2686,6 +3070,33 @@ export default function ShopPage() {
           ↑
         </button>
       )}
+
+      {/* Order success toast */}
+      {orderSuccess && (
+        <div className="shop-toast shop-toast-success" role="status" aria-live="polite">
+          <span className="shop-toast-icon" aria-hidden="true">✓</span>
+          <span className="shop-toast-text">{orderSuccess}</span>
+        </div>
+      )}
+
+      {/* Centered order placed popup */}
+      {orderPlacedPopup && (
+        <div className="order-success-overlay" role="status" aria-live="polite" data-tutorial="order-confirmation">
+          <div className="order-success-popup">
+            <span className="order-success-check" aria-hidden="true">✓</span>
+            <span className="order-success-text">Ordered successfully</span>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      <ReviewModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        shopId={shop?.id}
+        shopName={shop?.name}
+        onReviewSubmitted={handleReviewSubmitted}
+      />
 
       </main>
     </>

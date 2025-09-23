@@ -1,9 +1,11 @@
 import React from 'react';
-import { HeartHandshake, Home, Store, Info, HelpCircle, ShieldCheck, Cookie, FileText, MessageCircle } from 'lucide-react';
+import { HeartHandshake, Home, Store, Info, HelpCircle, ShieldCheck, Cookie, FileText, MessageCircle, Settings } from 'lucide-react';
 import FeedbackButton from './FeedbackButton.jsx';
+import { useCookieConsent } from '../contexts/CookieConsentContext';
 
 const Footer = ({ onOpenFeedback }) => {
   const currentYear = new Date().getFullYear();
+  const { showPreferences } = useCookieConsent();
 
   return (
     <footer className="modern-footer" role="contentinfo" aria-label="Site footer">
@@ -84,6 +86,7 @@ const Footer = ({ onOpenFeedback }) => {
                 <li><a href="/terms" className="footer-link"><FileText aria-hidden />Terms of Service</a></li>
                 <li><a href="/cookies" className="footer-link"><Cookie aria-hidden />Cookie Policy</a></li>
                 <li><a href="/gdpr" className="footer-link"><ShieldCheck aria-hidden />GDPR</a></li>
+                <li><button onClick={showPreferences} className="footer-link cookie-preferences-btn"><Settings aria-hidden />Cookie Preferences</button></li>
               </ul>
             </details>
           </div>
@@ -105,6 +108,28 @@ const Footer = ({ onOpenFeedback }) => {
           </div>
         </div>
       </div>
+      
+      <style>{`
+        .cookie-preferences-btn {
+          background: none;
+          border: none;
+          padding: 0;
+          margin: 0;
+          cursor: pointer;
+          text-decoration: none;
+          color: inherit;
+          font: inherit;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          width: 100%;
+          text-align: left;
+        }
+        
+        .cookie-preferences-btn:hover {
+          color: var(--primary);
+        }
+      `}</style>
     </footer>
   );
 };

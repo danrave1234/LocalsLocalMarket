@@ -13,6 +13,9 @@ import FeedbackModal from "./components/FeedbackModal.jsx"
 import TutorialOverlay from "./components/TutorialOverlay.jsx"
 import TutorialTrigger from "./components/TutorialTrigger.jsx"
 import TutorialPrompt from "./components/TutorialPrompt.jsx"
+import CookieConsentBanner from "./components/CookieConsentBanner.jsx"
+import { CookieConsentProvider } from "./contexts/CookieConsentContext.jsx"
+import { SkeletonText, SkeletonCard } from "./components/Skeleton.jsx"
 
 // Route-based code splitting
 const LandingPage = lazy(() => import("./pages/LandingPage.jsx"))
@@ -40,6 +43,28 @@ const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage.jsx"))
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage.jsx"))
 const SearchResultsPage = lazy(() => import("./pages/SearchResultsPage.jsx"))
 
+// Generic page loading skeleton for Suspense fallback
+function PageLoadingSkeleton() {
+  return (
+    <main className="main-content">
+      <div className="container" style={{ padding: '2rem' }}>
+        {/* Header skeleton */}
+        <div style={{ marginBottom: '2rem' }}>
+          <SkeletonText lines={1} height="2rem" style={{ marginBottom: '0.5rem' }} />
+          <SkeletonText lines={1} height="1rem" style={{ width: '60%' }} />
+        </div>
+        
+        {/* Content skeleton */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <SkeletonCard key={index} />
+          ))}
+        </div>
+      </div>
+    </main>
+  )
+}
+
 function App() {
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
 
@@ -49,13 +74,14 @@ function App() {
   return (
     <AuthProvider>
       <TutorialProvider>
-        <div className="app-container">
-          <Header onOpenFeedback={openFeedbackModal} />
-          <main className="main-content">
-            <Breadcrumbs />
-            <ErrorBoundary>
-              <Suspense fallback={<div className="page-loading">Loading...</div>}>
-                <Routes>
+        <CookieConsentProvider>
+          <div className="app-container">
+            <Header onOpenFeedback={openFeedbackModal} />
+            <main className="main-content">
+              <Breadcrumbs />
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoadingSkeleton />}>
+                  <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/shops" element={<Navigate to="/" replace />} />
                 <Route path="/login" element={<LoginPage />} />
@@ -128,12 +154,14 @@ function App() {
             </Suspense>
             </ErrorBoundary>
           </main>
-          <Footer onOpenFeedback={openFeedbackModal} />
-          <FeedbackModal isOpen={isFeedbackModalOpen} onClose={closeFeedbackModal} />
-          <TutorialOverlay />
-          <TutorialPrompt />
-          <TutorialTrigger />
-        </div>
+            <Footer onOpenFeedback={openFeedbackModal} />
+            <FeedbackModal isOpen={isFeedbackModalOpen} onClose={closeFeedbackModal} />
+            <TutorialOverlay />
+            <TutorialPrompt />
+            <TutorialTrigger />
+            <CookieConsentBanner />
+          </div>
+        </CookieConsentProvider>
       </TutorialProvider>
     </AuthProvider>
   )

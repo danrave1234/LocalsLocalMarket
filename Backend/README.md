@@ -162,6 +162,66 @@ Notes:
 - Authenticated, user-specific endpoints (e.g., /api/shops/my-shops) are not cached to avoid leaking private data.
 - Static uploads under /uploads/** already use long-lived HTTP caching.
 
+## Orders: require login or allow guests
+You can control whether customers must be logged in to place an order (POST /api/orders) via application properties or environment variables.
+
+Property (application.properties):
+
+```
+# If true, only authenticated users can place orders; if false, guests can also order
+app.orders.require-auth=false
+```
+
+Environment variable equivalent:
+- APP_ORDERS_REQUIRE_AUTH=false|true
+
+Behavior:
+- When set to true: the /api/orders endpoint requires a valid JWT. Unauthenticated requests get 401 Unauthorized with message "Authentication required to place orders".
+- When false (default): the endpoint accepts guest orders.
+
+This is enforced both at the Spring Security layer (request matcher) and within OrderController for defense-in-depth.
+
+## Email configuration and avoiding SMTP 553 relaying errors
+Many SMTP providers only allow sending from verified email addresses/domains. If you see an error like:
+
+```
+SMTPSendFailedException: 553 Relaying disallowed as noreply@localslocalmarket.com
+```
+
+it means the configured From address isn't allowed by your SMTP.
+
+Configure these properties to use an authorized address and set proper Reply-To:
+
+```
+# Global From address (recommended: a verified address on your SMTP provider)
+app.mail.from=notifications@your-verified-domain.com
+
+# Automatically set Reply-To to the customer's email on order notifications
+app.mail.reply-to-customer=true
+
+# (Optional) Where feedback emails should be sent; defaults to app.mail.from if blank
+app.feedback.to=support@your-verified-domain.com
+```
+
+If `app.mail.from` is not set, the application will fall back to `spring.mail.username` as the From address, which is usually permitted by your SMTP provider. As a last resort (development), it falls back to `no-reply@localhost`.
+
+Typical Spring Mail settings (example for Gmail SMTP or a transactional provider):
+
+```
+spring.mail.host=smtp.sendgrid.net
+spring.mail.port=587
+spring.mail.username=apikey-or-verified@your-domain.com
+spring.mail.password=YOUR_SMTP_PASSWORD
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+```
+
+With this setup, order emails will:
+- Use a permitted From address (app.mail.from or spring.mail.username)
+- Set Reply-To to the buyer's email so shop owners can reply directly
+
+Note: do not attempt to set the From to the buyer's email; most SMTP servers will reject it (spoofing) and cause 553/550 errors.
+
 
 ## Deploying to Google Cloud
 

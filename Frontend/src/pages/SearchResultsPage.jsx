@@ -99,7 +99,17 @@ export default function SearchResultsPage() {
         <button className={`btn ${activeTab === 'services' ? '' : 'outline'}`} onClick={() => setActiveTab('services')}>Services</button>
       </div>
 
-      {loading && <div>Loading...</div>}
+      {loading && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="card" style={{ padding: '1rem' }}>
+              <div style={{ height: '1.5rem', background: 'var(--border)', borderRadius: '4px', marginBottom: '0.5rem' }}></div>
+              <div style={{ height: '1rem', background: 'var(--border)', borderRadius: '4px', width: '70%', marginBottom: '0.5rem' }}></div>
+              <div style={{ height: '0.875rem', background: 'var(--border)', borderRadius: '4px', width: '50%' }}></div>
+            </div>
+          ))}
+        </div>
+      )}
       {error && <div className="error">{error}</div>}
 
       {!loading && !error && (
