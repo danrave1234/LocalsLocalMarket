@@ -305,9 +305,10 @@ body.tutorial-active {
 /* Mobile responsive */
 @media (max-width: 768px) {
   .tutorial-tooltip {
-    max-width: calc(100vw - 2rem);
-    min-width: calc(100vw - 2rem);
-    margin: 1rem;
+    max-width: calc(100vw - 1.5rem);
+    min-width: auto;
+    width: auto;
+    margin: 0.75rem;
     transform: translate(-50%, -50%);
   }
   
@@ -327,11 +328,17 @@ body.tutorial-active {
   .tutorial-controls {
     flex-direction: column;
     gap: 0.75rem;
+    position: sticky;
+    bottom: 0;
+    background: var(--card);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.25rem);
   }
   
   .tutorial-btn {
     width: 100%;
     justify-content: center;
+    min-height: 44px;
+    font-size: 0.9rem;
   }
   
   .tutorial-title {
@@ -341,6 +348,15 @@ body.tutorial-active {
   .tutorial-description {
     font-size: 0.8rem;
   }
+
+  .tutorial-tooltip-body {
+    max-height: 45vh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.5rem;
+  }
+
+  .tutorial-close-btn { padding: 0.5rem; }
 }
 
 /* Dark mode adjustments */

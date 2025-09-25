@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { loginRequest, registerRequest, getProfileRequest, updateProfileRequest, changePasswordRequest } from '../api/auth.js'
+import { loginRequest, registerRequest, getProfileRequest, updateProfileRequest, changePasswordRequest, googleLoginRequest, getEmailVerificationStatus, sendEmailVerification, verifyEmailCode } from '../api/auth.js'
 
 const AuthContext = createContext(null)
 
@@ -27,6 +27,11 @@ export function AuthProvider({ children }) {
                 createdAt: profileData.createdAt,
                 role: profileData.role || 'SELLER' // Default to SELLER if role is not provided
               }
+              try {
+                const ver = await getEmailVerificationStatus(storedToken)
+                updatedUser.emailVerified = !!ver.emailVerified
+                updatedUser.emailVerifiedAt = ver.emailVerifiedAt || null
+              } catch {}
               localStorage.setItem('auth_user', JSON.stringify(updatedUser))
               setToken(storedToken)
               setUser(updatedUser)
@@ -74,6 +79,11 @@ export function AuthProvider({ children }) {
         createdAt: profileData.createdAt,
         role: profileData.role || 'SELLER' // Default to SELLER if role is not provided
       }
+      try {
+        const ver = await getEmailVerificationStatus(newToken)
+        newUser.emailVerified = !!ver.emailVerified
+        newUser.emailVerifiedAt = ver.emailVerifiedAt || null
+      } catch {}
       localStorage.setItem('auth_user', JSON.stringify(newUser))
       setUser(newUser)
       return newUser
@@ -93,7 +103,7 @@ export function AuthProvider({ children }) {
     if (newToken) setToken(newToken)
     
     // Create user object with provided data
-    const newUser = { name, email, createdAt: new Date().toISOString(), role: 'SELLER' }
+    const newUser = { name, email, createdAt: new Date().toISOString(), role: 'SELLER', emailVerified: false }
     localStorage.setItem('auth_user', JSON.stringify(newUser))
     setUser(newUser)
     return newUser
@@ -104,6 +114,31 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('auth_user')
     setToken(null)
     setUser(null)
+  }
+
+  const loginWithGoogle = async (idToken) => {
+    const data = await googleLoginRequest({ idToken })
+    const newToken = data.token || data.accessToken
+    if (!newToken) throw new Error('No token returned')
+    localStorage.setItem('auth_token', newToken)
+    setToken(newToken)
+    try {
+      const profileData = await getProfileRequest(newToken)
+      const newUser = {
+        email: profileData.email || '',
+        name: profileData.name,
+        createdAt: profileData.createdAt,
+        role: profileData.role || 'SELLER'
+      }
+      localStorage.setItem('auth_user', JSON.stringify(newUser))
+      setUser(newUser)
+      return newUser
+    } catch {
+      const newUser = { role: 'SELLER' }
+      localStorage.setItem('auth_user', JSON.stringify(newUser))
+      setUser(newUser)
+      return newUser
+    }
   }
 
   const updateProfile = async (profileData) => {
@@ -155,7 +190,8 @@ export function AuthProvider({ children }) {
     register, 
     logout, 
     updateProfile, 
-    changePassword 
+    changePassword,
+    loginWithGoogle
   }), [token, user, isLoading])
   
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

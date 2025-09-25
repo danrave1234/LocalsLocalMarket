@@ -19,4 +19,8 @@ public class AuthDtos {
     public record ResetPasswordRequest(@NotBlank String token,
                                       @NotBlank String password) {}
     public record UserProfileResponse(String name, String email, String createdAt, String role) {}
+    public record EmailVerificationStatus(boolean emailVerified, String emailVerifiedAt) {}
+
+    // Google OAuth
+    public record GoogleLoginRequest(@NotBlank String idToken) {}
 }

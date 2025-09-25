@@ -70,6 +70,21 @@ export default function ShopPage() {
   const mobileMapInstanceRef = useRef(null)
   const isMobileDevice = typeof window !== 'undefined' && /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator.userAgent)
 
+  // Respect shop offering configuration for initial tab and visibility
+  useEffect(() => {
+    if (!shop) return
+    const type = (shop.offeringType || 'both').toLowerCase()
+    const priority = (shop.showcasePriority || 'products').toLowerCase()
+    if (type === 'products') {
+      setActiveTab('products')
+    } else if (type === 'services') {
+      setActiveTab('services')
+    } else {
+      setActiveTab(priority === 'services' ? 'services' : 'products')
+    }
+    // Update tutorial steps visibility hints if needed via data-tutorial targets (no code change required)
+  }, [shop])
+
   // Lightweight cart/order state stored per shop in localStorage
   const [cartItems, setCartItems] = useLocalStorage(`shop_${shopId}_cart`, [])
   const [showOrderModal, setShowOrderModal] = useState(false)
@@ -1414,7 +1429,7 @@ export default function ShopPage() {
         {/* Left Column - Shop Info Only */}
         <div className="shop-left-column">
           {/* Shop Header */}
-          <section className="card shop-header">
+          <section className="card shop-header" data-tutorial="shop-header">
             <div className="shop-header-content">
               <div className="shop-info-section">
 
@@ -1430,6 +1445,20 @@ export default function ShopPage() {
                 <div className="shop-details">
                   <div className="shop-name-section">
                     <h1 className="shop-name">{shop.name}</h1>
+                    <div className="shop-offering-badges" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                      {(() => {
+                        const type = (shop.offeringType || 'both').toLowerCase()
+                        const priority = (shop.showcasePriority || 'products').toLowerCase()
+                        const badges = []
+                        if (type === 'products') badges.push({ label: 'Products', tip: 'This shop offers products only' })
+                        else if (type === 'services') badges.push({ label: 'Services', tip: 'This shop offers services only' })
+                        else badges.push({ label: 'Products & Services', tip: 'This shop offers both products and services' })
+                        badges.push({ label: `Show ${priority === 'services' ? 'Services' : 'Products'} first`, tip: 'The first tab matches the shop\'s showcase preference' })
+                        return badges.map((b, i) => (
+                          <span key={i} className="chip" style={{ fontSize: '0.75rem' }} title={b.tip}>{b.label}</span>
+                        ))
+                      })()}
+                    </div>
                     {shop.description && (
                       <p className="shop-tagline">
                         {shop.description}
@@ -1702,7 +1731,7 @@ export default function ShopPage() {
                 </button>
                 {contactsOpen && (
                   <div className="collapsible-content">
-                <div className="shop-contact-details">
+                <div className="shop-contact-details" data-tutorial="contact-info">
                   {shop.phone && (
                     <div className="contact-item">
                       <span className="contact-icon"><Phone size={16} /></span>
@@ -1856,6 +1885,7 @@ export default function ShopPage() {
       <section className="products-section-full-width">
         {/* Tab Navigation */}
         <div className="items-tab-navigation" data-tutorial="products-services-tabs">
+          {(shop?.offeringType || 'both').toLowerCase() !== 'services' && (
           <button
             className={`tab-btn ${activeTab === 'products' ? 'active' : ''}`}
             onClick={() => setActiveTab('products')}
@@ -1863,6 +1893,8 @@ export default function ShopPage() {
             <Package size={16} />
             Products ({products.length})
           </button>
+          )}
+          {(shop?.offeringType || 'both').toLowerCase() !== 'products' && (
           <button
             className={`tab-btn ${activeTab === 'services' ? 'active' : ''}`}
             onClick={() => setActiveTab('services')}
@@ -1870,6 +1902,7 @@ export default function ShopPage() {
             <Wrench size={16} />
             Services ({services.length})
           </button>
+          )}
         </div>
 
         <div className="products-header">
@@ -2422,7 +2455,7 @@ export default function ShopPage() {
         )}
          
         {/* Reviews Section - below products, above ads */}
-        <section id="shop-reviews" className="card" style={{ marginTop: '2rem' }}>
+        <section id="shop-reviews" className="card" style={{ marginTop: '2rem' }} data-tutorial="reviews">
           <ShopReviews 
             shopId={shop?.id}
             shopName={shop?.name}

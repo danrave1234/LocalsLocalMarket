@@ -16,11 +16,13 @@ import TutorialPrompt from "./components/TutorialPrompt.jsx"
 import CookieConsentBanner from "./components/CookieConsentBanner.jsx"
 import { CookieConsentProvider } from "./contexts/CookieConsentContext.jsx"
 import { SkeletonText, SkeletonCard } from "./components/Skeleton.jsx"
+// Eagerly load auth pages to avoid showing generic Suspense skeletons on refresh
+import LandingPage from "./pages/LandingPage.jsx"
+import LoginPage from "./pages/LoginPage.jsx"
+import RegisterPage from "./pages/RegisterPage.jsx"
+import ResetPasswordPage from "./pages/ResetPasswordPage.jsx"
 
 // Route-based code splitting
-const LandingPage = lazy(() => import("./pages/LandingPage.jsx"))
-const LoginPage = lazy(() => import("./pages/LoginPage.jsx"))
-const RegisterPage = lazy(() => import("./pages/RegisterPage.jsx"))
 const ProfilePage = lazy(() => import("./pages/ProfilePage.jsx"))
 const SettingsPage = lazy(() => import("./pages/SettingsPage.jsx"))
 const ShopPage = lazy(() => import("./pages/ShopPage.jsx"))
@@ -37,9 +39,9 @@ const ServiceDetailsPage = lazy(() => import("./pages/ServiceDetailsPage.jsx"))
 const ShopEditPage = lazy(() => import("./pages/ShopEditPage.jsx"))
 const ShopCreatePage = lazy(() => import("./pages/ShopCreatePage.jsx"))
 const HelpPage = lazy(() => import("./pages/HelpPage.jsx"))
+const SearchSEOPage = lazy(() => import("./pages/SearchSEOPage.jsx"))
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"))
 const ShopManagementPage = lazy(() => import("./pages/ShopManagementPage.jsx"))
-const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage.jsx"))
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage.jsx"))
 const SearchResultsPage = lazy(() => import("./pages/SearchResultsPage.jsx"))
 
@@ -104,6 +106,10 @@ function App() {
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/support" element={<SupportPage onOpenFeedback={openFeedbackModal} />} />
                 <Route path="/help" element={<HelpPage />} />
+                <Route path="/post" element={<SearchSEOPage />} />
+                <Route path="/post-product" element={<SearchSEOPage />} />
+                <Route path="/post-service" element={<SearchSEOPage />} />
+                <Route path="/post-shop" element={<SearchSEOPage />} />
                 <Route path="/search" element={<SearchResultsPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />

@@ -6,10 +6,12 @@ import SocialSharing from "../components/SocialSharing.jsx"
 import FAQ from "../components/FAQ.jsx"
 import SearchOptimization from "../components/SearchOptimization.jsx"
 import { fetchPaginatedShopsWithRatings } from "../api/shops.js"
+import { fetchProducts } from "../api/products.js"
+import { searchServices } from "../api/services.js"
 import { generateShopUrl, generateShopSlug } from "../utils/slugUtils.js"
 import { InContentAd, ResponsiveAd } from "../components/GoogleAds.jsx"
 import { ArrowUp } from 'lucide-react'
-import { loadLeaflet, isLeafletLoaded } from "../utils/leafletLoader.js"
+import { loadLeaflet, isLeafletLoaded, loadMarkerCluster } from "../utils/leafletLoader.js"
 import { getImageUrl } from '../utils/imageUtils.js'
 import { handleApiError } from '../utils/errorHandler.js'
 import { SkeletonShopCard, SkeletonMap, SkeletonText } from "../components/Skeleton.jsx"
@@ -143,14 +145,18 @@ function extractShopsFromResponse(response) {
 export default function LandingPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const query = (searchParams.get("q") || "").trim().toLowerCase()
+  const resultType = searchParams.get("type") || "shops"
   const [clientQuery, setClientQuery] = useState("")
   const [coords, setCoords] = useState(null)
   const [pinnedLocation, setPinnedLocation] = useState(null)
   const [shops, setShops] = useState([])
+  const [products, setProducts] = useState([])
+  const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [mapInstance, setMapInstance] = useState(null)
   const [mapMarkers, setMapMarkers] = useState([])
+  const clusterGroupRef = useRef(null)
   const [isMapExpanded, setIsMapExpanded] = useState(false)
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -159,6 +165,8 @@ export default function LandingPage() {
   const [showTip, setShowTip] = useState(true)
   const [currentPage, setCurrentPage] = useState(0)
   const [hasMoreShops, setHasMoreShops] = useState(true)
+  const [hasMoreProducts, setHasMoreProducts] = useState(true)
+  const [hasMoreServices, setHasMoreServices] = useState(true)
   const mapRef = useRef(null)
   const shopsLoadingRef = useRef(false)
 
@@ -220,9 +228,9 @@ export default function LandingPage() {
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 
-  // Load shops using paginated endpoint - only on mount and when currentPage changes
+  // Load data based on current result type - only on mount and when currentPage/resultType changes
   useEffect(() => {
-    const loadShops = async () => {
+    const loadData = async () => {
       // Prevent multiple simultaneous calls
       if (shopsLoadingRef.current) {
         return
@@ -233,29 +241,57 @@ export default function LandingPage() {
       setError('')
       
       try {
-        console.log(`LandingPage: Fetching page ${currentPage} from API`)
-        const response = await fetchPaginatedShopsWithRatings(currentPage, 50) // Fetch 50 shops per page
+        console.log(`LandingPage: Fetching ${resultType} page ${currentPage} from API`)
         
-        const shopsData = extractShopsFromResponse(response)
-        
-        if (currentPage === 0) {
-          // First page, replace all shops
-          setShops(shopsData)
+        if (resultType === 'shops') {
+          const response = await fetchPaginatedShopsWithRatings(currentPage, 50)
+          const shopsData = extractShopsFromResponse(response)
+          
+          if (currentPage === 0) {
+            setShops(shopsData)
+          } else {
+            setShops(prev => [...prev, ...shopsData])
+          }
+          
+          if (response && response.content && response.content.length < 50) {
+            setHasMoreShops(false)
+          }
+        } else if (resultType === 'products') {
+          const response = await fetchProducts({ page: currentPage, size: 50 })
+          const productsData = Array.isArray(response) ? response : (response?.content || [])
+          
+          if (currentPage === 0) {
+            setProducts(productsData)
+          } else {
+            setProducts(prev => [...prev, ...productsData])
+          }
+          
+          if (productsData.length < 50) {
+            setHasMoreProducts(false)
+          }
         } else {
-          // Subsequent pages, append shops
-          setShops(prev => [...prev, ...shopsData])
-        }
-        
-        // Check if there are more shops
-        if (response && response.content && response.content.length < 50) {
-          setHasMoreShops(false)
+          // services
+          const response = await searchServices({ page: currentPage, size: 50 })
+          const servicesData = Array.isArray(response) ? response : (response?.content || [])
+          
+          if (currentPage === 0) {
+            setServices(servicesData)
+          } else {
+            setServices(prev => [...prev, ...servicesData])
+          }
+          
+          if (servicesData.length < 50) {
+            setHasMoreServices(false)
+          }
         }
       } catch (err) {
-        console.error('Failed to fetch shops:', err)
+        console.error(`Failed to fetch ${resultType}:`, err)
         const errorInfo = handleApiError(err)
         setError(errorInfo.message)
         if (currentPage === 0) {
           setShops([])
+          setProducts([])
+          setServices([])
         }
       } finally {
         setLoading(false)
@@ -263,13 +299,25 @@ export default function LandingPage() {
       }
     }
 
-    loadShops()
-  }, [currentPage])
+    loadData()
+  }, [currentPage, resultType])
 
-  // Load more shops function
-  const loadMoreShops = () => {
-    if (!loading && hasMoreShops) {
-      setCurrentPage(prev => prev + 1)
+  // Reset pagination when result type changes
+  useEffect(() => {
+    setCurrentPage(0)
+    setHasMoreShops(true)
+    setHasMoreProducts(true)
+    setHasMoreServices(true)
+  }, [resultType])
+
+  // Load more data function
+  const loadMoreData = () => {
+    if (!loading) {
+      if ((resultType === 'shops' && hasMoreShops) ||
+          (resultType === 'products' && hasMoreProducts) ||
+          (resultType === 'services' && hasMoreServices)) {
+        setCurrentPage(prev => prev + 1)
+      }
     }
   }
 
@@ -278,29 +326,53 @@ export default function LandingPage() {
     setClientQuery(searchTerm)
   }
 
-  const sortedShops = useMemo(() => {
-    let copy = [...shops]
+  const sortedItems = useMemo(() => {
+    let copy = []
+    
+    // Get the appropriate data based on result type
+    if (resultType === 'shops') {
+      copy = [...shops]
+    } else if (resultType === 'products') {
+      copy = [...products]
+    } else {
+      copy = [...services]
+    }
     
     // Client-side filtering - comprehensive search across multiple fields
     if (clientQuery.trim()) {
       const searchTerm = clientQuery.toLowerCase().trim()
-      copy = copy.filter(shop => 
-        shop.name.toLowerCase().includes(searchTerm) ||
-        (shop.description && shop.description.toLowerCase().includes(searchTerm)) ||
-        (shop.addressLine && shop.addressLine.toLowerCase().includes(searchTerm)) ||
-        (shop.category && shop.category.toLowerCase().includes(searchTerm)) ||
-        (shop.phone && shop.phone.toLowerCase().includes(searchTerm)) ||
-        (shop.email && shop.email.toLowerCase().includes(searchTerm))
-      )
+      copy = copy.filter(item => {
+        if (resultType === 'shops') {
+          return item.name.toLowerCase().includes(searchTerm) ||
+            (item.description && item.description.toLowerCase().includes(searchTerm)) ||
+            (item.addressLine && item.addressLine.toLowerCase().includes(searchTerm)) ||
+            (item.category && item.category.toLowerCase().includes(searchTerm)) ||
+            (item.phone && item.phone.toLowerCase().includes(searchTerm)) ||
+            (item.email && item.email.toLowerCase().includes(searchTerm))
+        } else if (resultType === 'products') {
+          return item.name.toLowerCase().includes(searchTerm) ||
+            (item.description && item.description.toLowerCase().includes(searchTerm)) ||
+            (item.category && item.category.toLowerCase().includes(searchTerm)) ||
+            (item.mainCategory && item.mainCategory.toLowerCase().includes(searchTerm)) ||
+            (item.subcategory && item.subcategory.toLowerCase().includes(searchTerm))
+        } else {
+          // services
+          return item.title.toLowerCase().includes(searchTerm) ||
+            (item.description && item.description.toLowerCase().includes(searchTerm)) ||
+            (item.category && item.category.toLowerCase().includes(searchTerm)) ||
+            (item.mainCategory && item.mainCategory.toLowerCase().includes(searchTerm)) ||
+            (item.subcategory && item.subcategory.toLowerCase().includes(searchTerm))
+        }
+      })
     }
     
-    // Use pinned location for sorting if available, otherwise use user coords
+    // Use pinned location for sorting if available, otherwise use user coords (only for shops)
     const referenceLocation = pinnedLocation || coords
-    if (referenceLocation) {
+    if (referenceLocation && resultType === 'shops') {
       copy.sort((a, b) => haversineDistanceKm(referenceLocation, a) - haversineDistanceKm(referenceLocation, b))
     }
     return copy
-  }, [shops, coords, pinnedLocation, clientQuery])
+  }, [shops, products, services, coords, pinnedLocation, clientQuery, resultType])
 
   // Load Leaflet CSS and JS
   useEffect(() => {
@@ -377,6 +449,61 @@ export default function LandingPage() {
           maxZoom: 19,
           minZoom: 1
         }).addTo(map)
+
+        // Initialize marker cluster group
+        loadMarkerCluster()
+          .then(() => {
+            try {
+              if (!clusterGroupRef.current) {
+                clusterGroupRef.current = L.markerClusterGroup({
+                  disableClusteringAtZoom: 16,
+                  spiderfyOnMaxZoom: true,
+                  showCoverageOnHover: false,
+                  maxClusterRadius: 50,
+                  iconCreateFunction: function(cluster) {
+                    const count = cluster.getChildCount()
+                    // Size tiers for better visual hierarchy
+                    const size = count >= 100 ? 52 : count >= 25 ? 46 : 40
+                    const fontSize = count >= 100 ? 16 : count >= 25 ? 15 : 14
+                    const ringColor = 'var(--card, #ffffff)'
+                    const bg = 'var(--primary, #6366f1)'
+                    const txt = '#ffffff'
+                    const shadow = 'rgba(0,0,0,0.25)'
+                    const html = `
+                      <div style="
+                        width: ${size}px;
+                        height: ${size}px;
+                        border-radius: 50%;
+                        background: ${bg};
+                        color: ${txt};
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 6px 16px ${shadow};
+                        border: 3px solid ${ringColor};
+                        font-weight: 700;
+                        font-family: inherit;
+                        line-height: 1;
+                        position: relative;
+                      ">
+                        <span style="font-size:${fontSize}px;">${count}</span>
+                      </div>
+                    `
+                    return L.divIcon({
+                      html,
+                      className: 'cluster-marker',
+                      iconSize: [size, size],
+                      iconAnchor: [size/2, size/2]
+                    })
+                  }
+                })
+                map.addLayer(clusterGroupRef.current)
+              }
+            } catch (e) {
+              console.warn('Failed to initialize marker cluster group', e)
+            }
+          })
+          .catch((e) => console.warn('MarkerCluster plugin failed to load', e))
 
         // Add click handler to pin location
         map.on('click', (e) => {
@@ -489,6 +616,11 @@ export default function LandingPage() {
           if (mapInstance._watchdog) { try { clearInterval(mapInstance._watchdog) } catch {} }
           if (mapInstance._onWinResize) { try { window.removeEventListener('resize', mapInstance._onWinResize) } catch {} }
           if (mapInstance._onTransitionEnd && mapRef.current) { try { mapRef.current.removeEventListener('transitionend', mapInstance._onTransitionEnd) } catch {} }
+          // Remove cluster group
+          if (clusterGroupRef.current) {
+            try { mapInstance.removeLayer(clusterGroupRef.current) } catch {}
+            clusterGroupRef.current = null
+          }
           mapInstance.remove()
         } catch (error) {
           console.log('Map already removed')
@@ -506,12 +638,12 @@ export default function LandingPage() {
           mapInstance.invalidateSize()
         }, 100)
       }
-      setIsMobile(window.innerWidth <= 900)
+      setIsMobile(window.innerWidth <= 1060)
     }
 
     window.addEventListener('resize', handleResize)
     // initialize value
-    setIsMobile(window.innerWidth <= 900)
+    setIsMobile(window.innerWidth <= 1060)
     return () => window.removeEventListener('resize', handleResize)
   }, [mapInstance])
 
@@ -533,41 +665,38 @@ export default function LandingPage() {
 
     const L = window.L
     
-    // Clear existing markers
-    mapMarkers.forEach(marker => {
-      try {
-        marker.remove()
-      } catch (error) {
-        console.log('Error removing marker:', error)
-      }
-    })
-    const newMarkers = []
+    // Clear existing user/pinned markers and clustered shop markers
+    mapMarkers.forEach(marker => { try { marker.remove() } catch {} })
+    const newMarkers = [] // will track only non-clustered markers (user/pinned)
+    if (clusterGroupRef.current && clusterGroupRef.current.clearLayers) {
+      try { clusterGroupRef.current.clearLayers() } catch {}
+    }
 
     // Add user location marker
     if (coords) {
-              const userIcon = L.divIcon({
-          className: 'user-marker',
-          html: `
-            <div style="
-              width: 24px;
-              height: 24px;
-              background: #10b981;
-              border: 3px solid white;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              color: white;
-              font-size: 12px;
-              font-weight: bold;
-            ">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </div>
-          `,
+      const userIcon = L.divIcon({
+        className: 'user-marker',
+        html: `
+          <div style="
+            width: 24px;
+            height: 24px;
+            background: var(--primary, #6366f1);
+            border: 3px solid var(--card, #ffffff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: bold;
+          ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </div>
+        `,
         iconSize: [24, 24],
         iconAnchor: [12, 12]
       })
@@ -575,34 +704,34 @@ export default function LandingPage() {
       const userMarker = L.marker([coords.lat, coords.lng], { icon: userIcon })
         .addTo(mapInstance)
         .bindPopup('Your Location')
-      
+ 
       newMarkers.push(userMarker)
     }
-
+ 
     // Add pinned location marker
     if (pinnedLocation) {
-              const pinnedIcon = L.divIcon({
-          className: 'pinned-marker',
-          html: `
-            <div style="
-              width: 28px;
-              height: 28px;
-              background: #f59e0b;
-              border: 3px solid white;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              color: white;
-              font-size: 14px;
-              font-weight: bold;
-            ">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-            </div>
-          `,
+      const pinnedIcon = L.divIcon({
+        className: 'pinned-marker',
+        html: `
+          <div style="
+            width: 28px;
+            height: 28px;
+            background: #f59e0b;
+            border: 3px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+          ">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+          </div>
+        `,
         iconSize: [28, 28],
         iconAnchor: [14, 14]
       })
@@ -610,106 +739,159 @@ export default function LandingPage() {
       const pinnedMarker = L.marker([pinnedLocation.lat, pinnedLocation.lng], { icon: pinnedIcon })
         .addTo(mapInstance)
         .bindPopup('Pinned Location')
-      
+ 
       newMarkers.push(pinnedMarker)
     }
-
-    // Add shop markers
-    sortedShops.forEach((shop, index) => {
-      if (shop.lat && shop.lng) {
-        try {
-          const logoUrl = shop.logoPath ? getImageUrl(shop.logoPath) : ''
-          const shopIcon = L.divIcon({
-            className: 'shop-marker',
-            html: `
-              <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); overflow: hidden;">
-                ${logoUrl 
-                  ? `<div style=\"position:absolute; top:0; left:0; right:0; bottom:0; background-image:url('${logoUrl}'); background-size:cover; background-position:center;\"></div>`
-                  : '<div style=\"position:absolute; inset:0; background:#6366f1; display:flex; align-items:center; justify-content:center;\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"white\" stroke-width=\"2\"><path d=\"M3 9l1-5h16l1 5\"/><path d=\"M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z\"/><path d=\"M8 13h3v3H8z\"/></svg></div>'}
-              </div>
-            `,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
-          })
-
-          const marker = L.marker([shop.lat, shop.lng], { icon: shopIcon })
-            .addTo(mapInstance)
-            .bindPopup(`
-              <div style="min-width: ${isMobile ? '280px' : '200px'}; max-width: ${isMobile ? '320px' : '250px'};">
-                <h4 style="margin: 0 0 0.5rem 0; color: #6366f1; font-size: ${isMobile ? '1rem' : '0.875rem'};">${shop.name}</h4>
-                ${shop.addressLine ? `<p style="margin: 0 0 0.5rem 0; font-size: ${isMobile ? '0.9rem' : '0.875rem'}; color: #666; line-height: 1.4;">${shop.addressLine}</p>` : ''}
-                <a href="/shops/${generateShopSlug(shop.name, shop.id)}" style="
-                  display: inline-block;
-                  background: #6366f1;
-                  color: white;
-                  padding: ${isMobile ? '0.75rem 1.25rem' : '0.5rem 1rem'};
-                  text-decoration: none;
-                  border-radius: ${isMobile ? '8px' : '6px'};
-                  font-size: ${isMobile ? '0.9rem' : '0.875rem'};
-                  font-weight: 500;
-                  text-align: center;
-                  width: ${isMobile ? '100%' : 'auto'};
-                  box-sizing: border-box;
-                  transition: background-color 0.2s;
-                " onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='#6366f1'">View Shop</a>
-              </div>
-            `, {
-              // Mobile-optimized popup options
-              maxWidth: isMobile ? 320 : 250,
-              className: isMobile ? 'mobile-popup' : '',
-              closeButton: true,
-              autoClose: false,
-              closeOnClick: false,
-              // Better mobile positioning
-              offset: isMobile ? [0, -10] : [0, 0]
-            })
-          
-          newMarkers.push(marker)
-        } catch (error) {
-          console.error(`Error adding marker for shop ${shop.name}:`, error)
-        }
+ 
+    // Ensure cluster group is available before adding shop markers
+    const addShopMarkers = () => {
+      if (!clusterGroupRef.current || !L.markerClusterGroup) {
+        return
       }
-    })
-
-    setMapMarkers(newMarkers)
-
-    // Fit bounds to show all markers with better zoom level
-    if (newMarkers.length > 0) {
-      try {
-        const group = L.featureGroup(newMarkers)
-        const bounds = group.getBounds()
-        
-        // Check if we have search results (filtered shops)
-        const hasSearchResults = clientQuery.trim().length > 0
-        
-                  if (hasSearchResults) {
-            // For search results, show a closer view with less padding
-            const paddedBounds = bounds.pad(0.02) // Very minimal padding for search results
-            mapInstance.fitBounds(paddedBounds, {
-              maxZoom: 15, // Allow even closer zoom for search results
-              animate: true
+      // Add shop markers to cluster group (only for shops)
+      if (resultType === 'shops') {
+        sortedItems.forEach((shop) => {
+        if (shop.lat && shop.lng) {
+          try {
+            const logoUrl = shop.logoPath ? getImageUrl(shop.logoPath) : ''
+            const shopIcon = L.divIcon({
+              className: 'shop-marker',
+              html: `
+                <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); overflow: hidden;">
+                  ${logoUrl 
+                    ? `<div style=\"position:absolute; top:0; left:0; right:0; bottom:0; background-image:url('${logoUrl}'); background-size:cover; background-position:center;\"></div>`
+                    : '<div style=\"position:absolute; inset:0; background:#6366f1; display:flex; align-items:center; justify-content:center;\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"white\" stroke-width=\"2\"><path d=\"M3 9l1-5h16l1 5\"/><path d=\"M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z\"/><path d=\"M8 13h3v3H8z\"/></svg></div>'}
+                </div>
+              `,
+              iconSize: [40, 40],
+              iconAnchor: [20, 20]
             })
-          } else {
-            // For all shops, use moderate padding
-            const paddedBounds = bounds.pad(0.1)
-            mapInstance.fitBounds(paddedBounds, {
-              maxZoom: 13, // Good detail for browsing all shops
-              animate: true
-            })
+
+            const marker = L.marker([shop.lat, shop.lng], { icon: shopIcon })
+              .bindPopup(`
+                <div style="min-width: ${isMobile ? '280px' : '200px'}; max-width: ${isMobile ? '320px' : '250px'};">
+                  <h4 style="margin: 0 0 0.5rem 0; color: #6366f1; font-size: ${isMobile ? '1rem' : '0.875rem'};">${shop.name}</h4>
+                  ${shop.addressLine ? `<p style="margin: 0 0 0.5rem 0; font-size: ${isMobile ? '0.9rem' : '0.875rem'}; color: #666; line-height: 1.4;">${shop.addressLine}</p>` : ''}
+                  <a href="/shops/${generateShopSlug(shop.name, shop.id)}" style="
+                    display: inline-block;
+                    background: #6366f1;
+                    color: white;
+                    padding: ${isMobile ? '0.75rem 1.25rem' : '0.5rem 1rem'};
+                    text-decoration: none;
+                    border-radius: ${isMobile ? '8px' : '6px'};
+                    font-size: ${isMobile ? '0.9rem' : '0.875rem'};
+                    font-weight: 500;
+                    text-align: center;
+                    width: ${isMobile ? '100%' : 'auto'};
+                    box-sizing: border-box;
+                    transition: background-color 0.2s;
+                  " onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='#6366f1'">View Shop</a>
+                </div>
+              `, {
+                maxWidth: isMobile ? 320 : 250,
+                className: isMobile ? 'mobile-popup' : '',
+                closeButton: true,
+                autoClose: false,
+                closeOnClick: false,
+                offset: isMobile ? [0, -10] : [0, 0]
+              })
+
+            clusterGroupRef.current.addLayer(marker)
+          } catch (error) {
+            console.error(`Error adding marker for shop ${shop.name}:`, error)
           }
-      } catch (error) {
-        console.error('Error fitting map bounds:', error)
-        // Fallback: set a default view if bounds fitting fails
+        }
+      })
+      }
+    }
+
+    // If plugin not ready yet, attempt to load then add
+    if (!clusterGroupRef.current || !L.markerClusterGroup) {
+      loadMarkerCluster().then(() => {
+        if (!clusterGroupRef.current) {
+          try {
+            clusterGroupRef.current = L.markerClusterGroup({
+              disableClusteringAtZoom: 16,
+              spiderfyOnMaxZoom: true,
+              showCoverageOnHover: false,
+              maxClusterRadius: 50,
+              iconCreateFunction: function(cluster) {
+                const count = cluster.getChildCount()
+                const size = count >= 100 ? 52 : count >= 25 ? 46 : 40
+                const fontSize = count >= 100 ? 16 : count >= 25 ? 15 : 14
+                const ringColor = 'var(--card, #ffffff)'
+                const bg = 'var(--primary, #6366f1)'
+                const txt = '#ffffff'
+                const shadow = 'rgba(0,0,0,0.25)'
+                const html = `
+                  <div style="
+                    width: ${size}px;
+                    height: ${size}px;
+                    border-radius: 50%;
+                    background: ${bg};
+                    color: ${txt};
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 6px 16px ${shadow};
+                    border: 3px solid ${ringColor};
+                    font-weight: 700;
+                    font-family: inherit;
+                    line-height: 1;
+                    position: relative;
+                  ">
+                    <span style="font-size:${fontSize}px;">${count}</span>
+                  </div>
+                `
+                return L.divIcon({
+                  html,
+                  className: 'cluster-marker',
+                  iconSize: [size, size],
+                  iconAnchor: [size/2, size/2]
+                })
+              }
+            })
+            mapInstance.addLayer(clusterGroupRef.current)
+          } catch {}
+        }
+        addShopMarkers()
+
+        // Fit bounds including clusters and non-cluster markers
+        try {
+          const layersForBounds = [clusterGroupRef.current, ...newMarkers]
+          const group = L.featureGroup(layersForBounds)
+          const bounds = group.getBounds()
+          const hasSearchResults = clientQuery.trim().length > 0
+          const paddedBounds = bounds.pad(hasSearchResults ? 0.02 : 0.1)
+          mapInstance.fitBounds(paddedBounds, { maxZoom: hasSearchResults ? 15 : 13, animate: true })
+        } catch (e) {
+          const center = coords ? [coords.lat, coords.lng] : [10.3157, 123.8854]
+          mapInstance.setView(center, 12)
+        }
+      }).catch(() => {
+        // Fallback: no clustering, just proceed with markers directly on map (already handled earlier if needed)
+      })
+    } else {
+      // Cluster group ready
+      addShopMarkers()
+
+      // Fit bounds including clusters and non-cluster markers
+      try {
+        const layersForBounds = [clusterGroupRef.current, ...newMarkers]
+        const group = L.featureGroup(layersForBounds)
+        const bounds = group.getBounds()
+        const hasSearchResults = clientQuery.trim().length > 0
+        const paddedBounds = bounds.pad(hasSearchResults ? 0.02 : 0.1)
+        mapInstance.fitBounds(paddedBounds, { maxZoom: hasSearchResults ? 15 : 13, animate: true })
+      } catch (e) {
         const center = coords ? [coords.lat, coords.lng] : [10.3157, 123.8854]
         mapInstance.setView(center, 12)
       }
-    } else {
-      // Set default view if no markers
-      const center = coords ? [coords.lat, coords.lng] : [10.3157, 123.8854]
-      mapInstance.setView(center, 12)
     }
-
-  }, [mapInstance, sortedShops, coords, pinnedLocation])
+ 
+    setMapMarkers(newMarkers)
+ 
+  }, [mapInstance, sortedItems, coords, pinnedLocation, resultType])
 
   // Handle map resize when component updates or window resizes
   useEffect(() => {
@@ -781,9 +963,16 @@ export default function LandingPage() {
         />
         <main className="container landing-page-container">
           {/* Header */}
-          <section style={{ marginBottom: "2rem" }}>
-            <SkeletonText lines={1} height="1.5rem" style={{ marginBottom: "0.5rem" }} />
-            <SkeletonText lines={1} height="1rem" style={{ width: "60%" }} />
+          <section className="shops-section-header" style={{ marginBottom: "1.5rem" }}>
+            <div className="shops-header-content">
+              <div className="shops-title-section">
+                <SkeletonText lines={1} height="1.5rem" style={{ marginBottom: "0.25rem" }} />
+                <SkeletonText lines={1} height="0.9rem" style={{ width: "60%" }} />
+              </div>
+              <div className="shops-stats-section">
+                <SkeletonText lines={1} height="1.25rem" style={{ width: "120px" }} />
+              </div>
+            </div>
           </section>
 
           {/* Search Bar */}
@@ -795,16 +984,15 @@ export default function LandingPage() {
           <div className="landing-layout">
             {/* Left Side - Shops List */}
             <div>
-              <div style={{ marginBottom: "1rem" }}>
-                <SkeletonText lines={1} height="1.2rem" style={{ marginBottom: "0.25rem" }} />
-                <SkeletonText lines={1} height="0.875rem" style={{ width: "40%" }} />
+              <div className="shops-section-header" style={{ marginBottom: "1rem" }}>
+                <div className="shops-header-content">
+                  <div className="shops-title-section">
+                    <SkeletonText lines={1} height="1.2rem" style={{ marginBottom: "0.25rem" }} />
+                    <SkeletonText lines={1} height="0.875rem" style={{ width: "40%" }} />
+                  </div>
+                </div>
               </div>
-              
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                gap: "1rem",
-              }}>
+              <div className="shops-grid">
                 {Array.from({ length: 6 }).map((_, index) => (
                   <SkeletonShopCard key={index} />
                 ))}
@@ -812,12 +1000,11 @@ export default function LandingPage() {
             </div>
 
             {/* Right Side - Map */}
-            <div style={{ 
-              height: 'calc(60vh - 2rem)', // Increased from 42vh to 60vh for taller map
-              minHeight: '400px', // Increased minHeight from 300px to 400px
+            <div className="map-sticky-container" style={{ 
+              height: 'calc(70vh - 2rem)',
+              minHeight: '460px',
               position: 'sticky',
-              top: 'calc(70px + 1rem)',
-              zIndex: 10
+              top: 'calc(70px + 1rem)'
             }}>
               <SkeletonMap style={{ height: '100%' }} />
             </div>
@@ -847,27 +1034,27 @@ export default function LandingPage() {
   return (
     <>
       <SEOHead 
-        title="Explore Local Shops"
-        description="Discover amazing local shops and businesses in your community. Find unique products, fresh goods, and support local entrepreneurs on LocalsLocalMarket."
-        keywords="local shops, local businesses, community shopping, local products, neighborhood stores, shop local, local market"
+        title={`Explore Local ${resultType === 'products' ? 'Products' : resultType === 'services' ? 'Services' : 'Shops'}`}
+        description={`Discover amazing local ${resultType} in your community. Find unique ${resultType === 'services' ? 'services' : 'products'}, fresh goods, and support local entrepreneurs on LocalsLocalMarket.`}
+        keywords={`local ${resultType}, local businesses, community shopping, local products, neighborhood stores, shop local, local market`}
         structuredData={{
           "@context": "https://schema.org",
           "@type": "ItemList",
-          "name": "Local Shops",
-          "description": "Discover local shops and businesses in your community",
+          "name": `Local ${resultType === 'products' ? 'Products' : resultType === 'services' ? 'Services' : 'Shops'}`,
+          "description": `Discover local ${resultType} in your community`,
           "url": "https://localslocalmarket.com",
-          "numberOfItems": sortedShops.length,
-          "itemListElement": sortedShops.slice(0, 10).map((shop, index) => ({
+          "numberOfItems": sortedItems.length,
+          "itemListElement": sortedItems.slice(0, 10).map((item, index) => ({
             "@type": "ListItem",
             "position": index + 1,
             "item": {
               "@type": "LocalBusiness",
-              "name": shop.name,
-              "description": shop.description || `Local shop: ${shop.name}`,
-                              "url": `https://localslocalmarket.com/shops/${generateShopSlug(shop.name, shop.id)}`,
-              "address": shop.addressLine ? {
+              "name": resultType === 'services' ? item.title : item.name,
+              "description": item.description || `Local ${resultType.slice(0, -1)}: ${resultType === 'services' ? item.title : item.name}`,
+              "url": resultType === 'shops' ? `https://localslocalmarket.com/shops/${generateShopSlug(item.name, item.id)}` : `https://localslocalmarket.com`,
+              "address": (resultType === 'shops' && item.addressLine) ? {
                 "@type": "PostalAddress",
-                "streetAddress": shop.addressLine
+                "streetAddress": item.addressLine
               } : undefined
             }
           }))
@@ -882,6 +1069,7 @@ export default function LandingPage() {
               onClearFilters={clearPinnedLocation} 
               onSearchChange={handleSearchChange}
               hasPinnedLocation={!!pinnedLocation}
+              navigateOnSubmit={false}
             />
           </div>
         </section>
@@ -890,7 +1078,7 @@ export default function LandingPage() {
         <div className={`landing-layout ${isMapExpanded ? 'expanded' : ''}`}>
           {/* Left Side - Shops List */}
           <div>
-            {sortedShops.length === 0 ? (
+            {sortedItems.length === 0 ? (
               <div style={{ 
                 textAlign: 'center', 
                 padding: '2rem',
@@ -901,9 +1089,9 @@ export default function LandingPage() {
                 <div style={{ marginBottom: '1rem' }}>
                   <StoreIcon width={48} height={48} style={{ color: "var(--muted)" }} />
                 </div>
-                <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No shops found</h3>
+                <h3 style={{ margin: 0, marginBottom: '0.5rem' }}>No {resultType} found</h3>
                 <p className="muted" style={{ margin: 0 }}>
-                  {query ? `No shops match "${query}"` : 'No shops available yet'}
+                  {query ? `No ${resultType} match "${query}"` : `No ${resultType} available yet`}
                 </p>
               </div>
             ) : (
@@ -912,25 +1100,25 @@ export default function LandingPage() {
                 <div className="shops-section-header">
                   <div className="shops-header-content">
                     <div className="shops-title-section">
-                      <h2 className="shops-main-title">Explore Local Shops</h2>
-                      <p className="shops-subtitle">Discover amazing shops from all areas</p>
+                      <h2 className="shops-main-title">Explore Local {resultType === 'products' ? 'Products' : resultType === 'services' ? 'Services' : 'Shops'}</h2>
+                      <p className="shops-subtitle">Discover amazing {resultType} from all areas</p>
                       <div className="filter-info">
                         <span className="filter-label">
-                          {clientQuery ? `Search results for "${clientQuery}"` : 'All available shops'}
+                          {clientQuery ? `Search results for "${clientQuery}"` : `All available ${resultType}`}
                         </span>
                       </div>
                     </div>
                     <div className="shops-stats-section">
                       <div className="shops-stats">
-                        <span className="shops-count">{sortedShops.length} shops found</span>
+                        <span className="shops-count">{sortedItems.length} {resultType} found</span>
                       </div>
                     </div>
                   </div>
                 </div>
               
                             <div className="shops-grid" data-tutorial="shop-cards">
-                {sortedShops.map((shop) => (
-                  <div key={shop.id} className="card" style={{ 
+                {sortedItems.map((item) => (
+                  <div key={item.id} className="card" style={{ 
                     padding: 0, 
                     overflow: "hidden",
                     borderRadius: "16px",
@@ -939,16 +1127,30 @@ export default function LandingPage() {
                   }}
                   onMouseEnter={(e) => e.target.style.transform = "translateY(-2px)"}
                   onMouseLeave={(e) => e.target.style.transform = "translateY(0)"}
-                                    onClick={() => {
-                    window.location.href = generateShopUrl(shop.name, shop.id)
+                  onClick={() => {
+                    if (resultType === 'shops') {
+                      window.location.href = generateShopUrl(item.name, item.id)
+                    } else if (resultType === 'products') {
+                      // For now, just show product details in console. Could navigate to product page later
+                      console.log('Product clicked:', item)
+                    } else {
+                      // Services - similar handling
+                      console.log('Service clicked:', item)
+                    }
                   }}
                   >
-                    {/* Shop Image */}
+                    {/* Item Image */}
                     <div style={{ 
                       height: "160px", 
-                      background: !shop.coverPath 
-                        ? "linear-gradient(135deg, var(--surface) 0%, var(--card) 100%)"
-                        : "transparent",
+                      background: (() => {
+                        if (resultType === 'products') {
+                          return !item.imagePathsJson ? "linear-gradient(135deg, var(--surface) 0%, var(--card) 100%)" : "transparent"
+                        } else if (resultType === 'services') {
+                          return !item.imageUrl ? "linear-gradient(135deg, var(--surface) 0%, var(--card) 100%)" : "transparent"
+                        } else {
+                          return !item.coverPath ? "linear-gradient(135deg, var(--surface) 0%, var(--card) 100%)" : "transparent"
+                        }
+                      })(),
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -957,38 +1159,83 @@ export default function LandingPage() {
                       position: "relative",
                       overflow: "hidden"
                     }}>
-                      {shop.coverPath ? (
-                        <img 
-                          src={getImageUrl(shop.coverPath)} 
-                          alt={`${shop.name} shop view`}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            objectPosition: "center"
-                          }}
-                          onError={(e) => {
-                            console.error('Shop view image failed to load:', e.target.src)
-                            e.target.style.display = 'none'
-                          }}
-                        />
-                      ) : (
-                        <div style={{ 
-                          display: "flex", 
-                          flexDirection: "column", 
-                          alignItems: "center", 
-                          gap: "0.5rem" 
-                        }}>
-                          <StoreIcon width={24} height={24} style={{ color: "var(--muted)" }} />
-                          <span>Shop View</span>
-                        </div>
-                      )}
+                      {(() => {
+                        if (resultType === 'products' && item.imagePathsJson) {
+                          try {
+                            const images = JSON.parse(item.imagePathsJson)
+                            const firstImage = Array.isArray(images) && images.length > 0 ? images[0] : null
+                            return firstImage ? (
+                              <img 
+                                src={getImageUrl(firstImage)} 
+                                alt={`${item.name} product`}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                  objectPosition: "center"
+                                }}
+                                onError={(e) => {
+                                  console.error('Product image failed to load:', e.target.src)
+                                  e.target.style.display = 'none'
+                                }}
+                              />
+                            ) : null
+                          } catch (e) {
+                            return null
+                          }
+                        } else if (resultType === 'services' && item.imageUrl) {
+                          return (
+                            <img 
+                              src={getImageUrl(item.imageUrl)} 
+                              alt={`${item.title} service`}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                objectPosition: "center"
+                              }}
+                              onError={(e) => {
+                                console.error('Service image failed to load:', e.target.src)
+                                e.target.style.display = 'none'
+                              }}
+                            />
+                          )
+                        } else if (resultType === 'shops' && item.coverPath) {
+                          return (
+                            <img 
+                              src={getImageUrl(item.coverPath)} 
+                              alt={`${item.name} shop view`}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                objectPosition: "center"
+                              }}
+                              onError={(e) => {
+                                console.error('Shop view image failed to load:', e.target.src)
+                                e.target.style.display = 'none'
+                              }}
+                            />
+                          )
+                        }
+                        return (
+                          <div style={{ 
+                            display: "flex", 
+                            flexDirection: "column", 
+                            alignItems: "center", 
+                            gap: "0.5rem" 
+                          }}>
+                            <StoreIcon width={24} height={24} style={{ color: "var(--muted)" }} />
+                            <span>{resultType === 'products' ? 'Product' : resultType === 'services' ? 'Service' : 'Shop'} View</span>
+                          </div>
+                        )
+                      })()}
                     </div>
 
-                    {/* Shop Details */}
+                    {/* Item Details */}
                     <div style={{ padding: "0.75rem", position: "relative" }}>
-                      {/* Shop Logo Overlay */}
-                      {shop.logoPath && (
+                      {/* Shop Logo Overlay - only for shops */}
+                      {resultType === 'shops' && item.logoPath && (
                         <div style={{
                           position: "absolute",
                           top: "-30px",
@@ -1003,8 +1250,8 @@ export default function LandingPage() {
                           zIndex: 10
                         }}>
                           <img 
-                            src={getImageUrl(shop.logoPath)} 
-                            alt={`${shop.name} logo`} 
+                            src={getImageUrl(item.logoPath)} 
+                            alt={`${item.name} logo`} 
                             style={{
                               width: "100%",
                               height: "100%",
@@ -1014,7 +1261,7 @@ export default function LandingPage() {
                         </div>
                       )}
                       
-                      {/* Shop Name */}
+                      {/* Item Name */}
                       <h3
                         style={{
                           margin: 0,
@@ -1024,14 +1271,14 @@ export default function LandingPage() {
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
-                          marginLeft: shop.logoPath ? "80px" : "0"
+                          marginLeft: (resultType === 'shops' && item.logoPath) ? "80px" : "0"
                         }}
                       >
-                        {shop.name}
+                        {resultType === 'services' ? item.title : item.name}
                       </h3>
                       
-                      {/* Location */}
-                      {shop.addressLine && (
+                      {/* Location - only for shops */}
+                      {resultType === 'shops' && item.addressLine && (
                         <div
                           style={{
                             display: "flex",
@@ -1044,37 +1291,56 @@ export default function LandingPage() {
                       >
                         <MapPin width={12} height={12} />
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {shop.addressLine}
+                          {item.addressLine}
                         </span>
                       </div>
                     )}
 
-                      {/* Rating - Display shop ratings if available */}
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.25rem",
-                          fontSize: "0.75rem",
-                          color: "var(--muted)",
-                          marginBottom: "0.375rem",
-                        }}
-                      >
-                        <Star width={12} height={12} />
-                        <span style={{ fontWeight: 500 }}>
-                          {shop.averageRating && shop.averageRating > 0 
-                            ? shop.averageRating.toFixed(1) 
-                            : '--'}
-                        </span>
-                        <span>
-                          {shop.reviewCount && shop.reviewCount > 0 
-                            ? `(${shop.reviewCount} reviews)` 
-                            : '(No reviews yet)'}
-                        </span>
-                      </div>
+                      {/* Price - for products and services */}
+                      {(resultType === 'products' || resultType === 'services') && item.price && (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            fontSize: "0.9rem",
+                            color: "var(--primary)",
+                            fontWeight: 600,
+                            marginBottom: "0.375rem",
+                          }}
+                        >
+                          <span>₱{parseFloat(item.price).toFixed(2)}</span>
+                        </div>
+                      )}
 
-                      {/* Distance */}
-                      {(coords || pinnedLocation) && shop.lat && shop.lng && (
+                      {/* Rating - Display ratings if available (mainly for shops) */}
+                      {resultType === 'shops' && (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.25rem",
+                            fontSize: "0.75rem",
+                            color: "var(--muted)",
+                            marginBottom: "0.375rem",
+                          }}
+                        >
+                          <Star width={12} height={12} />
+                          <span style={{ fontWeight: 500 }}>
+                            {item.averageRating && item.averageRating > 0 
+                              ? item.averageRating.toFixed(1) 
+                              : '--'}
+                          </span>
+                          <span>
+                            {item.reviewCount && item.reviewCount > 0 
+                              ? `(${item.reviewCount} reviews)` 
+                              : '(No reviews yet)'}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Distance - only for shops */}
+                      {resultType === 'shops' && (coords || pinnedLocation) && item.lat && item.lng && (
                         <div
                           style={{
                             display: "flex",
@@ -1087,27 +1353,42 @@ export default function LandingPage() {
                         >
                           <MapPin width={12} height={12} style={{ color: "#ec4899" }} />
                           <span>
-                            ~{haversineDistanceKm(pinnedLocation || coords, shop).toFixed(1)} km away
+                            ~{haversineDistanceKm(pinnedLocation || coords, item).toFixed(1)} km away
                           </span>
                         </div>
                       )}
 
                       {/* Category Tags */}
                       <div style={{ display: "flex", gap: "0.375rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
-                        {shop.category && <span className="pill" style={{ fontSize: "0.7rem", padding: "0.2rem 0.4rem" }}>#{shop.category.toLowerCase()}</span>}
-                        {shop.addressLine && <span className="pill" style={{ fontSize: "0.7rem", padding: "0.2rem 0.4rem" }}>#{shop.addressLine.split(',')[0].trim().toLowerCase()}</span>}
+                        {item.category && <span className="pill" style={{ fontSize: "0.7rem", padding: "0.2rem 0.4rem" }}>#{item.category.toLowerCase()}</span>}
+                        {item.mainCategory && <span className="pill" style={{ fontSize: "0.7rem", padding: "0.2rem 0.4rem" }}>#{item.mainCategory.toLowerCase()}</span>}
+                        {/* Removed redundant shop name/location hashtag tag */}
                       </div>
 
-                      {/* View Shop Details Button */}
-                      <Link
-                        to={generateShopUrl(shop.name, shop.id)}
-                        style={{
-                          textDecoration: "none",
-                          color: "inherit",
-                          display: "block",
-                        }}
-
-                      >
+                      {/* View Details Button */}
+                      {resultType === 'shops' ? (
+                        <Link
+                          to={generateShopUrl(item.name, item.id)}
+                          style={{
+                            textDecoration: "none",
+                            color: "inherit",
+                            display: "block",
+                          }}
+                        >
+                          <button
+                            className="btn btn-primary"
+                            style={{
+                              width: "100%",
+                              padding: "0.4rem",
+                              borderRadius: "6px",
+                              fontSize: "0.75rem",
+                              fontWeight: 500,
+                            }}
+                          >
+                            View Shop Details
+                          </button>
+                        </Link>
+                      ) : (
                         <button
                           className="btn btn-primary"
                           style={{
@@ -1117,16 +1398,26 @@ export default function LandingPage() {
                             fontSize: "0.75rem",
                             fontWeight: 500,
                           }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (resultType === 'products') {
+                              console.log('Product details:', item)
+                            } else {
+                              console.log('Service details:', item)
+                            }
+                          }}
                         >
-                          View Shop Details
+                          View {resultType === 'products' ? 'Product' : 'Service'} Details
                         </button>
-                      </Link>
+                      )}
                     </div>
                   </div>
                 ))}
                 
                 {/* Load More Button */}
-                {hasMoreShops && (
+                {((resultType === 'shops' && hasMoreShops) || 
+                  (resultType === 'products' && hasMoreProducts) || 
+                  (resultType === 'services' && hasMoreServices)) && (
                   <div style={{ 
                     gridColumn: '1 / -1', 
                     display: 'flex', 
@@ -1134,7 +1425,7 @@ export default function LandingPage() {
                     padding: '2rem 0' 
                   }}>
                     <button
-                      onClick={loadMoreShops}
+                      onClick={loadMoreData}
                       disabled={loading}
                       className="btn btn-secondary"
                       style={{
@@ -1145,7 +1436,7 @@ export default function LandingPage() {
                         minWidth: '200px'
                       }}
                     >
-                      {loading ? 'Loading...' : 'Load More Shops'}
+                      {loading ? 'Loading...' : `Load More ${resultType === 'products' ? 'Products' : resultType === 'services' ? 'Services' : 'Shops'}`}
                     </button>
                   </div>
                 )}
@@ -1319,22 +1610,25 @@ export default function LandingPage() {
       </div>
       </main>
       
-        <button 
-          className="floating-map-btn" 
-          data-tutorial="mobile-map-btn"
-          onClick={openMapModal} 
-          title="Open map"
-          style={{
-            // Mobile-optimized touch target
-            touchAction: 'manipulation',
-            WebkitTapHighlightColor: 'transparent',
-            // Prevent text selection on mobile
-            WebkitUserSelect: 'none',
-            userSelect: 'none'
-          }}
-        >
-          <MapIcon width="20" height="20" />
-        </button>
+        {isMobile && (
+          <button 
+            className="floating-map-btn" 
+            data-tutorial="mobile-map-btn"
+            onClick={openMapModal} 
+            title="Open map"
+            style={{
+              bottom: showBackToTop ? '5rem' : '1rem',
+              // Mobile-optimized touch target
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
+              // Prevent text selection on mobile
+              WebkitUserSelect: 'none',
+              userSelect: 'none'
+            }}
+          >
+            <MapIcon width="20" height="20" />
+          </button>
+        )}
 
         {isMapModalOpen && (
           <div className="map-modal-overlay" onClick={closeMapModal}>

@@ -119,4 +119,68 @@ export async function resetPasswordRequest({ token, password }) {
   return response.json()
 }
 
+export async function googleLoginRequest({ idToken }) {
+  const response = await fetch(`${API_BASE}/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ idToken })
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || 'Google sign-in failed')
+  }
+  return response.json()
+}
+
+export async function fetchPublicConfig() {
+  const response = await fetch(`${API_BASE}/public/config`, { method: 'GET' })
+  if (!response.ok) return {}
+  return response.json()
+}
+
+export async function getEmailVerificationStatus(token) {
+  const response = await fetch(`${API_BASE}/users/email-verification-status`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  if (!response.ok) {
+    return { emailVerified: false, emailVerifiedAt: null }
+  }
+  return response.json()
+}
+
+export async function sendEmailVerification(token) {
+  const response = await fetch(`${API_BASE}/users/send-email-verification`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || 'Failed to send verification code')
+  }
+  return response.json()
+}
+
+export async function verifyEmailCode(code, token) {
+  const response = await fetch(`${API_BASE}/users/verify-email`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ code })
+  })
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.error || 'Invalid or expired code')
+  }
+  return response.json()
+}
+
 

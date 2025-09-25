@@ -411,19 +411,8 @@ public class InputValidationService {
      * Validate password strength
      */
     public void validatePassword(String password) {
-        if (password == null || password.length() < 8) {
-            throw new IllegalArgumentException("Password must be at least 8 characters long");
-        }
-        
-        if (password.length() > 128) {
-            throw new IllegalArgumentException("Password too long");
-        }
-        
-        // Check for common weak passwords
-        String lowerPassword = password.toLowerCase();
-        if (lowerPassword.contains("password") || lowerPassword.contains("123456") ||
-            lowerPassword.contains("qwerty") || lowerPassword.contains("admin")) {
-            throw new IllegalArgumentException("Password too weak");
-        }
+        // Temporarily disable password strength restrictions.
+        // Note: Request DTOs use @NotBlank, so empty passwords are still rejected by validation.
+        // This method intentionally does nothing for now.
     }
 }

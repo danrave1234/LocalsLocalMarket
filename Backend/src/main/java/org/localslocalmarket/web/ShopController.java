@@ -70,6 +70,9 @@ public class ShopController {
         try {
             // Verify user is authenticated
             User owner = authorizationService.getCurrentUserOrThrow();
+            if (owner.isEmailVerified() == null || !owner.isEmailVerified()) {
+                return ResponseEntity.status(403).body(Map.of("error", "Please verify your email to create a shop"));
+            }
             
             // Validate and sanitize input
             String validatedName = inputValidationService.validateName(req.name());
@@ -105,6 +108,8 @@ public class ShopController {
             s.setInstagram(validatedInstagram);
             s.setTwitter(validatedTwitter);
             s.setBusinessHoursJson(req.businessHoursJson());
+            if (req.offeringType() != null) s.setOfferingType(normalizeOfferingType(req.offeringType()));
+            if (req.showcasePriority() != null) s.setShowcasePriority(normalizeShowcasePriority(req.showcasePriority()));
             
             shops.save(s);
             
@@ -292,7 +297,7 @@ public class ShopController {
                 shop.getAdsEnabled(),
                 shop.getBusinessHoursJson(),
                 shop.getCreatedAt(),
-                shop.getOwner() != null ? shop.getOwner().getId() : null,
+                null, // Avoid lazy-loading owner to prevent LazyInitializationException in paginated listing
                 shop.getIsActive(),
                 avgRating,
                 totalReviews
@@ -333,6 +338,23 @@ public class ShopController {
                 "Specialty & Niche"
             )
         ));
+    }
+
+    @PostMapping("/meta")
+    public ResponseEntity<?> getShopsMeta(@RequestBody java.util.List<Long> shopIds) {
+        if (shopIds == null || shopIds.isEmpty()) {
+            return ResponseEntity.ok(java.util.Collections.emptyList());
+        }
+        var list = shops.findAllById(shopIds).stream()
+                .map(s -> java.util.Map.of(
+                        "id", s.getId(),
+                        "offeringType", s.getOfferingType(),
+                        "showcasePriority", s.getShowcasePriority(),
+                        "logoPath", s.getLogoPath(),
+                        "name", s.getName()
+                ))
+                .toList();
+        return ResponseEntity.ok(list);
     }
 
     @PatchMapping("/{slug}")
@@ -390,6 +412,8 @@ public class ShopController {
                 if(req.adsEnabled() != null) shop.setAdsEnabled(req.adsEnabled());
                 if(req.businessHoursJson() != null) shop.setBusinessHoursJson(req.businessHoursJson());
                 if(req.isActive() != null) shop.setIsActive(req.isActive());
+                if(req.offeringType() != null) shop.setOfferingType(normalizeOfferingType(req.offeringType()));
+                if(req.showcasePriority() != null) shop.setShowcasePriority(normalizeShowcasePriority(req.showcasePriority()));
                 shops.save(shop);
                 
                 // Smart cache invalidation
@@ -405,6 +429,24 @@ public class ShopController {
             auditService.logPermissionDenied("unknown", "/api/shops/" + slug, "UPDATE");
             return ResponseEntity.status(401).body("Unauthorized");
         }
+    }
+
+    private String normalizeOfferingType(String raw) {
+        if (raw == null) return "both";
+        String v = raw.trim().toLowerCase();
+        return switch (v) {
+            case "products", "services", "both" -> v;
+            default -> "both";
+        };
+    }
+
+    private String normalizeShowcasePriority(String raw) {
+        if (raw == null) return "products";
+        String v = raw.trim().toLowerCase();
+        return switch (v) {
+            case "products", "services" -> v;
+            default -> "products";
+        };
     }
 
     @PostMapping("/{slug}/warn")

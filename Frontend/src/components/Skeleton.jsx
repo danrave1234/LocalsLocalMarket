@@ -63,7 +63,7 @@ export const SkeletonShopCard = ({ className = '', style = {} }) => (
     }}
   >
     {/* Shop Image */}
-    <SkeletonBase style={{ height: '120px' }} />
+    <SkeletonBase style={{ height: '160px' }} />
     
     {/* Shop Details */}
     <div style={{ padding: '0.75rem', position: 'relative' }}>
@@ -84,8 +84,8 @@ export const SkeletonShopCard = ({ className = '', style = {} }) => (
       {/* Shop Name */}
       <SkeletonBase
         style={{
-          height: '1rem',
-          marginBottom: '0.375rem',
+          height: '1.1rem',
+          marginBottom: '0.5rem',
           marginLeft: '80px'
         }}
       />
@@ -93,8 +93,8 @@ export const SkeletonShopCard = ({ className = '', style = {} }) => (
       {/* Location */}
       <SkeletonBase
         style={{
-          height: '0.75rem',
-          marginBottom: '0.375rem',
+          height: '0.875rem',
+          marginBottom: '0.5rem',
           width: '80%'
         }}
       />
@@ -102,8 +102,8 @@ export const SkeletonShopCard = ({ className = '', style = {} }) => (
       {/* Rating */}
       <SkeletonBase
         style={{
-          height: '0.75rem',
-          marginBottom: '0.375rem',
+          height: '0.875rem',
+          marginBottom: '0.5rem',
           width: '60%'
         }}
       />
@@ -111,14 +111,14 @@ export const SkeletonShopCard = ({ className = '', style = {} }) => (
       {/* Distance */}
       <SkeletonBase
         style={{
-          height: '0.75rem',
-          marginBottom: '0.5rem',
+          height: '0.875rem',
+          marginBottom: '0.75rem',
           width: '50%'
         }}
       />
 
       {/* Category Tags */}
-      <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '0.5rem' }}>
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
         <SkeletonBase style={{ height: '1.2rem', width: '3rem', borderRadius: '12px' }} />
         <SkeletonBase style={{ height: '1.2rem', width: '3rem', borderRadius: '12px' }} />
         <SkeletonBase style={{ height: '1.2rem', width: '4rem', borderRadius: '12px' }} />
@@ -127,8 +127,8 @@ export const SkeletonShopCard = ({ className = '', style = {} }) => (
       {/* Button */}
       <SkeletonBase
         style={{
-          height: '2rem',
-          borderRadius: '6px'
+          height: '2.25rem',
+          borderRadius: '8px'
         }}
       />
     </div>
@@ -281,6 +281,46 @@ export const SkeletonPage = ({ className = '', style = {} }) => (
     
     {/* Content */}
     <SkeletonGrid items={6} columns={3} />
+  </div>
+)
+
+// Seller Dashboard skeleton
+export const SkeletonSellerDashboard = ({ className = '', style = {} }) => (
+  <div className={className} style={{ padding: '2rem 0', ...style }}>
+    {/* Header */}
+    <div className="dashboard-header">
+      <div className="dashboard-header-content">
+        <div>
+          <SkeletonBase style={{ height: '2rem', width: '200px', marginBottom: '0.5rem', borderRadius: '8px' }} />
+          <SkeletonBase style={{ height: '1rem', width: '300px', borderRadius: '8px' }} />
+        </div>
+        <SkeletonButton width="180px" height="2.75rem" />
+      </div>
+    </div>
+
+    {/* Shops grid */}
+    <div className="shops-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="shop-card" style={{ padding: 0, overflow: 'hidden', borderRadius: '12px' }}>
+          {/* Cover */}
+          <SkeletonBase style={{ height: '160px' }} />
+          <div style={{ padding: '1rem' }}>
+            {/* Title */}
+            <SkeletonBase style={{ height: '1.25rem', width: '70%', marginBottom: '0.5rem', borderRadius: '6px' }} />
+            {/* Description */}
+            <SkeletonText lines={2} height="0.9rem" style={{ marginBottom: '0.75rem' }} />
+            {/* Address */}
+            <SkeletonBase style={{ height: '0.9rem', width: '60%', marginBottom: '0.75rem', borderRadius: '6px' }} />
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <SkeletonButton width="110px" height="2.25rem" />
+              <SkeletonButton width="120px" height="2.25rem" />
+              <SkeletonButton width="80px" height="2.25rem" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   </div>
 )
 

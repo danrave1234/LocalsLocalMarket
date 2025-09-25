@@ -36,7 +36,8 @@ export default function ShopCreatePage() {
   const [form, setForm] = useState({
     name: '', description: '', category: '', addressLine: '', phone: '', website: '', email: '',
     facebook: '', instagram: '', twitter: '', lat: 10.3157, lng: 123.8854, logoPath: '', coverPath: '',
-    adsEnabled: false, adsImagePathsJson: '[]', businessHoursJson: ''
+    adsEnabled: false, adsImagePathsJson: '[]', businessHoursJson: '',
+    offeringType: 'both', showcasePriority: 'products'
   })
   const [addressLoading, setAddressLoading] = useState(false)
 
@@ -66,7 +67,8 @@ export default function ShopCreatePage() {
         name: form.name, description: form.description, category: form.category, addressLine: form.addressLine,
         phone: form.phone, website: form.website, email: form.email, facebook: form.facebook, instagram: form.instagram, twitter: form.twitter,
         lat: form.lat === '' ? null : Number(form.lat), lng: form.lng === '' ? null : Number(form.lng), logoPath: form.logoPath, coverPath: form.coverPath,
-        adsEnabled: !!form.adsEnabled, adsImagePathsJson: form.adsImagePathsJson, businessHoursJson: form.businessHoursJson
+        adsEnabled: !!form.adsEnabled, adsImagePathsJson: form.adsImagePathsJson, businessHoursJson: form.businessHoursJson,
+        offeringType: form.offeringType, showcasePriority: form.showcasePriority
       }
       const createdShop = await createShopRequest(payload, token)
       navigate('/dashboard')
@@ -187,6 +189,46 @@ export default function ShopCreatePage() {
                     <span>This description will be visible to customers browsing your shop</span>
                   </div>
                 </div>
+
+                {/* Shop Offering */}
+                <div className="form-group">
+                  <label className="form-label">
+                    <span className="label-text">Shop Offering</span>
+                  </label>
+                  <div className="radio-group">
+                    <label className="radio">
+                      <input type="radio" name="offeringType" checked={form.offeringType === 'products'} onChange={() => setForm({ ...form, offeringType: 'products' })} />
+                      <span>Products only</span>
+                    </label>
+                    <label className="radio">
+                      <input type="radio" name="offeringType" checked={form.offeringType === 'services'} onChange={() => setForm({ ...form, offeringType: 'services' })} />
+                      <span>Services only</span>
+                    </label>
+                    <label className="radio">
+                      <input type="radio" name="offeringType" checked={form.offeringType === 'both'} onChange={() => setForm({ ...form, offeringType: 'both' })} />
+                      <span>Both</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Showcase Priority (only when both) */}
+                {form.offeringType === 'both' && (
+                  <div className="form-group">
+                    <label className="form-label">
+                      <span className="label-text">Showcase Priority</span>
+                    </label>
+                    <div className="radio-group">
+                      <label className="radio">
+                        <input type="radio" name="showcasePriority" checked={form.showcasePriority === 'products'} onChange={() => setForm({ ...form, showcasePriority: 'products' })} />
+                        <span>Show Products first</span>
+                      </label>
+                      <label className="radio">
+                        <input type="radio" name="showcasePriority" checked={form.showcasePriority === 'services'} onChange={() => setForm({ ...form, showcasePriority: 'services' })} />
+                        <span>Show Services first</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

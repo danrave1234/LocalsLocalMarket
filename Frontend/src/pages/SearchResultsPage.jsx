@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { fetchShops } from '../api/shops.js'
+import { fetchShops, fetchShopById, fetchShopsMeta } from '../api/shops.js'
 import { fetchProducts } from '../api/products.js'
 import { searchServices } from '../api/services.js'
 
@@ -40,6 +40,12 @@ export default function SearchResultsPage() {
     }
 
     const load = async () => {
+      const shopMetaCache = new Map()
+      const getShopMeta = async (sid) => {
+        if (!sid) return null
+        if (shopMetaCache.has(sid)) return shopMetaCache.get(sid)
+        return null
+      }
       setLoading(true)
       setError('')
       try {
@@ -51,14 +57,53 @@ export default function SearchResultsPage() {
           setHasMore((resp?.content?.length || 0) === PAGE_SIZE)
         } else if (activeTab === 'products') {
           const resp = await fetchProducts({ q: query, page, size: PAGE_SIZE })
-          const content = resp?.content || resp || []
-          setResults(Array.isArray(content) ? content : [])
+          let content = resp?.content || resp || []
+          content = Array.isArray(content) ? content : []
+          // Attempt to sort by each product's shop showcase priority when available
+          // Note: assumes each product has shopId; fallback to current order if not resolvable
+          // Batch prefetch meta for unique shopIds
+          const productShopIds = Array.from(new Set(content.map(p => p.shopId || p.shop?.id).filter(Boolean)))
+          if (productShopIds.length) {
+            try {
+              const metas = await fetchShopsMeta(productShopIds)
+              metas.forEach(m => shopMetaCache.set(m.id, m))
+            } catch {}
+          }
+          const withPriority = await Promise.all(content.map(async (p) => {
+            const sid = p.shopId || p.shop?.id
+            if (!sid) return { item: p, priority: 0 }
+            try {
+              const shopMeta = shopMetaCache.get(sid)
+              const pr = (shopMeta?.showcasePriority || 'products') === 'products' ? 1 : 0
+              return { item: p, priority: pr }
+            } catch { return { item: p, priority: 0 } }
+          }))
+          withPriority.sort((a, b) => b.priority - a.priority)
+          setResults(withPriority.map(x => x.item))
           setHasMore((resp?.content?.length || 0) === PAGE_SIZE)
         } else {
           // services
           const resp = await searchServices({ q: query, page, size: PAGE_SIZE })
-          const content = resp?.content || resp || []
-          setResults(Array.isArray(content) ? content : [])
+          let content = resp?.content || resp || []
+          content = Array.isArray(content) ? content : []
+          const serviceShopIds = Array.from(new Set(content.map(s => s.shopId || s.shop?.id).filter(Boolean)))
+          if (serviceShopIds.length) {
+            try {
+              const metas = await fetchShopsMeta(serviceShopIds)
+              metas.forEach(m => shopMetaCache.set(m.id, m))
+            } catch {}
+          }
+          const withPriority = await Promise.all(content.map(async (s) => {
+            const sid = s.shopId || s.shop?.id
+            if (!sid) return { item: s, priority: 0 }
+            try {
+              const shopMeta = shopMetaCache.get(sid)
+              const pr = (shopMeta?.showcasePriority || 'products') === 'services' ? 1 : 0
+              return { item: s, priority: pr }
+            } catch { return { item: s, priority: 0 } }
+          }))
+          withPriority.sort((a, b) => b.priority - a.priority)
+          setResults(withPriority.map(x => x.item))
           setHasMore((resp?.content?.length || 0) === PAGE_SIZE)
         }
       } catch (e) {
@@ -114,12 +159,33 @@ export default function SearchResultsPage() {
 
       {!loading && !error && (
         <ul className="list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
-          {results.map((item) => (
-            <li key={item.id || item.slug || (item.title + Math.random())} className="card" style={{ padding: '1rem' }}>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>{item.name || item.title}</div>
-              {item.description && <div className="muted" style={{ fontSize: 14 }}>{item.description}</div>}
-            </li>
-          ))}
+          {results.map((item) => {
+            const isProduct = !!item.price && (activeTab === 'products')
+            const isService = !!item.price && (activeTab === 'services')
+            const shop = item.shop || {}
+            const shopLogo = shop.logoPath
+            const pref = (shop.showcasePriority || '').toLowerCase()
+            const prefLabel = pref === 'services' ? 'Prefers Services' : (pref === 'products' ? 'Prefers Products' : '')
+            return (
+              <li key={item.id || item.slug || (item.title + Math.random())} className="card" style={{ padding: '1rem' }}>
+                {isProduct || isService ? (
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    {shopLogo ? (
+                      <img src={shopLogo} alt={shop.name || 'Shop'} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--border)' }} />
+                    )}
+                    <div style={{ fontWeight: 600 }}>{shop.name || 'Shop'}</div>
+                    {prefLabel && (
+                      <span className="chip" style={{ marginLeft: 'auto' }}>{prefLabel}</span>
+                    )}
+                  </div>
+                ) : null}
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>{item.name || item.title}</div>
+                {item.description && <div className="muted" style={{ fontSize: 14 }}>{item.description}</div>}
+              </li>
+            )
+          })}
         </ul>
       )}
 

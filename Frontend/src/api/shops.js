@@ -19,27 +19,23 @@ export async function fetchPaginatedShopsWithRatings(page = 0, size = 20) {
     const params = new URLSearchParams()
     params.set('page', page)
     params.set('size', size)
-    
     return api.get(`/shops/paginated-with-ratings?${params.toString()}`)
 }
 
 export async function fetchShopById(id) {
     try {
-        const result = await api.get(`/shops/${id}`)
-        return result
+        return api.get(`/shops/${id}`)
     } catch (error) {
         throw error
     }
 }
 
-
-
-
-export async function createShopRequest(shopData, token) {
+// Authenticated endpoints used by dashboard pages
+export async function createShop(shopData, token) {
     return api.post('/shops', shopData, { token })
 }
 
-export async function getUserShopsRequest(token) {
+export async function getUserShopsApi(token) {
     return api.get('/shops/my-shops', { token })
 }
 
@@ -47,7 +43,7 @@ export async function getShopRequest(id) {
     return api.get(`/shops/${id}`)
 }
 
-export async function updateShopRequest(id, shopData, token) {
+export async function updateShop(id, shopData, token) {
     return api.patch(`/shops/${id}`, shopData, { token })
 }
 
@@ -62,6 +58,18 @@ export async function fetchCategories() {
 // Admin-only: update shop active status by slug
 export async function updateShopStatusBySlug(slug, isActive) {
     return api.patch(`/shops/${slug}/status`, { isActive })
+}
+
+// Batch fetch shop meta for multiple IDs
+export async function fetchShopsMeta(shopIds = []) {
+    return api.post('/shops/meta', shopIds)
+}
+
+// Backward-compatible aliases for older import names used across pages
+export {
+    createShop as createShopRequest,
+    getUserShopsApi as getUserShopsRequest,
+    updateShop as updateShopRequest
 }
 
 

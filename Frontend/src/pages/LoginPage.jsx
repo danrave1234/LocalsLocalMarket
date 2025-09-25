@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ResponsiveAd } from '../components/GoogleAds.jsx'
-import { forgotPasswordRequest } from '../api/auth.js'
+import { forgotPasswordRequest, fetchPublicConfig } from '../api/auth.js'
 import Modal from '../components/Modal.jsx'
 import '../auth.css'
 
@@ -15,7 +15,8 @@ export default function LoginPage() {
     const [showForgotPassword, setShowForgotPassword] = useState(false)
     const [forgotPasswordMessage, setForgotPasswordMessage] = useState('')
     const [isLoading, setIsLoading] = useState(false)
-    const { login } = useAuth()
+    const { login, loginWithGoogle } = useAuth()
+    const googleBtnRef = useRef(null)
     const navigate = useNavigate()
     const location = useLocation()
 
@@ -31,6 +32,49 @@ export default function LoginPage() {
             setError(err?.data?.message || err.message || 'Login failed')
         }
     }
+
+    useEffect(() => {
+        if (!googleBtnRef.current) return
+        try {
+            const init = async () => {
+                const envClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+                let clientId = envClientId
+                if (!clientId) {
+                    try {
+                        const conf = await fetchPublicConfig()
+                        clientId = conf.googleClientId || ''
+                    } catch {}
+                }
+                if (!window.google || !clientId) return
+                /* global google */
+                window.google.accounts.id.initialize({
+                    client_id: clientId,
+                    callback: async (response) => {
+                    try {
+                        const cred = response.credential
+                        if (!cred) return
+                        await loginWithGoogle(cred)
+                        const from = location.state?.from?.pathname || '/'
+                        navigate(from, { replace: true })
+                    } catch (err) {
+                        setError(err?.message || 'Google sign-in failed')
+                    }
+                    }
+                })
+                window.google.accounts.id.renderButton(googleBtnRef.current, { 
+                theme: 'filled_black', 
+                size: 'large', 
+                shape: 'pill',
+                text: 'continue_with',
+                logo_alignment: 'left',
+                width: 360 
+                })
+            }
+            init()
+        } catch (e) {
+            // ignore
+        }
+    }, [loginWithGoogle])
 
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword)
@@ -161,6 +205,13 @@ export default function LoginPage() {
                             Sign In
                         </button>
                     </form>
+
+                    <div className="oauth-divider">
+                        <span>Or continue with</span>
+                    </div>
+                    <div className="oauth-buttons">
+                        <div ref={googleBtnRef} aria-label="Sign in with Google"></div>
+                    </div>
                     
                     <div className="auth-footer">
                         <p className="auth-link-text">

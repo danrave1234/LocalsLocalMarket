@@ -1,14 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Modal from '../components/Modal.jsx'
 import { ResponsiveAd } from '../components/GoogleAds.jsx'
 import { SkeletonText, SkeletonAvatar, SkeletonButton, SkeletonForm } from '../components/Skeleton.jsx'
 import '../profile.css'
+import { getEmailVerificationStatus, sendEmailVerification, verifyEmailCode } from '../api/auth.js'
 
 export default function ProfilePage() {
-  const { user, updateProfile, changePassword } = useAuth()
+  const { user, updateProfile, changePassword, token } = useAuth()
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [showEditProfile, setShowEditProfile] = useState(false)
+  const [showVerifyModal, setShowVerifyModal] = useState(false)
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -21,6 +25,80 @@ export default function ProfilePage() {
   const [passwordSuccess, setPasswordSuccess] = useState('')
   const [profileError, setProfileError] = useState('')
   const [profileSuccess, setProfileSuccess] = useState('')
+  const [verStatus, setVerStatus] = useState({ emailVerified: !!user?.emailVerified, emailVerifiedAt: user?.emailVerifiedAt || null })
+  const [verCodeDigits, setVerCodeDigits] = useState(['', '', '', '', '', ''])
+  const [verMsg, setVerMsg] = useState('')
+  const [cooldown, setCooldown] = useState(0)
+
+  useEffect(() => {
+    if (!cooldown) return
+    const t = setInterval(() => setCooldown((s) => (s > 0 ? s - 1 : 0)), 1000)
+    return () => clearInterval(t)
+  }, [cooldown])
+
+  const codeString = verCodeDigits.join('')
+  const inputRefs = Array.from({ length: 6 }, () => ({ current: null }))
+
+  const handleDigitChange = (idx, val) => {
+    const d = val.replace(/\D/g, '').slice(0, 1)
+    setVerMsg('')
+    setVerCodeDigits((prev) => {
+      const next = [...prev]
+      next[idx] = d
+      return next
+    })
+    // focus next
+    if (d && idx < 5 && inputRefs[idx + 1].current) {
+      inputRefs[idx + 1].current.focus()
+    }
+  }
+
+  const handleDigitKeyDown = (idx, e) => {
+    if (e.key === 'Backspace' && !verCodeDigits[idx] && idx > 0) {
+      if (inputRefs[idx - 1].current) inputRefs[idx - 1].current.focus()
+    }
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowUp') && idx > 0) {
+      e.preventDefault(); if (inputRefs[idx - 1].current) inputRefs[idx - 1].current.focus()
+    }
+    if ((e.key === 'ArrowRight' || e.key === 'ArrowDown') && idx < 5) {
+      e.preventDefault(); if (inputRefs[idx + 1].current) inputRefs[idx + 1].current.focus()
+    }
+  }
+
+  const handlePaste = (e) => {
+    const text = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6)
+    if (!text) return
+    e.preventDefault()
+    const arr = text.split('')
+    setVerCodeDigits(['', '', '', '', '', ''].map((_, i) => arr[i] || ''))
+  }
+
+  useEffect(() => {
+    if (codeString.length === 6) {
+      (async () => {
+        setVerMsg('')
+        try {
+          await verifyEmailCode(codeString, token)
+          setVerMsg('Email verified successfully!')
+          setVerStatus({ emailVerified: true, emailVerifiedAt: new Date().toISOString() })
+        } catch (e) {
+          setVerMsg(e.message || 'Invalid or expired code')
+        }
+      })()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codeString])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        if (!token) return
+        const s = await getEmailVerificationStatus(token)
+        setVerStatus({ emailVerified: !!s.emailVerified, emailVerifiedAt: s.emailVerifiedAt || null })
+      } catch {}
+    }
+    load()
+  }, [token])
 
   const handlePasswordChange = (e) => {
     setPasswordData({
@@ -44,6 +122,7 @@ export default function ProfilePage() {
     e.preventDefault()
     setPasswordError('')
     setPasswordSuccess('')
+    if (isChangingPassword) return
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setPasswordError('New passwords do not match.')
@@ -55,6 +134,7 @@ export default function ProfilePage() {
       return
     }
 
+    setIsChangingPassword(true)
     try {
       await changePassword(passwordData.currentPassword, passwordData.newPassword)
       setPasswordSuccess('Password changed successfully!')
@@ -66,6 +146,8 @@ export default function ProfilePage() {
       setShowChangePassword(false)
     } catch (error) {
       setPasswordError(error.message || 'Failed to change password.')
+    } finally {
+      setIsChangingPassword(false)
     }
   }
 
@@ -73,18 +155,22 @@ export default function ProfilePage() {
     e.preventDefault()
     setProfileError('')
     setProfileSuccess('')
+    if (isUpdatingProfile) return
 
     if (!profileData.name.trim()) {
       setProfileError('Name is required.')
       return
     }
 
+    setIsUpdatingProfile(true)
     try {
       await updateProfile(profileData)
       setProfileSuccess('Profile updated successfully!')
       setShowEditProfile(false)
     } catch (error) {
       setProfileError(error.message || 'Failed to update profile.')
+    } finally {
+      setIsUpdatingProfile(false)
     }
   }
 
@@ -125,13 +211,24 @@ export default function ProfilePage() {
               <h1 className="profile-name">{user.name}</h1>
               <p className="profile-email">{user.email}</p>
               <div className="profile-status">
-                <span className="status-badge">
+              {verStatus.emailVerified ? (
+                <span className="status-badge verified">
                   <svg className="status-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
                     <path d="M9 12L11 14L15 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  Active Account
+                  Email Verified
                 </span>
+              ) : (
+                <button className="status-badge action" onClick={() => setShowVerifyModal(true)}>
+                  <svg className="status-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                    <path d="M12 7V13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="12" cy="17" r="1" fill="currentColor"/>
+                  </svg>
+                  Verify Email
+                </button>
+              )}
               </div>
             </div>
           </div>
@@ -296,7 +393,7 @@ export default function ProfilePage() {
         title="Change Password"
         size="medium"
       >
-        <form onSubmit={handlePasswordSubmit} className="modal-form">
+        <form onSubmit={handlePasswordSubmit} className="modal-form" aria-busy={isChangingPassword}>
           <div className="form-group">
             <label htmlFor="currentPassword" className="form-label">Current Password</label>
             <input
@@ -308,6 +405,7 @@ export default function ProfilePage() {
               onChange={handlePasswordChange}
               required
               autoComplete="current-password"
+              disabled={isChangingPassword}
             />
           </div>
           <div className="form-group">
@@ -321,6 +419,7 @@ export default function ProfilePage() {
               onChange={handlePasswordChange}
               required
               autoComplete="new-password"
+              disabled={isChangingPassword}
             />
           </div>
           <div className="form-group">
@@ -334,6 +433,7 @@ export default function ProfilePage() {
               onChange={handlePasswordChange}
               required
               autoComplete="new-password"
+              disabled={isChangingPassword}
             />
           </div>
           {passwordError && (
@@ -355,7 +455,9 @@ export default function ProfilePage() {
             </div>
           )}
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary">Update Password</button>
+            <button type="submit" className="btn btn-primary" disabled={isChangingPassword} aria-disabled={isChangingPassword}>
+              {isChangingPassword ? 'Updating...' : 'Update Password'}
+            </button>
             <button 
               type="button" 
               className="btn cancel-btn" 
@@ -365,6 +467,7 @@ export default function ProfilePage() {
                 setPasswordError('')
                 setPasswordSuccess('')
               }}
+              disabled={isChangingPassword}
             >
               Cancel
             </button>
@@ -384,7 +487,7 @@ export default function ProfilePage() {
         title="Edit Profile"
         size="medium"
       >
-        <form onSubmit={handleProfileSubmit} className="modal-form">
+        <form onSubmit={handleProfileSubmit} className="modal-form" aria-busy={isUpdatingProfile}>
           <div className="form-group">
             <label htmlFor="name" className="form-label">Full Name</label>
             <input
@@ -396,6 +499,7 @@ export default function ProfilePage() {
               onChange={handleProfileChange}
               required
               autoComplete="name"
+              disabled={isUpdatingProfile}
             />
           </div>
           {profileError && (
@@ -417,7 +521,9 @@ export default function ProfilePage() {
             </div>
           )}
           <div className="form-actions">
-            <button type="submit" className="btn btn-primary">Update Profile</button>
+            <button type="submit" className="btn btn-primary" disabled={isUpdatingProfile} aria-disabled={isUpdatingProfile}>
+              {isUpdatingProfile ? 'Updating...' : 'Update Profile'}
+            </button>
             <button 
               type="button" 
               className="btn cancel-btn" 
@@ -427,11 +533,76 @@ export default function ProfilePage() {
                 setProfileError('')
                 setProfileSuccess('')
               }}
+              disabled={isUpdatingProfile}
             >
               Cancel
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Verify Email Modal */}
+      <Modal
+        isOpen={showVerifyModal}
+        onClose={() => { setShowVerifyModal(false); setVerMsg(''); setVerCode('') }}
+        title="Verify Email"
+        size="small"
+      >
+        <div className="modal-form">
+          <p style={{ marginBottom: '0.75rem' }}>
+            We’ll send a 6-digit code to <strong>{user.email}</strong>. Enter it below to verify your email.
+          </p>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <button className="btn btn-tonal" disabled={cooldown > 0} onClick={async () => {
+              setVerMsg('')
+              try {
+                await sendEmailVerification(token)
+                setVerMsg('Verification code sent. Please check your inbox.')
+                setCooldown(90)
+              } catch (e) {
+                setVerMsg(e.message || 'Failed to send code')
+              }
+            }}>{cooldown > 0 ? `Resend in ${cooldown}s` : 'Send Code'}</button>
+          </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="ver-code-0">Enter Code</label>
+            <div className="otp-inputs" style={{justifyContent:'center'}} onPaste={handlePaste}>
+              {verCodeDigits.map((digit, i) => (
+                <input
+                  key={i}
+                  id={`ver-code-${i}`}
+                  ref={(el) => (inputRefs[i].current = el)}
+                  className="otp-cell"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleDigitChange(i, e.target.value)}
+                  onKeyDown={(e) => handleDigitKeyDown(i, e)}
+                />
+              ))}
+            </div>
+          </div>
+          {verMsg && (
+            <div className="message" role="status" style={{ marginTop: '0.5rem' }}>{verMsg}</div>
+          )}
+          <div className="form-actions">
+            <button className="btn btn-tonal" onClick={async () => {
+              setVerMsg('')
+              try {
+                const code = codeString
+                if (!code || code.length !== 6) { setVerMsg('Enter the 6-digit code.'); return }
+                await verifyEmailCode(code, token)
+                setVerMsg('Email verified successfully!')
+                setVerStatus({ emailVerified: true, emailVerifiedAt: new Date().toISOString() })
+              } catch (e) {
+                setVerMsg(e.message || 'Invalid or expired code')
+              }
+            }}>Verify</button>
+            <button className="btn cancel-btn" onClick={() => setShowVerifyModal(false)}>Close</button>
+          </div>
+        </div>
       </Modal>
 
       {/* Bottom ad */}

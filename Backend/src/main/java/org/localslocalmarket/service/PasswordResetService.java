@@ -12,6 +12,7 @@ public class PasswordResetService {
     
     // In-memory storage for reset tokens (in production, use Redis or database)
     private final Map<String, TokenInfo> tokenStore = new ConcurrentHashMap<>();
+    private final Map<String, TokenInfo> emailVerificationStore = new ConcurrentHashMap<>();
     
     public static class TokenInfo {
         private final String email;
@@ -39,6 +40,30 @@ public class PasswordResetService {
         tokenStore.put(token, new TokenInfo(email, expiresAt));
         
         return token;
+    }
+
+    public String generateEmailVerificationCode(String email) {
+        // Clean up expired codes
+        emailVerificationStore.entrySet().removeIf(entry -> entry.getValue().isExpired());
+        // 6-digit code
+        String code = String.format("%06d", (int)(Math.random() * 1_000_000));
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(10);
+        emailVerificationStore.put(code, new TokenInfo(email, expiresAt));
+        return code;
+    }
+
+    public String validateEmailVerificationCode(String code) {
+        TokenInfo info = emailVerificationStore.get(code);
+        if (info == null) throw new IllegalArgumentException("Invalid verification code");
+        if (info.isExpired()) {
+            emailVerificationStore.remove(code);
+            throw new IllegalArgumentException("Verification code has expired");
+        }
+        return info.getEmail();
+    }
+
+    public void invalidateEmailVerificationCode(String code) {
+        emailVerificationStore.remove(code);
     }
     
     public String validateAndGetEmail(String token) {

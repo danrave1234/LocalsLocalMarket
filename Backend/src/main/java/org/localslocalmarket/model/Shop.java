@@ -72,6 +72,13 @@ public class Shop {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 
+    // Offering configuration
+    @Column(name = "offering_type", nullable = false)
+    private String offeringType = "both"; // products | services | both
+
+    @Column(name = "showcase_priority", nullable = false)
+    private String showcasePriority = "products"; // products | services
+
     public Shop() {}
 
     public Long getId() {
@@ -149,6 +156,9 @@ public class Shop {
 
     public Boolean getIsActive() { return isActive != null ? isActive : true; }
 
+    public String getOfferingType() { return offeringType; }
+    public String getShowcasePriority() { return showcasePriority; }
+
     // Setters for controller usage
     public void setOwner(User owner) { this.owner = owner; }
     public void setName(String name) { this.name = name; }
@@ -169,6 +179,8 @@ public class Shop {
     public void setAdsEnabled(Boolean adsEnabled) { this.adsEnabled = adsEnabled; }
     public void setBusinessHoursJson(String businessHoursJson) { this.businessHoursJson = businessHoursJson; }
     public void setIsActive(Boolean active) { this.isActive = active; }
+    public void setOfferingType(String offeringType) { this.offeringType = offeringType; }
+    public void setShowcasePriority(String showcasePriority) { this.showcasePriority = showcasePriority; }
 
     @PrePersist
     void prePersist(){
@@ -180,6 +192,12 @@ public class Shop {
         }
         if(isActive == null){
             isActive = true;
+        }
+        if(offeringType == null){
+            offeringType = "both";
+        }
+        if(showcasePriority == null){
+            showcasePriority = "products";
         }
     }
 }

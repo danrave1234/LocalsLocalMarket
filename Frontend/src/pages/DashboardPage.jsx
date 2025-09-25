@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowUp, MapPin, Image } from 'lucide-react'
+import { ArrowUp, MapPin, Image, HelpCircle } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useTutorial } from '../contexts/TutorialContext.jsx'
 import { dashboardTutorialSteps } from '../components/TutorialSteps.js'
 import Modal from '../components/Modal.jsx'
 import CategorySelector from '../components/CategorySelector.jsx'
 import LocationMap from '../components/LocationMap.jsx'
-import { SkeletonText } from '../components/Skeleton.jsx'
+import { SkeletonText, SkeletonSellerDashboard } from '../components/Skeleton.jsx'
 import { LoadingSpinner, LoadingOverlay, LoadingButton } from '../components/Loading.jsx'
 import { 
     getUserShopsRequest as fetchUserShopsApi, 
@@ -40,7 +40,7 @@ function StoreIcon(props) {
 
 export default function DashboardPage() {
     const { user, token } = useAuth()
-    const { setTutorialSteps, isTutorialActive } = useTutorial()
+    const { setTutorialSteps, isTutorialActive, shouldPrompt, startTutorial, tutorialCompleted } = useTutorial()
     const [shops, setShops] = useState([])
     const [showCreateShop, setShowCreateShop] = useState(false)
     const [showEditShop, setShowEditShop] = useState(false)
@@ -260,7 +260,9 @@ export default function DashboardPage() {
                     mainCategory: shopForm.mainCategory,
                     subcategory: shopForm.subcategory,
                     customCategory: shopForm.customCategory
-                })
+                }),
+                offeringType: shopForm.offeringType || 'both',
+                showcasePriority: shopForm.showcasePriority || 'products'
             }
             
             const updatedShop = await updateShop(editingShop.id, shopData, token)
@@ -322,7 +324,9 @@ export default function DashboardPage() {
             lng: shop.lng || 123.8854,
             logoPath: shop.logoPath || '',
             coverPath: shop.coverPath || '',
-            businessHoursJson: shop.businessHoursJson || ''
+            businessHoursJson: shop.businessHoursJson || '',
+            offeringType: (shop.offeringType || 'both'),
+            showcasePriority: (shop.showcasePriority || 'products')
         })
         setShowEditShop(true)
     }
@@ -375,30 +379,7 @@ export default function DashboardPage() {
     if (loading) {
         return (
             <main className="container seller-dashboard-container">
-                <div className="dashboard-header">
-                    <div className="dashboard-header-content">
-                        <div>
-                            <SkeletonText lines={1} height="2rem" style={{ marginBottom: '0.5rem' }} />
-                            <SkeletonText lines={1} height="1rem" style={{ width: '60%' }} />
-                        </div>
-                        <SkeletonText lines={1} height="3rem" style={{ width: '200px' }} />
-                    </div>
-                </div>
-
-                <div className="shops-grid">
-                    {[1, 2, 3].map((i) => (
-                        <div key={i} className="shop-card skeleton">
-                            <SkeletonText lines={1} height="160px" style={{ marginBottom: '1rem' }} />
-                            <SkeletonText lines={1} height="1.5rem" style={{ marginBottom: '0.5rem' }} />
-                            <SkeletonText lines={2} height="1rem" style={{ marginBottom: '1rem' }} />
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <SkeletonText lines={1} height="2.5rem" style={{ width: '80px' }} />
-                                <SkeletonText lines={1} height="2.5rem" style={{ width: '80px' }} />
-                                <SkeletonText lines={1} height="2.5rem" style={{ width: '80px' }} />
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                <SkeletonSellerDashboard />
             </main>
         )
     }
@@ -413,6 +394,18 @@ export default function DashboardPage() {
                         <p className="dashboard-subtitle">
                             Manage your shops and products
                         </p>
+                        {(!isTutorialActive && (!tutorialCompleted || shouldPrompt)) && (
+                          <button 
+                            className="seller-btn seller-btn-secondary seller-btn-sm"
+                            onClick={() => startTutorial()}
+                            style={{ marginTop: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                            data-tutorial="dashboard-tutorial-indicator"
+                            aria-label="Start dashboard tutorial"
+                          >
+                            <HelpCircle size={16} />
+                            Take a quick tour
+                          </button>
+                        )}
                     </div>
                     <button 
                         className="seller-btn seller-btn-primary create-shop-btn"
@@ -1167,6 +1160,66 @@ export default function DashboardPage() {
                                     style={{ resize: 'vertical' }}
                                 />
                             </div>
+
+                            {/* Shop Offering & Showcase Priority */}
+                            <div className="form-group">
+                                <label className="form-label">Shop Offering</label>
+                                <div className="radio-group">
+                                    <label className="radio">
+                                        <input
+                                            type="radio"
+                                            name="offeringType"
+                                            checked={(shopForm.offeringType || 'both') === 'products'}
+                                            onChange={() => setShopForm({ ...shopForm, offeringType: 'products' })}
+                                        />
+                                        <span>Products only</span>
+                                    </label>
+                                    <label className="radio">
+                                        <input
+                                            type="radio"
+                                            name="offeringType"
+                                            checked={(shopForm.offeringType || 'both') === 'services'}
+                                            onChange={() => setShopForm({ ...shopForm, offeringType: 'services' })}
+                                        />
+                                        <span>Services only</span>
+                                    </label>
+                                    <label className="radio">
+                                        <input
+                                            type="radio"
+                                            name="offeringType"
+                                            checked={(shopForm.offeringType || 'both') === 'both'}
+                                            onChange={() => setShopForm({ ...shopForm, offeringType: 'both' })}
+                                        />
+                                        <span>Both</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {(shopForm.offeringType || 'both') === 'both' && (
+                                <div className="form-group">
+                                    <label className="form-label">Showcase Priority</label>
+                                    <div className="radio-group">
+                                        <label className="radio">
+                                            <input
+                                                type="radio"
+                                                name="showcasePriority"
+                                                checked={(shopForm.showcasePriority || 'products') === 'products'}
+                                                onChange={() => setShopForm({ ...shopForm, showcasePriority: 'products' })}
+                                            />
+                                            <span>Show Products first</span>
+                                        </label>
+                                        <label className="radio">
+                                            <input
+                                                type="radio"
+                                                name="showcasePriority"
+                                                checked={(shopForm.showcasePriority || 'products') === 'services'}
+                                                onChange={() => setShopForm({ ...shopForm, showcasePriority: 'services' })}
+                                            />
+                                            <span>Show Services first</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="form-group">
                                 <label htmlFor="editShopPhone" className="form-label">

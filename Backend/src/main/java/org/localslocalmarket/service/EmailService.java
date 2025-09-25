@@ -1,5 +1,8 @@
 package org.localslocalmarket.service;
 
+import java.math.RoundingMode;
+import java.util.stream.Collectors;
+
 import org.localslocalmarket.model.Shop;
 import org.localslocalmarket.web.dto.OrderDtos.OrderRequestDto;
 import org.slf4j.Logger;
@@ -9,10 +12,10 @@ import org.springframework.lang.NonNull;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import java.math.RoundingMode;
-import java.util.stream.Collectors;
+import jakarta.mail.internet.MimeMessage;
 
 @Service
 public class EmailService {
@@ -101,6 +104,58 @@ public class EmailService {
             mailSender.send(msg);
         } catch (Exception e) {
             log.warn("Failed to send password reset email to {}: {}", email, e.getMessage());
+        }
+    }
+
+    @Value("${llm.seo.site.url:https://www.localslocalmarket.com}")
+    private String siteUrl;
+    @Value("${llm.brand.logo-path:/LogoWithBG.svg}")
+    private String brandLogoPath;
+
+    public void sendEmailVerificationCode(String email, String code, String name) {
+        try {
+            MimeMessage mime = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mime, "UTF-8");
+            helper.setTo(email);
+            helper.setFrom(resolveFrom());
+            helper.setSubject("Verify your email address");
+
+            String displayName = (name != null && !name.isBlank()) ? name : "there";
+            String safeCode = code == null ? "" : code;
+
+            String logoSrc = (siteUrl != null ? siteUrl : "") + (brandLogoPath != null ? brandLogoPath : "/LogoWithBG.svg");
+            String html = "" +
+                "<table role='presentation' cellpadding='0' cellspacing='0' width='100%' style='background:#0b0b12;padding:24px;font-family:Inter,Segoe UI,Arial,sans-serif;color:#e5e7eb;'>" +
+                "  <tr><td align='center'>" +
+                "    <table role='presentation' cellpadding='0' cellspacing='0' width='100%' style='max-width:640px;background:linear-gradient(135deg,#0f1020,#121329);border:1px solid #2a2b45;border-radius:16px;overflow:hidden;'>" +
+                "      <tr><td style='padding:28px 28px 0 28px;'>" +
+                "        <table role='presentation' cellpadding='0' cellspacing='0' width='100%'><tr>" +
+                "          <td style='vertical-align:middle'>" +
+                "            <img src='" + logoSrc + "' alt='LocalsLocalMarket' width='120' height='auto' style='display:block;border:0;outline:none;text-decoration:none;max-width:120px;'>" +
+                "          </td>" +
+                "        </tr></table>" +
+                "        <h1 style='margin:18px 0 8px 0;color:#e5e7eb;font-size:22px;'>Verify your email</h1>" +
+                "        <p style='margin:0 0 16px 0;color:#9ca3af;font-size:14px;'>Hi " + displayName + ",</p>" +
+                "        <p style='margin:0 0 16px 0;color:#cbd5e1;font-size:14px;'>Use the one-time code below to verify your email address for <a href='" + siteUrl + "' style='color:#a5b4fc;text-decoration:none;'>LocalsLocalMarket</a>.</p>" +
+                "        <div style='margin:20px 0;padding:16px;border:1px solid #2a2b45;border-radius:12px;background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.08));text-align:center;'>" +
+                "          <div style='font-size:28px;letter-spacing:6px;color:#ffffff;font-weight:700;'>" + safeCode + "</div>" +
+                "          <div style='margin-top:8px;color:#9ca3af;font-size:12px;'>Code expires in 10 minutes</div>" +
+                "        </div>" +
+                "        <p style='margin:0 0 12px 0;color:#94a3b8;font-size:13px;'>If you didn’t request this, you can safely ignore this email.</p>" +
+                "        <p style='margin:0 0 24px 0;color:#94a3b8;font-size:13px;'>Best regards,<br/>LocalsLocalMarket Team</p>" +
+                "      </td></tr>" +
+                "      <tr><td style='height:1px;background:linear-gradient(90deg,transparent,#4f46e5,transparent);'></td></tr>" +
+                "      <tr><td style='padding:16px 28px 28px 28px;color:#6b7280;font-size:12px;'>" +
+                "        <div>This email was sent to <span style='color:#a1a1aa;'>" + email + "</span>.</div>" +
+                "      </td></tr>" +
+                "    </table>" +
+                "  </td></tr>" +
+                "</table>";
+
+            helper.setText(html, true);
+            mailSender.send(mime);
+        } catch (Exception e) {
+            log.warn("Failed to send verification email to {}: {}", email, e.getMessage());
         }
     }
 

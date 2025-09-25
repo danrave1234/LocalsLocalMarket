@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useNavigate } from 'react-router-dom'
 import { ResponsiveAd } from '../components/GoogleAds.jsx'
 import '../auth.css'
+import { fetchPublicConfig } from '../api/auth.js'
 
 export default function RegisterPage() {
     const [formData, setFormData] = useState({
@@ -15,7 +16,9 @@ export default function RegisterPage() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [acceptedTerms, setAcceptedTerms] = useState(false)
     const [error, setError] = useState('')
-    const { register } = useAuth()
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const { register, loginWithGoogle } = useAuth()
+    const googleBtnRef = useRef(null)
     const navigate = useNavigate()
 
     const handleChange = (e) => {
@@ -28,6 +31,7 @@ export default function RegisterPage() {
     const onSubmit = async (e) => {
         e.preventDefault()
         setError('')
+        if (isSubmitting) return
         
         if (!acceptedTerms) {
             return setError('Please accept the Terms of Agreement to continue')
@@ -37,13 +41,58 @@ export default function RegisterPage() {
             return setError('Passwords do not match')
         }
 
+        setIsSubmitting(true)
         try {
             await register(formData.email, formData.password, formData.name)
             navigate('/', { replace: true })
         } catch (err) {
             setError(err?.data?.message || err.message || 'Registration failed')
+        } finally {
+            setIsSubmitting(false)
         }
     }
+
+    useEffect(() => {
+        if (!googleBtnRef.current) return
+        try {
+            const init = async () => {
+                const envClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+                let clientId = envClientId
+                if (!clientId) {
+                    try {
+                        const conf = await fetchPublicConfig()
+                        clientId = conf.googleClientId || ''
+                    } catch {}
+                }
+                if (!window.google || !clientId) return
+                /* global google */
+                window.google.accounts.id.initialize({
+                    client_id: clientId,
+                    callback: async (response) => {
+                    try {
+                        const cred = response.credential
+                        if (!cred) return
+                        await loginWithGoogle(cred)
+                        navigate('/', { replace: true })
+                    } catch (err) {
+                        setError(err?.message || 'Google sign-in failed')
+                    }
+                    }
+                })
+                window.google.accounts.id.renderButton(googleBtnRef.current, { 
+                theme: 'filled_black', 
+                size: 'large', 
+                shape: 'pill',
+                text: 'continue_with',
+                logo_alignment: 'left',
+                width: 360 
+                })
+            }
+            init()
+        } catch (e) {
+            // ignore
+        }
+    }, [loginWithGoogle])
 
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword)
@@ -74,7 +123,7 @@ export default function RegisterPage() {
                         </div>
                     )}
 
-                    <form onSubmit={onSubmit} className="auth-form">
+                    <form onSubmit={onSubmit} className="auth-form" aria-busy={isSubmitting}>
                         <div className="form-group">
                             <label htmlFor="name" className="form-label">
                                 <svg className="label-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -95,6 +144,7 @@ export default function RegisterPage() {
                                 autoFill="off"
                                 data-form-type="other"
                                 placeholder="Enter your full name"
+                                disabled={isSubmitting}
                             />
                         </div>
 
@@ -118,6 +168,7 @@ export default function RegisterPage() {
                                 autoFill="off"
                                 data-form-type="other"
                                 placeholder="Enter your email address"
+                                disabled={isSubmitting}
                             />
                         </div>
 
@@ -143,12 +194,14 @@ export default function RegisterPage() {
                                     autoFill="off"
                                     data-form-type="other"
                                     placeholder="Create a strong password"
+                                    disabled={isSubmitting}
                                 />
                                 <button
                                     type="button"
                                     className="password-toggle-btn"
                                     onClick={togglePasswordVisibility}
                                     aria-label={showPassword ? "Hide password" : "Show password"}
+                                    disabled={isSubmitting}
                                 >
                                     {showPassword ? (
                                         <svg className="password-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -187,12 +240,14 @@ export default function RegisterPage() {
                                     autoFill="off"
                                     data-form-type="other"
                                     placeholder="Confirm your password"
+                                    disabled={isSubmitting}
                                 />
                                 <button
                                     type="button"
                                     className="password-toggle-btn"
                                     onClick={toggleConfirmPasswordVisibility}
                                     aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                                    disabled={isSubmitting}
                                 >
                                     {showConfirmPassword ? (
                                         <svg className="password-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -228,14 +283,21 @@ export default function RegisterPage() {
                             </label>
                         </div>
                         
-                        <button type="submit" className="auth-submit-btn" disabled={!acceptedTerms} aria-disabled={!acceptedTerms}>
+                        <button type="submit" className="auth-submit-btn" disabled={!acceptedTerms || isSubmitting} aria-disabled={!acceptedTerms || isSubmitting}>
                             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M15 3L21 12L15 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 <path d="M3 12H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                             </svg>
-                            Create Account
+                            {isSubmitting ? 'Creating Account...' : 'Create Account'}
                         </button>
                     </form>
+
+                    <div className="oauth-divider">
+                        <span>Or continue with</span>
+                    </div>
+                    <div className="oauth-buttons" style={isSubmitting ? { pointerEvents: 'none', opacity: 0.6 } : undefined}>
+                        <div ref={googleBtnRef} aria-label="Sign up with Google"></div>
+                    </div>
                     
                     <div className="auth-footer">
                         <p className="auth-link-text">

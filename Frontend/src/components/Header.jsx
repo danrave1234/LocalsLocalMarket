@@ -17,6 +17,14 @@ export default function Header({ onOpenFeedback }) {
     if (typeof window === 'undefined') return false
     return window.matchMedia && window.matchMedia('(max-width: 768px)').matches
   })
+  const [isXSmallScreen, setIsXSmallScreen] = React.useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia && window.matchMedia('(max-width: 480px)').matches
+  })
+  const [isMediumScreen, setIsMediumScreen] = React.useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia && window.matchMedia('(max-width: 992px)').matches
+  })
   const isActive = (path) => location.pathname === path
   
   // Get current search state for synchronization
@@ -52,17 +60,38 @@ export default function Header({ onOpenFeedback }) {
   const hasActiveFilters = query || category || hasPinnedLocation
 
   React.useEffect(() => {
-    // Track viewport size to control mobile header search visibility
+    // Track viewport size to control mobile header search visibility and logo sizing
     if (!window.matchMedia) return
     const mq = window.matchMedia('(max-width: 768px)')
+    const mqXs = window.matchMedia('(max-width: 480px)')
+    const mqMd = window.matchMedia('(max-width: 992px)')
     const onChange = (e) => setIsSmallScreen(e.matches)
+    const onChangeXs = (e) => setIsXSmallScreen(e.matches)
+    const onChangeMd = (e) => setIsMediumScreen(e.matches)
+    
     // Modern browsers
-    if (mq.addEventListener) mq.addEventListener('change', onChange)
-    else if (mq.addListener) mq.addListener(onChange)
+    if (mq.addEventListener) {
+      mq.addEventListener('change', onChange)
+      mqXs.addEventListener('change', onChangeXs)
+      mqMd.addEventListener('change', onChangeMd)
+    } else if (mq.addListener) {
+      mq.addListener(onChange)
+      mqXs.addListener(onChangeXs)
+      mqMd.addListener(onChangeMd)
+    }
     setIsSmallScreen(mq.matches)
+    setIsXSmallScreen(mqXs.matches)
+    setIsMediumScreen(mqMd.matches)
     return () => {
-      if (mq.removeEventListener) mq.removeEventListener('change', onChange)
-      else if (mq.removeListener) mq.removeListener(onChange)
+      if (mq.removeEventListener) {
+        mq.removeEventListener('change', onChange)
+        mqXs.removeEventListener('change', onChangeXs)
+        mqMd.removeEventListener('change', onChangeMd)
+      } else if (mq.removeListener) {
+        mq.removeListener(onChange)
+        mqXs.removeListener(onChangeXs)
+        mqMd.removeListener(onChangeMd)
+      }
     }
   }, [])
 
@@ -99,6 +128,9 @@ export default function Header({ onOpenFeedback }) {
     // The actual clearing is handled by SearchOptimization's clearFilters function
   }
 
+  // Responsive logo size using clamp to fluidly scale with viewport
+  const logoSize = 'clamp(24px, 6vw, 64px)'
+
   // Show loading state while checking authentication
   if (isLoading) {
     return (
@@ -106,7 +138,7 @@ export default function Header({ onOpenFeedback }) {
         <div className="container header-row">
           <div className="header-left">
             <Link to="/" className="brand-link">
-              <Logo size={48} />
+              <Logo size={logoSize} />
             </Link>
             <span className="loading-pill">
               <div className="loading-spinner"></div>
@@ -138,17 +170,17 @@ export default function Header({ onOpenFeedback }) {
       <div className="container header-row">
         <div className="header-left">
           <Link to="/" className="brand-link">
-            <Logo size={48} />
+                <Logo size={logoSize} />
           </Link>
         </div>
         
-        {(isSmallScreen || showSearch) && (
+        {(((location.pathname === '/') ? showSearch : (isSmallScreen || showSearch))) && (
           <div className="header-center">
             <SearchOptimization 
               onClearFilters={clearFilters}
               compactFilter={true}
               hasPinnedLocation={hasPinnedLocation}
-              navigateOnSubmit={true}
+              navigateOnSubmit={false}
             />
           </div>
         )}
@@ -217,7 +249,7 @@ export default function Header({ onOpenFeedback }) {
         <div className="mobile-nav-content">
           <div className="container" style={{padding: '0.5rem 1rem'}}>
             <Link to="/" className="brand-link" onClick={() => setIsMobileMenuOpen(false)}>
-              <Logo size={28} />
+              <Logo size={logoSize} />
             </Link>
           </div>
           <button 

@@ -8,7 +8,7 @@ const PageSpeed = () => {
       { rel: 'preload', href: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', as: 'style' },
       { rel: 'dns-prefetch', href: 'https://unpkg.com' },
       { rel: 'dns-prefetch', href: 'https://www.googletagmanager.com' },
-      { rel: 'dns-prefetch', href: 'https://pagead2.googlesyndication.com' }
+      // AdSense disabled
     ]
 
     preloadLinks.forEach(link => {

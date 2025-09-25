@@ -33,7 +33,8 @@
 /* Shop Cards Grid - Fix max width issue */
 .landing-page-container .shops-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  /* Use a larger minimum card width to avoid squeezing */
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1rem;
   max-width: 100%;
 }
@@ -53,10 +54,34 @@
 }
 
 /* 24-inch monitors and larger - optimize spacing */
-@media (min-width: 1440px) {
+@media (min-width: 1700px) {
   .landing-page-container .shops-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 1.25rem;
+  }
+}
+
+/* Large laptop/desktop widths up to 1699px: force 3 columns */
+@media (min-width: 1401px) and (max-width: 1699px) {
+  .landing-page-container .shops-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.1rem;
+  }
+}
+
+/* Laptop L and similar (≤1500px): prefer 3 columns to reduce wasted space */
+@media (max-width: 1500px) {
+  .landing-page-container .shops-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.1rem;
+  }
+}
+
+/* 15" laptops and similar (<=1400px): show exactly 3 cards per row */
+@media (max-width: 1400px) and (min-width: 1101px) {
+  .landing-page-container .shops-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
   }
 }
 
@@ -385,19 +410,24 @@
 /* Responsive layout for list + map */
 .landing-page-container .landing-layout {
   display: grid;
-  grid-template-columns: minmax(520px, 2fr) 1fr;
+  grid-template-columns: minmax(560px, 1.6fr) minmax(480px, 0.8fr);
   gap: 2rem;
   align-items: start;
 }
 
 .landing-page-container .landing-layout.expanded {
-  grid-template-columns: 1fr minmax(520px, 2fr);
+  grid-template-columns: minmax(560px, 1.1fr) minmax(640px, 0.9fr);
+}
+
+/* Keep left column from shrinking too small when map grows */
+.landing-page-container .landing-layout > div:first-child {
+  min-width: 560px;
 }
 
 /* 14" screens (~1366px width) and below: tighten spacing */
 @media (max-width: 1400px) {
   .landing-page-container .landing-layout {
-    gap: 1.5rem;
+    gap: 1.25rem;
   }
 }
 
@@ -405,8 +435,9 @@
 @media (max-width: 1200px) {
   .landing-page-container .landing-layout,
   .landing-page-container .landing-layout.expanded {
-    grid-template-columns: minmax(480px, 2fr) 1fr; /* maintain map at right like desktop */
+    grid-template-columns: minmax(480px, 1.4fr) minmax(420px, 0.9fr); /* reduce map size on small laptops */
   }
+  .landing-page-container .landing-layout > div:first-child { min-width: 480px; }
 }
 
 /* Stack on narrower tablets and phones */
@@ -423,6 +454,7 @@
     min-height: 320px;
     margin-top: 1rem;
   }
+  .landing-page-container .landing-layout > div:first-child { min-width: 0; }
 }
 
 /* Small phones */
@@ -440,6 +472,32 @@
   }
 }
 
+/* Keep search bar in one row on mobile for landing page */
+@media (max-width: 768px) {
+  .landing-page-container .airbnb-search-bar .search-input-group {
+    display: grid;
+    grid-template-columns: max-content max-content 1fr auto;
+    align-items: center;
+    gap: 6px;
+  }
+  .landing-page-container .search-filter {
+    min-width: 70px;
+    max-width: 90px;
+    padding: 6px 8px;
+    font-size: 0.78rem;
+    border-radius: 12px;
+  }
+  .landing-page-container .search-input-wrapper {
+    padding: 0;
+    border-radius: 12px;
+  }
+  .landing-page-container .search-button {
+    height: 36px;
+    padding: 6px 8px;
+    border-radius: 12px;
+  }
+}
+
 /* Floating map button on mobile */
 .floating-map-btn {
   position: fixed;
@@ -450,6 +508,7 @@
   border-radius: 16px; /* Increased radius for modern mobile look */
   border: 1px solid var(--landing-border);
   background: linear-gradient(135deg, var(--landing-card) 0%, var(--landing-card-2) 100%);
+  background-color: var(--landing-card); /* ensure non-transparent fallback */
   color: var(--landing-text);
   display: flex;
   align-items: center;
@@ -469,6 +528,20 @@
 /* Show button only under 1060px */
 @media (min-width: 1061px) {
   .floating-map-btn { display: none; }
+}
+
+/* Avoid overlap with back-to-top by reserving space when both visible */
+@media (max-width: 1060px) {
+  .floating-map-btn {
+    margin-bottom: 3.25rem; /* creates separation from back-to-top default position */
+  }
+}
+
+/* Improve icon legibility on mobile by adding subtle icon background */
+.floating-map-btn > svg {
+  background: rgba(0,0,0,0.15);
+  border-radius: 12px;
+  padding: 6px;
 }
 
 .map-modal-overlay {

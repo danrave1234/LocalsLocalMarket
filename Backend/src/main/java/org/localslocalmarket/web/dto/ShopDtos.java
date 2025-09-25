@@ -21,7 +21,9 @@ public class ShopDtos {
             String facebook,
             String instagram,
             String twitter,
-            String businessHoursJson
+            String businessHoursJson,
+            String offeringType,
+            String showcasePriority
     ){}
 
     // All fields optional for PATCH
@@ -43,7 +45,9 @@ public class ShopDtos {
             String adsImagePathsJson,
             Boolean adsEnabled,
             String businessHoursJson,
-            Boolean isActive
+            Boolean isActive,
+            String offeringType,
+            String showcasePriority
     ){}
     
     public record ShopResponse(
@@ -67,7 +71,9 @@ public class ShopDtos {
             String businessHoursJson,
             java.time.Instant createdAt,
             Long ownerId,
-            Boolean isActive
+            Boolean isActive,
+            String offeringType,
+            String showcasePriority
     ){
         public static ShopResponse fromShop(Shop shop) {
             return new ShopResponse(
@@ -91,7 +97,9 @@ public class ShopDtos {
                 shop.getBusinessHoursJson(),
                 shop.getCreatedAt(),
                 shop.getOwner() != null ? shop.getOwner().getId() : null,
-                shop.getIsActive()
+                shop.getIsActive(),
+                shop.getOfferingType(),
+                shop.getShowcasePriority()
             );
         }
     }

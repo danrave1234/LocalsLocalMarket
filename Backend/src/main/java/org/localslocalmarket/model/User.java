@@ -46,6 +46,12 @@ public class User {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 
+    @Column(name = "email_verified", nullable = false)
+    private Boolean emailVerified;
+
+    @Column(name = "email_verified_at")
+    private Instant emailVerifiedAt;
+
     public User() {}
 
     // Getters and setters
@@ -78,6 +84,10 @@ public class User {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public Instant getCreatedAt() { return createdAt; }
+    public Boolean isEmailVerified() { return emailVerified != null ? emailVerified : false; }
+    public void setEmailVerified(Boolean emailVerified) { this.emailVerified = emailVerified; }
+    public Instant getEmailVerifiedAt() { return emailVerifiedAt; }
+    public void setEmailVerifiedAt(Instant emailVerifiedAt) { this.emailVerifiedAt = emailVerifiedAt; }
 
     @PrePersist
     void prePersist(){
@@ -93,6 +103,9 @@ public class User {
         }
         if(isActive == null) {
             isActive = true;
+        }
+        if (emailVerified == null) {
+            emailVerified = false;
         }
     }
 

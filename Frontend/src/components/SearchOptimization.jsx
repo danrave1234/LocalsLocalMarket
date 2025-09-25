@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchCategories } from '../api/shops.js'
+import { fetchProductMainCategories } from '../api/products.js'
+import { getServiceCategories } from '../api/services.js'
 import { useDebounce } from '../hooks/useDebounce.js'
 import categoriesCache from '../utils/categoriesCache.js'
 import { Utensils, ShoppingCart, Palette, Wrench, Smartphone, Shirt, Heart, Home } from 'lucide-react'
@@ -12,11 +14,26 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
   const [categories, setCategories] = useState([])
   const [isExpanded, setIsExpanded] = useState(false)
   const [activeFilter, setActiveFilter] = useState(null)
+  const resultMenuRef = useRef(null)
+  const resultMenuWrapperRef = useRef(null)
+  const [showResultMenu, setShowResultMenu] = useState(false)
   const [localQuery, setLocalQuery] = useState(searchParams.get('q') || '')
+  const [recentSearches, setRecentSearches] = useState(() => {
+    try {
+      const raw = localStorage.getItem('recent_searches')
+      if (!raw) return []
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed.slice(0, 5) : []
+    } catch (_) {
+      return []
+    }
+  })
   const categoriesLoadedRef = useRef(false)
 
   const query = searchParams.get('q') || ''
   const category = searchParams.get('category') || ''
+  const initialType = searchParams.get('type') || 'shops'
+  const [resultType, setResultType] = useState(initialType)
   
   // Check if there are any active filters
   const hasActiveFilters = localQuery || category || hasPinnedLocation
@@ -31,9 +48,24 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
     }
   }, [debouncedQuery, onSearchChange])
 
+  // Ensure default type is 'shops' in URL when missing
+  useEffect(() => {
+    const current = searchParams.get('type')
+    if (!current) {
+      const params = new URLSearchParams(searchParams)
+      params.set('type', 'shops')
+      setSearchParams(params, { replace: true })
+      setResultType('shops')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Sync local query with URL params only on initial load
   useEffect(() => {
     setLocalQuery(query)
+    // keep type in sync if URL changes elsewhere
+    const t = searchParams.get('type') || 'shops'
+    setResultType(t)
   }, [query])
 
   // Popular search terms for suggestions
@@ -50,8 +82,15 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
 
   // Popular categories for quick selection
   const popularCategories = [
-    'Restaurants',
+    'Barber',
     'Grocery',
+    'Hardware',
+    'Restaurants',
+    'Thai',
+    'Chinese',
+    'Drinks',
+    'Repair Phone',
+    'Motorcycle Service',
     'Crafts',
     'Services',
     'Electronics',
@@ -61,54 +100,67 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
   ]
 
   useEffect(() => {
-    // Check global cache first (now includes localStorage persistence)
-    const cachedCategories = categoriesCache.get()
-    if (cachedCategories && cachedCategories.length > 0) {
-      // Using cached categories from localStorage/memory
-      setCategories(cachedCategories)
-      categoriesLoadedRef.current = true
-      return
+    // Close result type menu on outside click
+    const onPointerDown = (e) => {
+      if (!showResultMenu) return
+      const wrapper = resultMenuWrapperRef.current
+      if (wrapper && !wrapper.contains(e.target)) {
+        setShowResultMenu(false)
+      }
     }
-    
-    // Check if already loading to prevent duplicate fetches
-    if (categoriesCache.getLoadingState()) {
-      // Categories already loading, waiting...
-      // Wait for the existing promise
-      categoriesCache.getLoadingPromise()?.then((data) => {
-        setCategories(data.categories || [])
-        categoriesLoadedRef.current = true
-      })
-      return
-    }
-    
-    // Fetch categories if not in cache and not loading
-    if (categoriesLoadedRef.current) return
-    
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [showResultMenu])
+
+  useEffect(() => {
+    // Reset state when type changes
+    setCategories([])
+    categoriesLoadedRef.current = false
+
     const loadCategories = async () => {
       try {
-        // Loading categories from API...
-        categoriesCache.setLoading(true)
-        
-        const data = await fetchCategories()
-        // Categories loaded from API
-        
-        // Cache the categories globally (now persists to localStorage)
-        categoriesCache.set(data.categories || [])
-        
-        setCategories(data.categories || [])
+        if (resultType === 'shops') {
+          // Prefer global cache for shops categories
+          const cachedCategories = categoriesCache.get()
+          if (cachedCategories && cachedCategories.length > 0) {
+            setCategories(cachedCategories)
+            categoriesLoadedRef.current = true
+            return
+          }
+          if (categoriesCache.getLoadingState()) {
+            categoriesCache.getLoadingPromise()?.then((data) => {
+              setCategories(data.categories || [])
+              categoriesLoadedRef.current = true
+            })
+            return
+          }
+          categoriesCache.setLoading(true)
+          const data = await fetchCategories()
+          categoriesCache.set(data.categories || [])
+          setCategories(data.categories || [])
+        } else if (resultType === 'products') {
+          const data = await fetchProductMainCategories()
+          // API returns an array
+          setCategories(Array.isArray(data) ? data : (data?.categories || []))
+        } else {
+          // services
+          const data = await getServiceCategories()
+          setCategories(Array.isArray(data) ? data : (data?.categories || []))
+        }
         categoriesLoadedRef.current = true
       } catch (error) {
         console.error('Failed to fetch categories:', error)
-        // Fallback to popular categories if API fails
         setCategories(popularCategories)
         categoriesLoadedRef.current = true
       } finally {
-        categoriesCache.setLoading(false, null)
+        if (resultType === 'shops') {
+          categoriesCache.setLoading(false, null)
+        }
       }
     }
-    
+
     loadCategories()
-  }, [])
+  }, [resultType])
 
   const handleSearch = (searchTerm) => {
     if (searchTerm.trim()) {
@@ -116,12 +168,28 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
       setLocalQuery(trimmed)
       setShowSuggestions(false)
       setIsExpanded(false)
+      // Save to recent searches (MRU, max 5)
+      try {
+        setRecentSearches((prev) => {
+          const next = [trimmed, ...prev.filter((q) => q.toLowerCase() !== trimmed.toLowerCase())]
+          const limited = next.slice(0, 5)
+          localStorage.setItem('recent_searches', JSON.stringify(limited))
+          return limited
+        })
+      } catch (_) { /* ignore */ }
       if (navigateOnSubmit) {
         const params = new URLSearchParams()
         params.set('q', trimmed)
-        params.set('type', 'shops')
-        window.location.href = `/search?${params.toString()}`
-        return
+        params.set('type', resultType || 'shops')
+        // Navigation disabled per new UX preference; preserve URL only
+        const url = `${window.location.pathname}?${params.toString()}`
+        window.history.replaceState({}, '', url)
+      } else {
+        // Update URL params without navigation
+        const params = new URLSearchParams(searchParams)
+        params.set('q', trimmed)
+        params.set('type', resultType || 'shops')
+        setSearchParams(params, { replace: true })
       }
     }
   }
@@ -178,23 +246,93 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
     setCategories([])
   }
 
+  // Choose icon for any category string
+  const getCategoryIcon = (cat) => {
+    const c = (cat || '').toLowerCase()
+    if (c.includes('grocery') || c.includes('market')) return <ShoppingCart size={20} />
+    if (c.includes('restaurant') || c.includes('thai') || c.includes('chinese') || c.includes('food')) return <Utensils size={20} />
+    if (c.includes('hardware')) return <Wrench size={20} />
+    if (c.includes('repair') || c.includes('service') || c.includes('motorcycle')) return <Wrench size={20} />
+    if (c.includes('phone') || c.includes('electronic')) return <Smartphone size={20} />
+    if (c.includes('clothing') || c.includes('apparel')) return <Shirt size={20} />
+    if (c.includes('craft')) return <Palette size={20} />
+    if (c.includes('health') || c.includes('beauty')) return <Heart size={20} />
+    if (c.includes('home') || c.includes('garden')) return <Home size={20} />
+    if (c.includes('barber') || c.includes('salon')) return <Home size={20} />
+    return <Home size={20} />
+  }
+
+  // Prefer API categories for the quick grid if available
+  const displayedCategories = (categories && categories.length > 0 ? categories : popularCategories).slice(0, 12)
+
   return (
     <div className="airbnb-search-container">
       {/* Main Search Bar */}
       <div className="airbnb-search-bar">
         <div className="search-input-group">
-          {/* Category Filter */}
+          {/* Results Filter (inline menu) */}
+          <div ref={resultMenuWrapperRef} style={{ position: 'relative', display: 'inline-block' }}>
+            <div 
+              className={`search-filter ${activeFilter === 'resultType' ? 'active' : ''}`}
+              aria-label={`Results: ${resultType}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                // Toggle small inline menu
+                setShowResultMenu((v) => !v)
+                setActiveFilter('resultType')
+              }}
+            >
+              <div className="filter-value">
+                <span className="category-label">
+                  {resultType === 'products' ? 'Products' : resultType === 'services' ? 'Services' : 'Stores'}
+                </span>
+              </div>
+              <svg className="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="6,9 12,15 18,9"></polyline>
+              </svg>
+            </div>
+            {showResultMenu && (
+              <div ref={resultMenuRef} style={{ position: 'absolute', top: '44px', left: 0, zIndex: 1000, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)', padding: '6px', minWidth: '180px' }} onClick={(e) => e.stopPropagation()}>
+                {[
+                  { key: 'shops', label: 'Stores' },
+                  { key: 'products', label: 'Products' },
+                  { key: 'services', label: 'Services' }
+                ].map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => {
+                      setResultType(opt.key)
+                      const params = new URLSearchParams(searchParams)
+                      params.set('type', opt.key)
+                      params.delete('category')
+                      setSearchParams(params, { replace: true })
+                      setShowResultMenu(false)
+                      setActiveFilter(null)
+                    }}
+                    className={`btn ${resultType === opt.key ? '' : 'outline'}`}
+                    style={{ width: '100%', textAlign: 'left', margin: '2px 0' }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Type Filter (contextual to selected result type) */}
           <div 
             className={`search-filter ${activeFilter === 'category' ? 'active' : ''}`}
-            aria-label={`Category${category ? ': ' + category : ''}`}
+            aria-label={`${resultType === 'products' ? 'Type' : (resultType === 'services' ? 'Type' : 'Type')}${category ? ': ' + category : ''}`}
             onClick={() => {
               setActiveFilter(activeFilter === 'category' ? null : 'category')
               setIsExpanded(true)
             }}
           >
             <div className="filter-value">
-              <span className="category-label desktop-only">Category</span>
-              {category && category}
+              {category ? (
+                <span className="category-selected">{category}</span>
+              ) : (
+                <span className="category-label">Type</span>
+              )}
             </div>
             <svg className="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="6,9 12,15 18,9"></polyline>
@@ -205,7 +343,13 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
           <div className={`search-input-wrapper ${activeFilter === 'search' ? 'active' : ''}`}>
             <input
               type="text"
-              placeholder="Search shops, products, or services..."
+              placeholder={
+                resultType === 'products'
+                  ? 'Search products...'
+                  : resultType === 'services'
+                    ? 'Search services...'
+                    : 'Search stores...'
+              }
               value={localQuery}
               onChange={(e) => {
                 const newQuery = e.target.value
@@ -270,42 +414,35 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
         {/* Removed active filters pill display per request */}
       </div>
 
-      {/* Expanded Search Panel */}
-      {isExpanded && (
+      {/* Expanded Search Panel (excludes Results type; handled inline now) */}
+      {isExpanded && activeFilter !== 'resultType' && (
         <div className="search-panel">
-          {/* Category Selection */}
+          {/* Category Selection - options depend on selected result type */}
           {activeFilter === 'category' && (
             <div className="panel-section">
-              <h3>Select a category</h3>
+              <h3>Select a {resultType === 'products' ? 'product' : resultType === 'services' ? 'service' : 'store'} type</h3>
               <div className="category-grid">
-                {popularCategories.map((cat) => (
+                {displayedCategories.map((cat) => (
                   <button
                     key={cat}
                     className={`category-option ${category === cat ? 'selected' : ''}`}
                     onClick={() => handleQuickCategorySelect(cat)}
                   >
                     <div className="category-icon">
-                      {cat === 'Restaurants' && <Utensils size={20} />}
-                      {cat === 'Grocery' && <ShoppingCart size={20} />}
-                      {cat === 'Crafts' && <Palette size={20} />}
-                      {cat === 'Services' && <Wrench size={20} />}
-                      {cat === 'Electronics' && <Smartphone size={20} />}
-                      {cat === 'Clothing' && <Shirt size={20} />}
-                      {cat === 'Health & Beauty' && <Heart size={20} />}
-                      {cat === 'Home & Garden' && <Home size={20} />}
+                      {getCategoryIcon(cat)}
                     </div>
                     <span>{cat}</span>
                   </button>
                 ))}
               </div>
               <div className="all-categories">
-                <h4>All categories</h4>
+                <h4>All {resultType === 'products' ? 'product' : resultType === 'services' ? 'service' : 'store'} types</h4>
                 <select
                   value={category}
                   onChange={(e) => handleQuickCategorySelect(e.target.value)}
                   className="category-select"
                 >
-                  <option value="">Any category</option>
+                  <option value="">Any {resultType === 'products' ? 'product' : resultType === 'services' ? 'service' : 'store'} type</option>
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
@@ -336,6 +473,24 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
                   ))}
                 </div>
               </div>
+
+              {/* Recent Searches */}
+              {recentSearches.length > 0 && (
+                <div className="suggestions-section">
+                  <h4>Recent</h4>
+                  <div className="suggestion-tags">
+                    {recentSearches.map((search, index) => (
+                      <button
+                        key={`recent-${index}`}
+                        onClick={() => handleSuggestionClick(search)}
+                        className="suggestion-tag"
+                      >
+                        {search}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Search Tips */}
               <div className="suggestions-section">

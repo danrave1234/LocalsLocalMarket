@@ -11,6 +11,30 @@ export const generateSitemapEntries = (shops = []) => {
       priority: '1.0'
     },
     {
+      loc: 'https://localslocalmarket.com/post',
+      lastmod: new Date().toISOString().split('T')[0],
+      changefreq: 'weekly',
+      priority: '0.8'
+    },
+    {
+      loc: 'https://localslocalmarket.com/post-product',
+      lastmod: new Date().toISOString().split('T')[0],
+      changefreq: 'weekly',
+      priority: '0.75'
+    },
+    {
+      loc: 'https://localslocalmarket.com/post-service',
+      lastmod: new Date().toISOString().split('T')[0],
+      changefreq: 'weekly',
+      priority: '0.75'
+    },
+    {
+      loc: 'https://localslocalmarket.com/post-shop',
+      lastmod: new Date().toISOString().split('T')[0],
+      changefreq: 'weekly',
+      priority: '0.8'
+    },
+    {
       loc: 'https://localslocalmarket.com/login',
       lastmod: new Date().toISOString().split('T')[0],
       changefreq: 'monthly',

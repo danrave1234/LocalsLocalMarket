@@ -56,6 +56,7 @@ export default function ShopManagementPage() {
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [shopMeta, setShopMeta] = useState({ offeringType: 'both', showcasePriority: 'products' })
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false)
@@ -84,6 +85,19 @@ export default function ShopManagementPage() {
     
     if (shopId && token) {
       loadData()
+      // Load shop meta to set default tab/visibility
+      try {
+        fetchShopById(shopId).then(resp => {
+          if (resp) {
+            const type = (resp.offeringType || 'both').toLowerCase()
+            const priority = (resp.showcasePriority || 'products').toLowerCase()
+            setShopMeta({ offeringType: type, showcasePriority: priority })
+            if (type === 'products') setActiveTab('products')
+            else if (type === 'services') setActiveTab('services')
+            else setActiveTab(priority === 'services' ? 'services' : 'products')
+          }
+        }).catch(() => {})
+      } catch {}
     } else if (!shopId) {
       setError('Invalid shop URL')
       setLoading(false)

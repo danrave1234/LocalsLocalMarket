@@ -1,6 +1,7 @@
 package org.localslocalmarket.web;
 
 import java.util.Map;
+import java.util.Optional;
 
 import org.localslocalmarket.model.User;
 import org.localslocalmarket.repo.UserRepository;
@@ -11,6 +12,7 @@ import org.localslocalmarket.security.JwtService;
 import org.localslocalmarket.service.EmailService;
 import org.localslocalmarket.service.PasswordResetService;
 import org.localslocalmarket.web.dto.AuthDtos;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
@@ -18,6 +20,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -30,6 +38,9 @@ public class AuthController {
     private final AuthorizationService authorizationService;
     private final EmailService emailService;
     private final PasswordResetService passwordResetService;
+
+    @Value("${llm.google.client-id:}")
+    private String googleClientId;
 
     public AuthController(UserRepository users, PasswordEncoder encoder, JwtService jwt, 
                          AuditService auditService, InputValidationService inputValidationService,
@@ -297,6 +308,90 @@ public class AuthController {
             auditService.logSecurityEvent(AuditService.AuditEventType.SUSPICIOUS_ACTIVITY, 
                     "unknown", "Password reset failed: " + e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", "Failed to reset password"));
+        }
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<?> loginWithGoogle(@RequestBody @Validated AuthDtos.GoogleLoginRequest req) {
+        try {
+            if (googleClientId == null || googleClientId.isBlank()) {
+                return ResponseEntity.status(503).body(Map.of("error", "Google login not configured"));
+            }
+
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                    .setAudience(java.util.Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(req.idToken());
+            if (idToken == null) {
+                auditService.logSecurityEvent(AuditService.AuditEventType.SUSPICIOUS_ACTIVITY,
+                        "unknown", "Invalid Google ID token");
+                return ResponseEntity.status(401).body(Map.of("error", "Invalid Google token"));
+            }
+
+            Payload payload = idToken.getPayload();
+            String email = (String) payload.getEmail();
+            boolean emailVerified = Boolean.TRUE.equals(payload.getEmailVerified());
+            String name = Optional.ofNullable((String) payload.get("name")).orElse("Google User");
+
+            if (!emailVerified) {
+                return ResponseEntity.status(400).body(Map.of("error", "Google email not verified"));
+            }
+
+            String normalizedEmail = inputValidationService.validateEmail(email).toLowerCase();
+
+            User user = users.findByEmail(normalizedEmail)
+                    .map(existing -> {
+                        if (existing.isEnabled() != null && !existing.isEnabled()) {
+                            throw new IllegalStateException("Account is disabled");
+                        }
+                        if (existing.isActive() != null && !existing.isActive()) {
+                            throw new IllegalStateException("Account is inactive");
+                        }
+                        if (existing.getName() == null || existing.getName().isBlank()) {
+                            existing.setName(name);
+                        }
+                        if (emailVerified && (existing.isEmailVerified() == null || !existing.isEmailVerified())) {
+                            existing.setEmailVerified(true);
+                            existing.setEmailVerifiedAt(java.time.Instant.now());
+                        }
+                        users.save(existing);
+                        return existing;
+                    })
+                    .orElseGet(() -> {
+                        User u = new User();
+                        u.setEmail(normalizedEmail);
+                        // Mark as OAuth account: store non-usable password
+                        u.setPasswordHash(encoder.encode(java.util.UUID.randomUUID().toString()));
+                        u.setName(name);
+                        u.setRole(User.Role.SELLER);
+                        u.setEnabled(true);
+                        u.setActive(true);
+                        u.setEmailVerified(true);
+                        u.setEmailVerifiedAt(java.time.Instant.now());
+                        users.save(u);
+                        // Send welcome email asynchronously (if enabled)
+                        try { emailService.sendWelcomeEmail(u.getEmail(), u.getName()); } catch (Exception ignored) {}
+                        return u;
+                    });
+
+            String token = jwt.generate(user.getEmail(), Map.of(
+                "uid", user.getId(),
+                "role", user.getRole().name()
+            ));
+
+            auditService.logSecurityEvent(AuditService.AuditEventType.LOGIN_SUCCESS,
+                    user.getId().toString(), "Google OAuth login successful");
+
+            return ResponseEntity.ok(new AuthDtos.AuthResponse(token));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid input: " + e.getMessage()));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            auditService.logSecurityEvent(AuditService.AuditEventType.SUSPICIOUS_ACTIVITY,
+                    "unknown", "Google OAuth error: " + e.getMessage());
+            return ResponseEntity.status(401).body(Map.of("error", "Failed to verify Google token"));
         }
     }
 }

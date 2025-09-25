@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { ADSENSE_CLIENT_ID, AD_SLOTS, isProductionEnvironment } from '../utils/adsConfig'
+import { ADSENSE_CLIENT_ID, AD_SLOTS, isProductionEnvironment, areAdsEnabled } from '../utils/adsConfig'
 
 export default function GoogleAds({ 
   adSlot, 
@@ -11,8 +11,8 @@ export default function GoogleAds({
   const adRef = useRef(null)
 
   useEffect(() => {
-    // Only load ads if we're in production and have the ad slot
-    if (isProductionEnvironment() && adSlot && window.adsbygoogle) {
+    // Only load ads if enabled, in production, and we have the ad slot
+    if (areAdsEnabled() && adSlot && window.adsbygoogle) {
       try {
         // Push the ad to the dataLayer
         (window.adsbygoogle = window.adsbygoogle || []).push({})
@@ -22,32 +22,8 @@ export default function GoogleAds({
     }
   }, [adSlot])
 
-  // Don't render ads in development
-  if (!isProductionEnvironment()) {
-    return (
-      <div 
-        style={{
-          ...style,
-          background: '#f0f0f0',
-          border: '2px dashed #ccc',
-          padding: '20px',
-          textAlign: 'center',
-          color: '#666',
-          minHeight: '100px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-        className={className}
-      >
-        <div>
-          <strong>Ad Space</strong><br />
-          <small>Ad Slot: {adSlot}</small><br />
-          <small>Format: {adFormat}</small>
-        </div>
-      </div>
-    )
-  }
+  // Don't render anything when ads are disabled or not in production
+  if (!areAdsEnabled()) return null
 
   return (
     <div style={{ textAlign: 'center', margin: '1rem 0', ...style }} className={className}>

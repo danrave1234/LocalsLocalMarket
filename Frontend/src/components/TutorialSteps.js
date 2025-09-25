@@ -168,7 +168,7 @@ export const shopPageTutorialSteps = [
     id: 'products-services-tabs',
     target: '[data-tutorial="products-services-tabs"]',
     title: 'Products & Services 📦',
-    description: 'Switch between viewing products and services offered by this shop. Each tab shows different items you can purchase.',
+    description: 'Switch between products and services. Some shops show only one. If both are available, the first tab matches the shop\'s preference.',
     placement: 'bottom',
     action: 'Click on "Products" or "Services" to see what\'s available.'
   },
@@ -255,6 +255,7 @@ export const getTutorialSteps = (pathname) => {
   } else if (pathname.startsWith('/shop-management/')) {
     return shopManagementTutorialSteps
   } else if (pathname.startsWith('/shops/') && !pathname.includes('/edit')) {
+    // Dynamically adjust steps later using runtime filter based on offering type
     return shopPageTutorialSteps
   }
   return []
