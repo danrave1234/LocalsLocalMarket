@@ -1,46 +1,11 @@
-// Smart API base URL detection with Android-specific fixes
+// Simplified API base URL detection
 function getApiBase() {
   // Use Vite environment variable (configured in vite.config.js)
-  let apiBase = import.meta.env.VITE_API_BASE
+  const apiBase = import.meta.env.VITE_API_BASE
   
-  // Detect if we're on Android
-  const isAndroid = typeof window !== 'undefined' && 
-    (window.navigator.userAgent.includes('Android') || 
-     window.navigator.userAgent.includes('Mobile'))
-  
-  // For Android devices, implement fallback logic (dev only)
-  if (import.meta.env.DEV && isAndroid && typeof window !== 'undefined') {
-    const currentHost = window.location.hostname
-    
-    // If we're in production but the API domain is not accessible, try localhost
-    if (apiBase && apiBase.includes('api.localslocalmarket.com')) {
-      // Try to detect if we're running locally on Android (like in a development build)
-      if (currentHost === 'localhost' || currentHost === '127.0.0.1' || currentHost.includes('192.168')) {
-        apiBase = 'http://localhost:8080/api'
-        console.log('🤖 Android detected - using localhost API for development')
-      } else {
-        // For production Android builds, try the production API
-        console.log('🤖 Android detected - using production API')
-      }
-    }
-    
-    // Additional fallback: if we're on a local network, try to use the same host
-    if (currentHost.includes('192.168') || currentHost.includes('10.') || currentHost.includes('172.')) {
-      const protocol = window.location.protocol
-      const port = window.location.port || (protocol === 'https:' ? '443' : '80')
-      const fallbackApiBase = `${protocol}//${currentHost}:8080/api`
-      console.log('🤖 Android on local network - fallback API:', fallbackApiBase)
-      // Store fallback for potential use
-      window.ANDROID_FALLBACK_API = fallbackApiBase
-    }
-  }
-  
-  // For mobile devices, ensure we're using the correct protocol
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-    // If frontend is served over HTTPS, ensure API is also HTTPS
-    if (apiBase && apiBase.startsWith('http://localhost')) {
-      console.warn('⚠️ Frontend is served over HTTPS but API is HTTP. This may cause issues on mobile devices.')
-    }
+  // Simple fallback for development
+  if (import.meta.env.DEV && (!apiBase || apiBase === '/api')) {
+    return '/api'
   }
   
   return apiBase
@@ -59,22 +24,11 @@ const createTimeoutSignal = (ms) => {
   return controller.signal
 }
 
-// Log API configuration in development
-if (import.meta.env.DEV) {
+// Minimal logging for debugging
+if (import.meta.env.DEV && import.meta.env.VITE_ENABLE_LOGS === 'true') {
   logger.info('🔧 API Configuration:', {
     environment: 'Development',
-    apiBase: API_BASE,
-    viteApiBase: import.meta.env.VITE_API_BASE
-  })
-}
-
-// Also log in production for debugging
-if (!import.meta.env.DEV) {
-  logger.info('🚀 Production API Configuration:', {
-    environment: 'Production',
-    apiBase: API_BASE,
-    viteApiBase: import.meta.env.VITE_API_BASE,
-    isDev: import.meta.env.DEV
+    apiBase: API_BASE
   })
 }
 
@@ -103,7 +57,7 @@ export async function apiRequest(path, { method = 'GET', body, token, headers } 
       headers: requestHeaders,
       body: isFormData ? body : body ? JSON.stringify(body) : undefined,
       credentials: 'include',
-      signal: createTimeoutSignal(30000),
+      signal: createTimeoutSignal(10000),
     })
     
     if (!res.ok) {
@@ -136,8 +90,8 @@ export async function apiRequest(path, { method = 'GET', body, token, headers } 
   }
 }
 
-// Retry mechanism for failed requests
-async function apiRequestWithRetry(path, options, maxRetries = 2) {
+// Simplified retry mechanism for failed requests
+async function apiRequestWithRetry(path, options, maxRetries = 1) {
   let lastError
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -150,8 +104,8 @@ async function apiRequestWithRetry(path, options, maxRetries = 2) {
         error.message.includes('Network error') ||
         error.name === 'AbortError'
       )) {
-        // Wait before retry (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
+        // Quick retry with minimal delay
+        await new Promise(resolve => setTimeout(resolve, 500))
         continue
       }
       break
