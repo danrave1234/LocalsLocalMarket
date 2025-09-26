@@ -441,7 +441,7 @@ export default function DashboardPage() {
                         </p>
                         <button 
                             className="seller-btn seller-btn-primary"
-                            onClick={() => setShowCreateShop(true)}
+                            onClick={() => window.location.href = '/shops/create'}
                         >
                             <span className="seller-btn-icon"><StoreIcon width={16} height={16} /></span>
                             Create Your First Shop
@@ -669,7 +669,9 @@ export default function DashboardPage() {
                                     className="input"
                                     value={shopForm.addressLine}
                                     onChange={(e) => setShopForm({...shopForm, addressLine: e.target.value})}
-                                    placeholder="Enter your shop address"
+                                                                        placeholder="Address is auto-filled from map selection"
+                                    disabled
+                                    style={{ backgroundColor: 'var(--input-disabled-bg, #f5f5f5)', cursor: 'not-allowed' }}
                                 />
                             </div>
                         </div>
@@ -730,8 +732,15 @@ export default function DashboardPage() {
                                 <LocationMap
                                     initialLat={shopForm.lat}
                                     initialLng={shopForm.lng}
-                                    onLocationSelect={(lat, lng) => {
-                                        setShopForm({...shopForm, lat, lng})
+                                    onLocationSelect={(locationData) => {
+                                        setShopForm({
+                                            ...shopForm, 
+                                            lat: locationData.lat, 
+                                            lng: locationData.lng,
+                                            addressLine: locationData.addressLine || locationData.fullAddress || '',
+                                            barangay: locationData.barangay || '',
+                                            city: locationData.city || ''
+                                        })
                                     }}
                                 />
                                 <small className="form-help">
@@ -1339,8 +1348,15 @@ export default function DashboardPage() {
                                 <LocationMap
                                     initialLat={shopForm.lat}
                                     initialLng={shopForm.lng}
-                                    onLocationSelect={(lat, lng) => {
-                                        setShopForm({...shopForm, lat, lng})
+                                    onLocationSelect={(locationData) => {
+                                        setShopForm({
+                                            ...shopForm, 
+                                            lat: locationData.lat, 
+                                            lng: locationData.lng,
+                                            addressLine: locationData.addressLine || locationData.fullAddress || '',
+                                            barangay: locationData.barangay || '',
+                                            city: locationData.city || ''
+                                        })
                                     }}
                                 />
                                 <small className="form-help">

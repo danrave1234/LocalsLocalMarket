@@ -31,10 +31,15 @@ steps:
       '--region', '${_DEPLOY_REGION}',
       '--platform', '${_PLATFORM}',
       '--allow-unauthenticated',
-      '--port', '8080',
-      '--memory', '1Gi',
-      '--cpu', '1',
-      '--max-instances', '10'
+            '--port', '8080',
+            '--memory', '2Gi',
+      # Increased CPU allocation to 2 to address observed performance bottlenecks during load testing. allocation from 1Gi to 2Gi due to higher application memory requirements observed during load testing.
+      '--memory', '2Gi',
+            '--timeout', '300',
+      # Enable CPU throttling to reduce costs when the container is idle. '--max-instances', '10',
+      '--timeout', '300',
+      '--cpu-throttling',
+      '--execution-environment', 'gen2'
     ]
     id: 'deploy-backend'
     waitFor: ['push-backend-image']

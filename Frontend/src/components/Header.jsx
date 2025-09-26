@@ -1,10 +1,9 @@
 import React from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
-import { Home, MessageCircle, Menu, X } from 'lucide-react'
+import { Home, Menu, X } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Logo from './Logo.jsx'
 import SearchOptimization from './SearchOptimization.jsx'
-import FeedbackButton from './FeedbackButton.jsx'
 import ProfileDropdown from './ProfileDropdown.jsx'
 
 export default function Header({ onOpenFeedback }) {
@@ -140,25 +139,12 @@ export default function Header({ onOpenFeedback }) {
             <Link to="/" className="brand-link">
               <Logo size={logoSize} />
             </Link>
-            <span className="loading-pill">
+          </div>
+          <nav className="header-right">
+            <div className="loading-pill">
               <div className="loading-spinner"></div>
               Loading...
-            </span>
-          </div>
-          {showSearch && (
-            <div className="header-center">
-              <div className="header-search">
-                <input
-                  className="input"
-                  placeholder="Search products or shops"
-                  disabled
-                />
-                <button className="btn" disabled>Search</button>
-              </div>
             </div>
-          )}
-          <nav className="header-right">
-            <span className="muted">Loading...</span>
           </nav>
         </div>
       </header>
@@ -187,16 +173,6 @@ export default function Header({ onOpenFeedback }) {
         
         <nav className="header-right">
           <div className="desktop-nav">
-            <FeedbackButton 
-              variant="ghost" 
-              size="md" 
-              className="nav-link feedback-link"
-              showIcon={true}
-              onClick={onOpenFeedback}
-            >
-              <MessageCircle className="nav-icon" aria-hidden size={18} />
-              <span>Feedback</span>
-            </FeedbackButton>
             <Link to="/donate" className={`nav-link donate-link${isActive('/donate') ? ' active' : ''}`}>
               <svg className="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 20.02L12 17.77L5.82 20.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="currentColor"/>
@@ -209,7 +185,7 @@ export default function Header({ onOpenFeedback }) {
               <span>Home</span>
             </Link>
             {token ? (
-              <ProfileDropdown />
+              <ProfileDropdown onOpenFeedback={onOpenFeedback} />
             ) : (
               <>
                 <Link to="/login" className={`nav-link login-link${isActive('/login') ? ' active' : ''}`}>

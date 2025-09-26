@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { User, LayoutDashboard, LogOut, ChevronDown } from 'lucide-react'
+import { User, LayoutDashboard, LogOut, ChevronDown, MessageCircle } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 
-export default function ProfileDropdown({ isMobile = false, onMobileItemClick }) {
+export default function ProfileDropdown({ isMobile = false, onMobileItemClick, onOpenFeedback }) {
   const { user, logout } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef(null)
@@ -77,7 +77,7 @@ export default function ProfileDropdown({ isMobile = false, onMobileItemClick })
         <div className="profile-avatar">
           <User size={18} />
         </div>
-        <span className="profile-name">{user?.username || 'Profile'}</span>
+        <span className="profile-name">{user?.username || 'Account'}</span>
         <ChevronDown 
           size={16} 
           className={`dropdown-chevron ${isOpen ? 'open' : ''}`}
@@ -102,6 +102,16 @@ export default function ProfileDropdown({ isMobile = false, onMobileItemClick })
             <User size={16} />
             <span>Profile</span>
           </Link>
+          <button 
+            className="dropdown-item"
+            onClick={() => {
+              setIsOpen(false)
+              if (onOpenFeedback) onOpenFeedback()
+            }}
+          >
+            <MessageCircle size={16} />
+            <span>Feedback</span>
+          </button>
           <button 
             className="dropdown-item logout-item"
             onClick={handleLogout}
