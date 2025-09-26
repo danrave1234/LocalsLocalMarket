@@ -42,12 +42,6 @@ export async function getProfileRequest(token) {
 }
 
 export async function updateProfileRequest({ name }, token) {
-  console.log('=== UPDATE PROFILE REQUEST DEBUG ===')
-  console.log('API_BASE:', API_BASE)
-  console.log('Full URL:', `${API_BASE}/users/profile`)
-  console.log('Making update profile request with token:', token ? token.substring(0, 20) + '...' : 'NO TOKEN')
-  console.log('Request data:', { name })
-  
   const response = await fetch(`${API_BASE}/users/profile`, {
     method: 'PUT',
     headers: { 
@@ -57,23 +51,14 @@ export async function updateProfileRequest({ name }, token) {
     body: JSON.stringify({ name })
   })
   
-  console.log('Response status:', response.status)
-  console.log('Response headers:', Object.fromEntries(response.headers.entries()))
-  
   if (!response.ok) {
     const error = await response.json()
-    console.error('Error response:', error)
     throw new Error(error.error || 'Failed to update profile')
   }
   return response.json()
 }
 
 export async function changePasswordRequest({ currentPassword, newPassword }, token) {
-  console.log('=== CHANGE PASSWORD REQUEST DEBUG ===')
-  console.log('API_BASE:', API_BASE)
-  console.log('Full URL:', `${API_BASE}/users/change-password`)
-  console.log('Making change password request with token:', token ? token.substring(0, 20) + '...' : 'NO TOKEN')
-  
   const response = await fetch(`${API_BASE}/users/change-password`, {
     method: 'PUT',
     headers: { 
@@ -83,11 +68,8 @@ export async function changePasswordRequest({ currentPassword, newPassword }, to
     body: JSON.stringify({ currentPassword, newPassword })
   })
   
-  console.log('Response status:', response.status)
-  
   if (!response.ok) {
     const error = await response.json()
-    console.error('Error response:', error)
     throw new Error(error.error || 'Failed to change password')
   }
   return response.json()
