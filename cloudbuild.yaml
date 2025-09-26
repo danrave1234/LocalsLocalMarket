@@ -23,6 +23,8 @@ steps:
     waitFor: ['build-backend-image']
 
   # Deploy backend to Cloud Run
+  # NOTE: Database environment variables (LLM_DB_URL, LLM_DB_USER, LLM_DB_PASS, LLM_JWT_SECRET) 
+  # should be set separately in Google Cloud Console for security reasons
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args: [
@@ -31,15 +33,12 @@ steps:
       '--region', '${_DEPLOY_REGION}',
       '--platform', '${_PLATFORM}',
       '--allow-unauthenticated',
-            '--port', '8080',
-            '--memory', '2Gi',
-      # Increased CPU allocation to 2 to address observed performance bottlenecks during load testing. allocation from 1Gi to 2Gi due to higher application memory requirements observed during load testing.
+      '--port', '8080',
       '--memory', '2Gi',
-            '--timeout', '300',
-      # Enable CPU throttling to reduce costs when the container is idle. '--max-instances', '10',
       '--timeout', '300',
       '--cpu-throttling',
-      '--execution-environment', 'gen2'
+      '--execution-environment', 'gen2',
+      '--set-env-vars', 'SPRING_PROFILES_ACTIVE=dev,LLM_UPLOADS_DIR=/tmp/uploads,LLM_JPA_DDL=update'
     ]
     id: 'deploy-backend'
     waitFor: ['push-backend-image']

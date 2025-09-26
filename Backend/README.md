@@ -231,17 +231,24 @@ Prereqs: gcloud CLI, a GCP project, Artifact/Container Registry enabled.
 1) Build & push image via Cloud Build:
    - gcloud builds submit --tag gcr.io/PROJECT_ID/llm-backend:latest .
 
-2) Deploy to Cloud Run:
-   - gcloud run deploy llm-backend \
+2) Deploy to Cloud Run with Neon PostgreSQL:
+   - First, set the database environment variables in Google Cloud Console or via gcloud:
+     ```
+     gcloud run services update llm-backend \
+       --region REGION \
+       --set-env-vars "LLM_DB_URL=jdbc:postgresql://ep-xxx.neon.tech:5432/neondb?sslmode=require,LLM_DB_DRIVER=org.postgresql.Driver,LLM_DB_USER=neondb_owner,LLM_DB_PASS=your_password,LLM_JWT_SECRET=your-secure-32-byte-secret"
+     ```
+   
+   - Then deploy:
+     ```
+     gcloud run deploy llm-backend \
        --image gcr.io/PROJECT_ID/llm-backend:latest \
        --region REGION \
        --platform managed \
        --allow-unauthenticated \
        --memory 512Mi \
-       --set-env-vars "LLM_JWT_SECRET=change-me,LLM_UPLOADS_DIR=/tmp/uploads,LLM_JPA_DDL=update"
-
-3) (Optional) Use Postgres instead of SQLite by setting:
-   - --set-env-vars "LLM_DB_URL=jdbc:postgresql://HOST:PORT/DB?sslmode=require,LLM_DB_DRIVER=org.postgresql.Driver,LLM_DB_DIALECT=org.hibernate.dialect.PostgreSQLDialect,LLM_DB_USER=USER,LLM_DB_PASS=PASS"
+       --set-env-vars "LLM_UPLOADS_DIR=/tmp/uploads,LLM_JPA_DDL=update"
+     ```
 
 Notes:
 - Cloud Run container filesystem is mostly read-only; only /tmp is writable. Use LLM_UPLOADS_DIR=/tmp/uploads or switch to GCS/S3 for durable storage.
