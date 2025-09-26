@@ -38,7 +38,7 @@ steps:
       '--timeout', '300',
       '--cpu-throttling',
       '--execution-environment', 'gen2',
-      '--set-env-vars', 'SPRING_PROFILES_ACTIVE=dev,LLM_UPLOADS_DIR=/tmp/uploads,LLM_JPA_DDL=update,LLM_JWT_SECRET=${_LLM_JWT_SECRET},LLM_DB_URL=${_LLM_DB_URL},LLM_DB_DRIVER=org.postgresql.Driver,LLM_DB_USER=${_LLM_DB_USER},LLM_DB_PASS=${_LLM_DB_PASS}'
+      '--set-env-vars', 'SPRING_PROFILES_ACTIVE=dev,LLM_UPLOADS_DIR=/tmp/uploads,LLM_JPA_DDL=update,LLM_JWT_SECRET=${_LLM_JWT_SECRET},LLM_DB_URL=${_LLM_DB_URL},LLM_DB_DRIVER=org.postgresql.Driver,LLM_DB_USER=${_LLM_DB_USER},LLM_DB_PASS=${_LLM_DB_PASS},debug=true,logging.level.org.springframework.beans=TRACE,logging.level.org.localslocalmarket=DEBUG'
     ]
     id: 'deploy-backend'
     waitFor: ['push-backend-image']
