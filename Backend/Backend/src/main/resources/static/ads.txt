@@ -1,6 +1,0 @@
-# Authorized Digital Sellers (ads.txt)
-# Replace the placeholder publisher ID below with your real AdSense Publisher ID (format: pub-XXXXXXXXXXXXXXXXXXXXXXX)
-# Reference: https://support.google.com/adsense/answer/7532444?hl=en
-
-# Google AdSense
-google.com, pub-REPLACE_WITH_YOUR_PUBLISHER_ID, DIRECT, f08c47fec0942fa0
