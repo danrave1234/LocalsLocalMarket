@@ -37,7 +37,7 @@ import {
   deleteService 
 } from '../api/services.js'
 import { uploadImage } from '../api/products.js'
-import { getImageUrl } from '../utils/imageUtils.js'
+import { getImageUrl } from '../utils/imageUtils.jsx'
 import { SkeletonShopManagement } from '../components/Skeleton.jsx'
 import './ShopManagementPage.css'
 

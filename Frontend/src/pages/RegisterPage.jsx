@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, memo, useCallback, useMemo } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useNavigate } from 'react-router-dom'
 import { ResponsiveAd } from '../components/GoogleAds.jsx'
+import { useFormErrorHandler } from '../hooks/useErrorHandler.js'
+import { formValidationPatterns, validationPatterns } from '../utils/codeDuplication.jsx'
 import '../auth.css'
 import { fetchPublicConfig } from '../api/auth.js'
 
-export default function RegisterPage() {
+function RegisterPage() {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -15,30 +17,69 @@ export default function RegisterPage() {
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [acceptedTerms, setAcceptedTerms] = useState(false)
-    const [error, setError] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const { register, loginWithGoogle } = useAuth()
     const googleBtnRef = useRef(null)
     const navigate = useNavigate()
+    
+    // Enhanced error handling
+    const { 
+        fieldErrors, 
+        submissionError, 
+        handleValidationError,
+        handleSubmissionError, 
+        clearAllErrors 
+    } = useFormErrorHandler()
 
-    const handleChange = (e) => {
-        setFormData({
-            ...formData,
+    const handleChange = useCallback((e) => {
+        setFormData(prev => ({
+            ...prev,
             [e.target.name]: e.target.value
-        })
-    }
+        }))
+    }, [])
 
-    const onSubmit = async (e) => {
+    // Form validation using standardized patterns
+    const validateForm = useCallback(() => {
+        const errors = {}
+        
+        // Name validation
+        const nameError = validationPatterns.required(formData.name, 'Name') ||
+                         validationPatterns.minLength(formData.name, 2, 'Name')
+        if (nameError) errors.name = nameError
+        
+        // Email validation
+        const emailError = validationPatterns.required(formData.email, 'Email') ||
+                          validationPatterns.email(formData.email)
+        if (emailError) errors.email = emailError
+        
+        // Password validation
+        const passwordError = validationPatterns.required(formData.password, 'Password') ||
+                             validationPatterns.password(formData.password)
+        if (passwordError) errors.password = passwordError
+        
+        // Confirm password validation
+        const confirmPasswordError = validationPatterns.required(formData.confirmPassword, 'Confirm Password') ||
+                                   validationPatterns.confirmPassword(formData.password, formData.confirmPassword)
+        if (confirmPasswordError) errors.confirmPassword = confirmPasswordError
+        
+        return errors
+    }, [formData])
+
+    const onSubmit = useCallback(async (e) => {
         e.preventDefault()
-        setError('')
+        clearAllErrors()
         if (isSubmitting) return
         
-        if (!acceptedTerms) {
-            return setError('Please accept the Terms of Agreement to continue')
+        // Validate form
+        const validationErrors = validateForm()
+        if (Object.keys(validationErrors).length > 0) {
+            handleValidationError(validationErrors)
+            return
         }
-
-        if (formData.password !== formData.confirmPassword) {
-            return setError('Passwords do not match')
+        
+        if (!acceptedTerms) {
+            handleSubmissionError(new Error('Please accept the Terms of Agreement to continue'), 'Terms validation')
+            return
         }
 
         setIsSubmitting(true)
@@ -46,11 +87,11 @@ export default function RegisterPage() {
             await register(formData.email, formData.password, formData.name)
             navigate('/', { replace: true })
         } catch (err) {
-            setError(err?.data?.message || err.message || 'Registration failed')
+            handleSubmissionError(err, 'Registration submission')
         } finally {
             setIsSubmitting(false)
         }
-    }
+    }, [isSubmitting, validateForm, acceptedTerms, formData, register, navigate, clearAllErrors, handleValidationError, handleSubmissionError])
 
     useEffect(() => {
         if (!googleBtnRef.current) return
@@ -94,13 +135,19 @@ export default function RegisterPage() {
         }
     }, [loginWithGoogle])
 
-    const togglePasswordVisibility = () => {
-        setShowPassword(!showPassword)
-    }
+    const togglePasswordVisibility = useCallback(() => {
+        setShowPassword(prev => !prev)
+    }, [])
 
-    const toggleConfirmPasswordVisibility = () => {
-        setShowConfirmPassword(!showConfirmPassword)
-    }
+    const toggleConfirmPasswordVisibility = useCallback(() => {
+        setShowConfirmPassword(prev => !prev)
+    }, [])
+
+    // Memoized form configuration
+    const formConfig = useMemo(() => ({
+        fields: ['name', 'email', 'password', 'confirmPassword'],
+        validation: formValidationPatterns
+    }), [])
 
     return (
         <main className="auth-container">
@@ -113,13 +160,13 @@ export default function RegisterPage() {
 
                 {/* Auth Form Card */}
                 <div className="auth-card">
-                    {error && (
-                        <div className="auth-error">
-                            <svg className="error-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {submissionError && (
+                        <div className="auth-error" role="alert">
+                            <svg className="error-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
                                 <path d="M15 9L9 15M9 9L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                             </svg>
-                            {error}
+                            {submissionError}
                         </div>
                     )}
 
@@ -136,7 +183,7 @@ export default function RegisterPage() {
                                 type="text"
                                 id="name"
                                 name="name"
-                                className="auth-input"
+                                className={`auth-input ${fieldErrors.name ? 'error' : ''}`}
                                 value={formData.name}
                                 onChange={handleChange}
                                 required
@@ -145,7 +192,14 @@ export default function RegisterPage() {
                                 data-form-type="other"
                                 placeholder="Enter your full name"
                                 disabled={isSubmitting}
+                                aria-invalid={fieldErrors.name ? "true" : "false"}
+                                aria-describedby={fieldErrors.name ? "name-error" : undefined}
                             />
+                            {fieldErrors.name && (
+                                <div id="name-error" className="field-error" role="alert">
+                                    {fieldErrors.name}
+                                </div>
+                            )}
                         </div>
 
                         <div className="form-group">
@@ -320,4 +374,10 @@ export default function RegisterPage() {
     )
 }
 
+// Memoized component to prevent unnecessary re-renders
+const MemoizedRegisterPage = memo(RegisterPage, (prevProps, nextProps) => {
+    // Since this component doesn't take props, it should only re-render when internal state changes
+    return true // Always return true to prevent re-renders unless internal state changes
+})
 
+export default MemoizedRegisterPage

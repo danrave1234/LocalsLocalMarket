@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, memo, useCallback, useMemo } from 'react'
 import { ArrowUp, MapPin, Image, HelpCircle } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import { useTutorial } from '../contexts/TutorialContext.jsx'
@@ -17,11 +17,14 @@ import {
 } from '../api/shops.js'
 import categoriesCache from '../utils/categoriesCache.js'
 import { uploadImage, deleteImage } from '../api/products.js'
-import { getImageUrl } from '../utils/imageUtils.js'
+import { getImageUrl } from '../utils/imageUtils.jsx'
 import { handleApiError } from '../utils/errorHandler.js'
 import { generateShopUrl, generateShopSlug } from '../utils/slugUtils.js'
 import ErrorDisplay from '../components/ErrorDisplay.jsx'
 import BusinessHours from '../components/BusinessHours.jsx'
+import { useFormErrorHandler } from '../hooks/useErrorHandler.js'
+import { useFocusManagement } from '../hooks/useFocusManagement.js'
+import { validationPatterns } from '../utils/codeDuplication.jsx'
 import '../dashboard.css'
 
 // Inline icon components to match landing page consistency

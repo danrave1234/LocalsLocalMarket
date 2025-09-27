@@ -23,7 +23,7 @@ import ReviewModal from '../components/ReviewModal.jsx'
 import ShopReviews from '../components/ShopReviews.jsx'
 import { extractShopIdFromSlug, extractShopNameFromSlug, generateShopSlug } from '../utils/slugUtils.js'
 import { ResponsiveAd, InContentAd } from '../components/GoogleAds.jsx'
-import { getImageUrl } from '../utils/imageUtils.js'
+import { getImageUrl, clearImageCache } from '../utils/imageUtils.jsx'
 import { handleApiError } from '../utils/errorHandler.js'
 import { SkeletonProductCard, SkeletonText, SkeletonAvatar, SkeletonButton, SkeletonMap } from '../components/Skeleton.jsx'
 import ErrorDisplay from '../components/ErrorDisplay.jsx'
@@ -568,6 +568,9 @@ export default function ShopPage() {
       setError('')
       setLoading(true)
       setMapLoaded(false)
+      
+      // Clear image cache to ensure fresh images when loading shop data
+      clearImageCache()
       
       
       try {
@@ -1562,7 +1565,7 @@ export default function ShopPage() {
                         }}
                       >
                         <img 
-                          src={getImageUrl(shop.coverPath)} 
+                          src={getImageUrl(shop.coverPath, { forceRefresh: false })} 
                           alt={`${shop.name} shop view - Click to view full size`}
                           style={{ 
                             objectFit: 'cover', 
@@ -1570,6 +1573,13 @@ export default function ShopPage() {
                             width: '100%',
                             height: '180px',
                             transition: 'transform 0.2s ease'
+                          }}
+                          onError={(e) => {
+                            console.error('Shop cover image failed to load:', e.target.src)
+                            // Try with force refresh
+                            setTimeout(() => {
+                              e.target.src = getImageUrl(shop.coverPath, { forceRefresh: true })
+                            }, 1000)
                           }}
                         />
                       </button>
@@ -2173,11 +2183,12 @@ export default function ShopPage() {
                       return (
                         <>
                           <OptimizedImage 
-                            src={getImageUrl(imagePaths[0])} 
+                            src={getImageUrl(imagePaths[0], { forceRefresh: false })} 
                             alt={product.title}
                             className="product-image"
                             fallbackSrc="/placeholder-product.jpg"
                             loading="lazy"
+                            retryOnError={true}
                           />
                           <div className="product-image-placeholder" style={{ display: 'none' }}>
                             <Camera size={24} />

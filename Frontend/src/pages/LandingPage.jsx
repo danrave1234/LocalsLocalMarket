@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, useRef } from "react"
-import { useSearchParams, Link } from "react-router-dom"
+import { useEffect, useMemo, useState, useRef, memo, useCallback } from "react"
+import { useSearchParams, Link, useNavigate } from "react-router-dom"
 import Avatar from "../components/Avatar.jsx"
 import SEOHead from "../components/SEOHead.jsx"
 import SocialSharing from "../components/SocialSharing.jsx"
@@ -12,13 +12,15 @@ import { generateShopUrl, generateShopSlug } from "../utils/slugUtils.js"
 import { InContentAd, ResponsiveAd } from "../components/GoogleAds.jsx"
 import { ArrowUp } from 'lucide-react'
 import { loadLeaflet, isLeafletLoaded, loadMarkerCluster } from "../utils/leafletLoader.js"
-import { getImageUrl } from '../utils/imageUtils.js'
+import { getImageUrl, loadImageWithRetry, clearImageCache } from '../utils/imageUtils.jsx'
 import { handleApiError } from '../utils/errorHandler.js'
 import { SkeletonShopCard, SkeletonMap, SkeletonText } from "../components/Skeleton.jsx"
 import ErrorDisplay from "../components/ErrorDisplay.jsx"
 import { LoadingSpinner, LoadingCard, LoadingOverlay } from "../components/Loading.jsx"
 import { useTutorial } from "../contexts/TutorialContext.jsx"
 import { landingPageTutorialSteps } from "../components/TutorialSteps.js"
+import { useErrorHandler } from '../hooks/useErrorHandler.js'
+import { debouncePatterns } from '../utils/codeDuplication.jsx'
 import '../landing-page.css'
 
 // Inline icon components to avoid external dependencies
@@ -142,7 +144,8 @@ function extractShopsFromResponse(response) {
   return []
 }
 
-export default function LandingPage() {
+function LandingPage() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const query = (searchParams.get("q") || "").trim().toLowerCase()
   const resultType = searchParams.get("type") || "shops"
@@ -321,10 +324,16 @@ export default function LandingPage() {
     }
   }
 
-  // Handle client-side search
-  const handleSearchChange = (searchTerm) => {
+  // Handle client-side search with debouncing
+  const handleSearchChange = useCallback(debouncePatterns.search((searchTerm) => {
     setClientQuery(searchTerm)
-  }
+  }, 300), [])
+
+  // Clear image cache when needed
+  const handleClearImageCache = useCallback(() => {
+    clearImageCache()
+    console.log('Image cache cleared')
+  }, [])
 
   const sortedItems = useMemo(() => {
     let copy = []
@@ -554,13 +563,20 @@ export default function LandingPage() {
           map._intersectionObserver = io
         }
 
-        // Window resize: debounce and invalidate
+        // Enhanced window resize handling with better debouncing
         let resizeTimer
+        let isResizing = false
         const onWinResize = () => {
+          if (isResizing) return
+          isResizing = true
+          
           clearTimeout(resizeTimer)
-          resizeTimer = setTimeout(() => scheduleInvalidate(), 120)
+          resizeTimer = setTimeout(() => {
+            scheduleInvalidate()
+            isResizing = false
+          }, 100) // Reduced debounce for better responsiveness
         }
-        window.addEventListener('resize', onWinResize)
+        window.addEventListener('resize', onWinResize, { passive: true })
         map._onWinResize = onWinResize
 
         // CSS transition end on container (if layout animates)
@@ -616,10 +632,16 @@ export default function LandingPage() {
           if (mapInstance._watchdog) { try { clearInterval(mapInstance._watchdog) } catch {} }
           if (mapInstance._onWinResize) { try { window.removeEventListener('resize', mapInstance._onWinResize) } catch {} }
           if (mapInstance._onTransitionEnd && mapRef.current) { try { mapRef.current.removeEventListener('transitionend', mapInstance._onTransitionEnd) } catch {} }
-          // Remove cluster group
+          // Remove cluster group but preserve it for reuse
           if (clusterGroupRef.current) {
-            try { mapInstance.removeLayer(clusterGroupRef.current) } catch {}
-            clusterGroupRef.current = null
+            try { 
+              mapInstance.removeLayer(clusterGroupRef.current) 
+              console.log('Cluster group removed from map during cleanup')
+            } catch (error) {
+              console.warn('Error removing cluster group:', error)
+            }
+            // Don't set to null - keep the reference for reuse
+            // clusterGroupRef.current = null
           }
           mapInstance.remove()
         } catch (error) {
@@ -630,22 +652,88 @@ export default function LandingPage() {
     }
   }, [mapContainerReady]) // Only reinitialize when container readiness changes
 
-  // Handle window resize for map
+  // Enhanced window resize handling with better debouncing and performance
   useEffect(() => {
+    let resizeTimeout
+    let orientationTimeout
+    let isResizing = false
+
     const handleResize = () => {
-      if (mapInstance && mapInstance.invalidateSize) {
-        setTimeout(() => {
-          mapInstance.invalidateSize()
-        }, 100)
+      if (isResizing) return
+      isResizing = true
+
+      // Clear existing timeout
+      clearTimeout(resizeTimeout)
+      
+      // Update mobile state immediately for responsive behavior
+      const newIsMobile = window.innerWidth <= 1060
+      if (newIsMobile !== isMobile) {
+        setIsMobile(newIsMobile)
       }
-      setIsMobile(window.innerWidth <= 1060)
+
+      // Debounced map resize with better performance
+      resizeTimeout = setTimeout(() => {
+        if (mapInstance && mapInstance.invalidateSize) {
+          try {
+            // Use requestAnimationFrame for smoother performance
+            requestAnimationFrame(() => {
+              mapInstance.invalidateSize(true) // Force invalidate with animation
+            })
+          } catch (error) {
+            console.warn('Map resize failed:', error)
+          }
+        }
+        isResizing = false
+      }, 150) // Increased debounce for better performance
     }
 
-    window.addEventListener('resize', handleResize)
-    // initialize value
+    // Handle orientation changes (mobile devices)
+    const handleOrientationChange = () => {
+      clearTimeout(orientationTimeout)
+      orientationTimeout = setTimeout(() => {
+        handleResize()
+      }, 300) // Longer delay for orientation changes
+    }
+
+    // Handle viewport changes (better for mobile)
+    const handleViewportChange = () => {
+      if (mapInstance) {
+        // Force immediate resize for viewport changes
+        requestAnimationFrame(() => {
+          try {
+            mapInstance.invalidateSize(true)
+          } catch (error) {
+            console.warn('Map viewport resize failed:', error)
+          }
+        })
+      }
+    }
+
+    // Add event listeners
+    window.addEventListener('resize', handleResize, { passive: true })
+    window.addEventListener('orientationchange', handleOrientationChange, { passive: true })
+    
+    // Listen for viewport changes (CSS media queries)
+    let mediaQuery = null
+    if (window.matchMedia) {
+      mediaQuery = window.matchMedia('(max-width: 1060px)')
+      mediaQuery.addEventListener('change', handleViewportChange)
+    }
+
+    // Initialize mobile state
     setIsMobile(window.innerWidth <= 1060)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [mapInstance])
+
+    return () => {
+      clearTimeout(resizeTimeout)
+      clearTimeout(orientationTimeout)
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('orientationchange', handleOrientationChange)
+      
+      if (mediaQuery) {
+        mediaQuery.removeEventListener('change', handleViewportChange)
+      }
+    }
+  }, [mapInstance, isMobile])
 
   // Update map center when coords change (without reinitializing)
   useEffect(() => {
@@ -743,117 +831,146 @@ export default function LandingPage() {
       newMarkers.push(pinnedMarker)
     }
  
-    // Ensure cluster group is available before adding shop markers
+    // Enhanced shop markers addition with better error handling and persistence
     const addShopMarkers = () => {
       if (!clusterGroupRef.current || !L.markerClusterGroup) {
+        console.warn('Cluster group not ready, skipping shop markers')
         return
       }
+      
       // Add shop markers to cluster group (only for shops)
       if (resultType === 'shops') {
+        console.log(`Adding ${sortedItems.length} shop markers to cluster group`)
+        
         sortedItems.forEach((shop) => {
-        if (shop.lat && shop.lng) {
-          try {
-            const logoUrl = shop.logoPath ? getImageUrl(shop.logoPath) : ''
-            const shopIcon = L.divIcon({
-              className: 'shop-marker',
-              html: `
-                <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); overflow: hidden;">
-                  ${logoUrl 
-                    ? `<div style=\"position:absolute; top:0; left:0; right:0; bottom:0; background-image:url('${logoUrl}'); background-size:cover; background-position:center;\"></div>`
-                    : '<div style=\"position:absolute; inset:0; background:#6366f1; display:flex; align-items:center; justify-content:center;\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"white\" stroke-width=\"2\"><path d=\"M3 9l1-5h16l1 5\"/><path d=\"M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z\"/><path d=\"M8 13h3v3H8z\"/></svg></div>'}
-                </div>
-              `,
-              iconSize: [40, 40],
-              iconAnchor: [20, 20]
-            })
-
-            const marker = L.marker([shop.lat, shop.lng], { icon: shopIcon })
-              .bindPopup(`
-                <div style="min-width: ${isMobile ? '280px' : '200px'}; max-width: ${isMobile ? '320px' : '250px'};">
-                  <h4 style="margin: 0 0 0.5rem 0; color: #6366f1; font-size: ${isMobile ? '1rem' : '0.875rem'};">${shop.name}</h4>
-                  ${shop.addressLine ? `<p style="margin: 0 0 0.5rem 0; font-size: ${isMobile ? '0.9rem' : '0.875rem'}; color: #666; line-height: 1.4;">${shop.addressLine}</p>` : ''}
-                  <a href="/shops/${generateShopSlug(shop.name, shop.id)}" style="
-                    display: inline-block;
-                    background: #6366f1;
-                    color: white;
-                    padding: ${isMobile ? '0.75rem 1.25rem' : '0.5rem 1rem'};
-                    text-decoration: none;
-                    border-radius: ${isMobile ? '8px' : '6px'};
-                    font-size: ${isMobile ? '0.9rem' : '0.875rem'};
-                    font-weight: 500;
-                    text-align: center;
-                    width: ${isMobile ? '100%' : 'auto'};
-                    box-sizing: border-box;
-                    transition: background-color 0.2s;
-                  " onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='#6366f1'">View Shop</a>
-                </div>
-              `, {
-                maxWidth: isMobile ? 320 : 250,
-                className: isMobile ? 'mobile-popup' : '',
-                closeButton: true,
-                autoClose: false,
-                closeOnClick: false,
-                offset: isMobile ? [0, -10] : [0, 0]
+          if (shop.lat && shop.lng) {
+            try {
+              // Sanitize inputs to prevent XSS
+              const logoUrl = shop.logoPath ? getImageUrl(shop.logoPath).replace(/[<>\"'&]/g, '') : ''
+              const shopIcon = L.divIcon({
+                className: 'shop-marker',
+                html: `
+                  <div style="position: relative; width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3); overflow: hidden;">
+                    ${logoUrl 
+                      ? `<div style=\"position:absolute; top:0; left:0; right:0; bottom:0; background-image:url('${logoUrl}'); background-size:cover; background-position:center;\"></div>`
+                      : '<div style=\"position:absolute; inset:0; background:#6366f1; display:flex; align-items:center; justify-content:center;\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"white\" stroke-width=\"2\"><path d=\"M3 9l1-5h16l1 5\"/><path d=\"M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z\"/><path d=\"M8 13h3v3H8z\"/></svg></div>'}
+                  </div>
+                `,
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
               })
 
-            clusterGroupRef.current.addLayer(marker)
-          } catch (error) {
-            console.error(`Error adding marker for shop ${shop.name}:`, error)
+              // Sanitize shop data for popup
+              const sanitizedShopName = (shop.name || '').replace(/[<>\"'&]/g, '')
+              const sanitizedAddress = (shop.addressLine || '').replace(/[<>\"'&]/g, '')
+              
+              const marker = L.marker([shop.lat, shop.lng], { icon: shopIcon })
+                .bindPopup(`
+                  <div style="min-width: ${isMobile ? '280px' : '200px'}; max-width: ${isMobile ? '320px' : '250px'};">
+                    <h4 style="margin: 0 0 0.5rem 0; color: #6366f1; font-size: ${isMobile ? '1rem' : '0.875rem'};">${sanitizedShopName}</h4>
+                    ${sanitizedAddress ? `<p style="margin: 0 0 0.5rem 0; font-size: ${isMobile ? '0.9rem' : '0.875rem'}; color: #666; line-height: 1.4;">${sanitizedAddress}</p>` : ''}
+                    <a href="/shops/${generateShopSlug(sanitizedShopName, shop.id)}" style="
+                      display: inline-block;
+                      background: #6366f1;
+                      color: white;
+                      padding: ${isMobile ? '0.75rem 1.25rem' : '0.5rem 1rem'};
+                      text-decoration: none;
+                      border-radius: ${isMobile ? '8px' : '6px'};
+                      font-size: ${isMobile ? '0.9rem' : '0.875rem'};
+                      font-weight: 500;
+                      text-align: center;
+                      width: ${isMobile ? '100%' : 'auto'};
+                      box-sizing: border-box;
+                      transition: background-color 0.2s;
+                    " onmouseover="this.style.background='#4f46e5'" onmouseout="this.style.background='#6366f1'">View Shop</a>
+                  </div>
+                `, {
+                  maxWidth: isMobile ? 320 : 250,
+                  className: isMobile ? 'mobile-popup' : '',
+                  closeButton: true,
+                  autoClose: false,
+                  closeOnClick: false,
+                  offset: isMobile ? [0, -10] : [0, 0]
+                })
+
+              // Ensure cluster group is still valid before adding
+              if (clusterGroupRef.current && clusterGroupRef.current.addLayer) {
+                clusterGroupRef.current.addLayer(marker)
+                console.log(`Successfully added marker for shop: ${shop.name}`)
+              } else {
+                console.warn(`Cluster group not available for shop: ${shop.name}`)
+              }
+            } catch (error) {
+              console.error(`Error adding marker for shop ${shop.name}:`, error)
+            }
           }
+        })
+      }
+    }
+
+    // Enhanced cluster group handling with better persistence
+    const initializeClusterGroup = () => {
+      if (!clusterGroupRef.current) {
+        try {
+          console.log('Initializing cluster group for shop markers')
+          clusterGroupRef.current = L.markerClusterGroup({
+            disableClusteringAtZoom: 16,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            maxClusterRadius: 50,
+            iconCreateFunction: function(cluster) {
+              const count = cluster.getChildCount()
+              const size = count >= 100 ? 52 : count >= 25 ? 46 : 40
+              const fontSize = count >= 100 ? 16 : count >= 25 ? 15 : 14
+              const ringColor = 'var(--card, #ffffff)'
+              const bg = 'var(--primary, #6366f1)'
+              const txt = '#ffffff'
+              const shadow = 'rgba(0,0,0,0.25)'
+              const html = `
+                <div style="
+                  width: ${size}px;
+                  height: ${size}px;
+                  border-radius: 50%;
+                  background: ${bg};
+                  color: ${txt};
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  box-shadow: 0 6px 16px ${shadow};
+                  border: 3px solid ${ringColor};
+                  font-weight: 700;
+                  font-family: inherit;
+                  line-height: 1;
+                  position: relative;
+                ">
+                  <span style="font-size:${fontSize}px;">${count}</span>
+                </div>
+              `
+              return L.divIcon({
+                html,
+                className: 'cluster-marker',
+                iconSize: [size, size],
+                iconAnchor: [size/2, size/2]
+              })
+            }
+          })
+          
+          if (mapInstance && mapInstance.addLayer) {
+            mapInstance.addLayer(clusterGroupRef.current)
+            console.log('Cluster group added to map successfully')
+          }
+        } catch (error) {
+          console.error('Failed to initialize cluster group:', error)
         }
-      })
       }
     }
 
     // If plugin not ready yet, attempt to load then add
     if (!clusterGroupRef.current || !L.markerClusterGroup) {
+      console.log('Loading marker cluster plugin...')
       loadMarkerCluster().then(() => {
-        if (!clusterGroupRef.current) {
-          try {
-            clusterGroupRef.current = L.markerClusterGroup({
-              disableClusteringAtZoom: 16,
-              spiderfyOnMaxZoom: true,
-              showCoverageOnHover: false,
-              maxClusterRadius: 50,
-              iconCreateFunction: function(cluster) {
-                const count = cluster.getChildCount()
-                const size = count >= 100 ? 52 : count >= 25 ? 46 : 40
-                const fontSize = count >= 100 ? 16 : count >= 25 ? 15 : 14
-                const ringColor = 'var(--card, #ffffff)'
-                const bg = 'var(--primary, #6366f1)'
-                const txt = '#ffffff'
-                const shadow = 'rgba(0,0,0,0.25)'
-                const html = `
-                  <div style="
-                    width: ${size}px;
-                    height: ${size}px;
-                    border-radius: 50%;
-                    background: ${bg};
-                    color: ${txt};
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    box-shadow: 0 6px 16px ${shadow};
-                    border: 3px solid ${ringColor};
-                    font-weight: 700;
-                    font-family: inherit;
-                    line-height: 1;
-                    position: relative;
-                  ">
-                    <span style="font-size:${fontSize}px;">${count}</span>
-                  </div>
-                `
-                return L.divIcon({
-                  html,
-                  className: 'cluster-marker',
-                  iconSize: [size, size],
-                  iconAnchor: [size/2, size/2]
-                })
-              }
-            })
-            mapInstance.addLayer(clusterGroupRef.current)
-          } catch {}
-        }
+        console.log('Marker cluster plugin loaded, initializing cluster group')
+        initializeClusterGroup()
         addShopMarkers()
 
         // Fit bounds including clusters and non-cluster markers
@@ -868,11 +985,14 @@ export default function LandingPage() {
           const center = coords ? [coords.lat, coords.lng] : [10.3157, 123.8854]
           mapInstance.setView(center, 12)
         }
-      }).catch(() => {
-        // Fallback: no clustering, just proceed with markers directly on map (already handled earlier if needed)
+      }).catch((error) => {
+        console.warn('MarkerCluster plugin failed to load:', error)
+        // Fallback: no clustering, just proceed with markers directly on map
       })
     } else {
-      // Cluster group ready
+      // Cluster group ready - ensure it's properly initialized
+      console.log('Cluster group already exists, adding shop markers')
+      initializeClusterGroup()
       addShopMarkers()
 
       // Fit bounds including clusters and non-cluster markers
@@ -893,41 +1013,106 @@ export default function LandingPage() {
  
   }, [mapInstance, sortedItems, coords, pinnedLocation, resultType])
 
-  // Handle map resize when component updates or window resizes
+  // Enhanced map resize handling for component updates
   useEffect(() => {
     if (mapInstance) {
-      const handleResize = () => {
-        if (mapInstance) {
-          mapInstance.invalidateSize()
+      // Create a more robust resize handler
+      const handleComponentResize = () => {
+        if (mapInstance && mapInstance.invalidateSize) {
+          // Use requestAnimationFrame for better performance
+          requestAnimationFrame(() => {
+            try {
+              mapInstance.invalidateSize(true)
+            } catch (error) {
+              console.warn('Component map resize failed:', error)
+            }
+          })
         }
       }
-      
-      window.addEventListener('resize', handleResize)
-      return () => window.removeEventListener('resize', handleResize)
+
+      // Listen for container size changes
+      if (mapRef.current) {
+        const resizeObserver = new ResizeObserver((entries) => {
+          for (let entry of entries) {
+            if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+              handleComponentResize()
+            }
+          }
+        })
+        
+        resizeObserver.observe(mapRef.current)
+        
+        return () => {
+          resizeObserver.disconnect()
+        }
+      }
     }
   }, [mapInstance])
 
   const toggleMapSize = () => {
     setIsMapExpanded(!isMapExpanded)
-    // Force map resize after toggle
-    setTimeout(() => {
-      if (mapInstance) {
-        mapInstance.invalidateSize()
-      }
-    }, 100)
+    // Enhanced map resize after toggle with better timing
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (mapInstance && mapInstance.invalidateSize) {
+          try {
+            mapInstance.invalidateSize(true)
+            // Additional resize after CSS transition completes
+            setTimeout(() => {
+              if (mapInstance) {
+                mapInstance.invalidateSize(true)
+              }
+            }, 300) // Match CSS transition duration
+          } catch (error) {
+            console.warn('Map toggle resize failed:', error)
+          }
+        }
+      }, 50) // Reduced initial delay for better responsiveness
+    })
   }
 
   const openMapModal = () => {
     setIsMapModalOpen(true)
-    setTimeout(() => {
-      if (mapInstance) mapInstance.invalidateSize()
-    }, 250)
+    // Enhanced modal resize handling
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (mapInstance && mapInstance.invalidateSize) {
+          try {
+            mapInstance.invalidateSize(true)
+            // Additional resize after modal animation
+            setTimeout(() => {
+              if (mapInstance) {
+                mapInstance.invalidateSize(true)
+              }
+            }, 200)
+          } catch (error) {
+            console.warn('Map modal open resize failed:', error)
+          }
+        }
+      }, 100)
+    })
   }
+  
   const closeMapModal = () => {
     setIsMapModalOpen(false)
-    setTimeout(() => {
-      if (mapInstance) mapInstance.invalidateSize()
-    }, 250)
+    // Enhanced modal close resize handling
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        if (mapInstance && mapInstance.invalidateSize) {
+          try {
+            mapInstance.invalidateSize(true)
+            // Additional resize after modal close animation
+            setTimeout(() => {
+              if (mapInstance) {
+                mapInstance.invalidateSize(true)
+              }
+            }, 200)
+          } catch (error) {
+            console.warn('Map modal close resize failed:', error)
+          }
+        }
+      }, 100)
+    })
   }
 
   const clearPinnedLocation = () => {
@@ -948,6 +1133,29 @@ export default function LandingPage() {
     // Only refresh if map is not already ready
     if (!mapContainerReady) {
       setMapContainerReady(true)
+    }
+  }
+
+  // Enhanced map resize utility with performance optimization
+  const optimizedMapResize = (immediate = false) => {
+    if (!mapInstance || !mapInstance.invalidateSize) return
+
+    const resizeMap = () => {
+      try {
+        // Use requestAnimationFrame for smoother performance
+        requestAnimationFrame(() => {
+          mapInstance.invalidateSize(true)
+        })
+      } catch (error) {
+        console.warn('Optimized map resize failed:', error)
+      }
+    }
+
+    if (immediate) {
+      resizeMap()
+    } else {
+      // Debounced resize for better performance
+      setTimeout(resizeMap, 50)
     }
   }
 
@@ -1129,7 +1337,7 @@ export default function LandingPage() {
                   onMouseLeave={(e) => e.target.style.transform = "translateY(0)"}
                   onClick={() => {
                     if (resultType === 'shops') {
-                      window.location.href = generateShopUrl(item.name, item.id)
+                      navigate(generateShopUrl(item.name, item.id))
                     } else if (resultType === 'products') {
                       // For now, just show product details in console. Could navigate to product page later
                       console.log('Product clicked:', item)
@@ -1176,7 +1384,14 @@ export default function LandingPage() {
                                 }}
                                 onError={(e) => {
                                   console.error('Product image failed to load:', e.target.src)
-                                  e.target.style.display = 'none'
+                                  // Try to reload with force refresh
+                                  const originalSrc = e.target.src
+                                  setTimeout(() => {
+                                    e.target.src = getImageUrl(firstImage, { forceRefresh: true })
+                                  }, 1000)
+                                }}
+                                onLoad={() => {
+                                  console.log('Product image loaded successfully')
                                 }}
                               />
                             ) : null
@@ -1196,7 +1411,13 @@ export default function LandingPage() {
                               }}
                               onError={(e) => {
                                 console.error('Service image failed to load:', e.target.src)
-                                e.target.style.display = 'none'
+                                // Try to reload with force refresh
+                                setTimeout(() => {
+                                  e.target.src = getImageUrl(item.imageUrl, { forceRefresh: true })
+                                }, 1000)
+                              }}
+                              onLoad={() => {
+                                console.log('Service image loaded successfully')
                               }}
                             />
                           )
@@ -1213,7 +1434,13 @@ export default function LandingPage() {
                               }}
                               onError={(e) => {
                                 console.error('Shop view image failed to load:', e.target.src)
-                                e.target.style.display = 'none'
+                                // Try to reload with force refresh
+                                setTimeout(() => {
+                                  e.target.src = getImageUrl(item.coverPath, { forceRefresh: true })
+                                }, 1000)
+                              }}
+                              onLoad={() => {
+                                console.log('Shop image loaded successfully')
                               }}
                             />
                           )
@@ -1664,3 +1891,11 @@ export default function LandingPage() {
     </>
   )
 }
+
+// Memoized component to prevent unnecessary re-renders
+const MemoizedLandingPage = memo(LandingPage, (prevProps, nextProps) => {
+  // LandingPage doesn't take props, so it should only re-render when internal state changes
+  return true
+})
+
+export default MemoizedLandingPage

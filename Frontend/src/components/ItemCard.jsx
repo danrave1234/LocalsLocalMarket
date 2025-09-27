@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Package, Wrench, Edit, Trash2, Eye, ShoppingCart, Clock, Tag, MapPin } from 'lucide-react'
 import OptimizedImage from './OptimizedImage.jsx'
-import { getImageUrl } from '../utils/imageUtils.js'
+import { getImageUrl } from '../utils/imageUtils.jsx'
 import './ItemCard.css'
 
 const ItemCard = ({ 

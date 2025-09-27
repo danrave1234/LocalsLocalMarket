@@ -50,7 +50,7 @@ const Footer = ({ onOpenFeedback }) => {
               </summary>
               <ul className="footer-links-list">
                 <li><a href="/" className="footer-link"><Home aria-hidden />Home</a></li>
-                <li><a href="/shops" className="footer-link"><Store aria-hidden />Browse Shops</a></li>
+                <li><a href="/?type=shops" className="footer-link"><Store aria-hidden />Browse Shops</a></li>
                 <li><a href="/about" className="footer-link"><Info aria-hidden />About Us</a></li>
                 <li><a href="/donate" className="footer-link special"><HeartHandshake aria-hidden />Support Us</a></li>
                 <li><FeedbackButton variant="ghost" size="sm" className="footer-link" showIcon={true} onClick={onOpenFeedback}><MessageCircle aria-hidden />Feedback</FeedbackButton></li>

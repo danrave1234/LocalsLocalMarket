@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, memo, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchCategories } from '../api/shops.js'
 import { fetchProductMainCategories } from '../api/products.js'
@@ -80,8 +80,8 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
     'community businesses'
   ]
 
-  // Popular categories for quick selection
-  const popularCategories = [
+  // Popular categories for quick selection (memoized)
+  const popularCategories = useMemo(() => [
     'Barber',
     'Grocery',
     'Hardware',
@@ -97,7 +97,7 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
     'Clothing',
     'Health & Beauty',
     'Home & Garden'
-  ]
+  ], [])
 
   useEffect(() => {
     // Close result type menu on outside click
@@ -108,8 +108,21 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
         setShowResultMenu(false)
       }
     }
-    document.addEventListener('mousedown', onPointerDown)
-    return () => document.removeEventListener('mousedown', onPointerDown)
+    
+    // Add event listener with error handling
+    try {
+      document.addEventListener('mousedown', onPointerDown)
+    } catch (error) {
+      console.warn('Failed to add mousedown listener:', error)
+    }
+    
+    return () => {
+      try {
+        document.removeEventListener('mousedown', onPointerDown)
+      } catch (error) {
+        console.warn('Failed to remove mousedown listener:', error)
+      }
+    }
   }, [showResultMenu])
 
   useEffect(() => {
@@ -162,7 +175,7 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
     loadCategories()
   }, [resultType])
 
-  const handleSearch = (searchTerm) => {
+  const handleSearch = useCallback((searchTerm) => {
     if (searchTerm.trim()) {
       const trimmed = searchTerm.trim()
       setLocalQuery(trimmed)
@@ -192,19 +205,19 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
         setSearchParams(params, { replace: true })
       }
     }
-  }
+  }, [navigateOnSubmit, resultType, searchParams, setSearchParams])
 
-  const handleSuggestionClick = (suggestion) => {
+  const handleSuggestionClick = useCallback((suggestion) => {
     handleSearch(suggestion)
-  }
+  }, [handleSearch])
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = useCallback((e) => {
     if (e.key === 'Enter') {
       handleSearch(e.target.value)
     }
-  }
+  }, [handleSearch])
 
-  const handleCategoryChange = (selectedCategory) => {
+  const handleCategoryChange = useCallback((selectedCategory) => {
     const newParams = new URLSearchParams(searchParams)
     if (selectedCategory) {
       newParams.set('category', selectedCategory)
@@ -213,7 +226,7 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
     }
     setSearchParams(newParams)
     setActiveFilter(null)
-  }
+  }, [searchParams, setSearchParams])
 
   const handleQuickCategorySelect = (cat) => {
     handleCategoryChange(cat)
@@ -522,4 +535,16 @@ const SearchOptimization = ({ onClearFilters, onSearchChange, hasPinnedLocation,
   )
 }
 
-export default SearchOptimization
+// Memoized component to prevent unnecessary re-renders
+const MemoizedSearchOptimization = memo(SearchOptimization, (prevProps, nextProps) => {
+  // Custom comparison function for props
+  return (
+    prevProps.onClearFilters === nextProps.onClearFilters &&
+    prevProps.onSearchChange === nextProps.onSearchChange &&
+    prevProps.hasPinnedLocation === nextProps.hasPinnedLocation &&
+    prevProps.compactFilter === nextProps.compactFilter &&
+    prevProps.navigateOnSubmit === nextProps.navigateOnSubmit
+  )
+})
+
+export default MemoizedSearchOptimization

@@ -4,13 +4,13 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { ResponsiveAd } from '../components/GoogleAds.jsx'
 import { forgotPasswordRequest, fetchPublicConfig } from '../api/auth.js'
 import Modal from '../components/Modal.jsx'
+import { useFormErrorHandler } from '../hooks/useErrorHandler.js'
 import '../auth.css'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
-    const [error, setError] = useState('')
     const [forgotPasswordEmail, setForgotPasswordEmail] = useState('')
     const [showForgotPassword, setShowForgotPassword] = useState(false)
     const [forgotPasswordMessage, setForgotPasswordMessage] = useState('')
@@ -19,17 +19,25 @@ export default function LoginPage() {
     const googleBtnRef = useRef(null)
     const navigate = useNavigate()
     const location = useLocation()
+    
+    // Enhanced error handling
+    const { 
+        fieldErrors, 
+        submissionError, 
+        handleSubmissionError, 
+        clearAllErrors 
+    } = useFormErrorHandler()
 
     const onSubmit = async (e) => {
         e.preventDefault()
-        setError('')
+        clearAllErrors()
         const from = location.state?.from?.pathname || '/'
 
         try {
             await login(email, password)
             navigate(from, { replace: true })
         } catch (err) {
-            setError(err?.data?.message || err.message || 'Login failed')
+            handleSubmissionError(err, 'Login submission')
         }
     }
 
@@ -111,20 +119,20 @@ export default function LoginPage() {
 
                 {/* Auth Form Card */}
                 <div className="auth-card">
-                    {error && (
-                        <div className="auth-error">
-                            <svg className="error-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {submissionError && (
+                        <div className="auth-error" role="alert">
+                            <svg className="error-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
                                 <path d="M15 9L9 15M9 9L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                             </svg>
-                            {error}
+                            {submissionError}
                         </div>
                     )}
 
-                    <form onSubmit={onSubmit} className="auth-form">
+                    <form onSubmit={onSubmit} className="auth-form" aria-label="Login form">
                         <div className="form-group">
                             <label htmlFor="email" className="form-label">
-                                <svg className="label-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <svg className="label-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                                     <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                     <polyline points="22,6 12,13 2,6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
@@ -140,7 +148,10 @@ export default function LoginPage() {
                                 autoComplete="email"
                                 data-form-type="other"
                                 placeholder="Enter your email address"
+                                aria-describedby="email-help"
+                                aria-invalid={error ? "true" : "false"}
                             />
+                            <div id="email-help" className="sr-only">Enter your email address to log in</div>
                         </div>
                         
                         <div className="form-group">

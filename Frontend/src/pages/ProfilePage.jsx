@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, memo, useCallback, useMemo } from 'react'
 import { useAuth } from '../auth/AuthContext.jsx'
 import Modal from '../components/Modal.jsx'
 import { ResponsiveAd } from '../components/GoogleAds.jsx'
 import { SkeletonText, SkeletonAvatar, SkeletonButton, SkeletonForm } from '../components/Skeleton.jsx'
+import { useFormErrorHandler } from '../hooks/useErrorHandler.js'
+import { useFocusManagement } from '../hooks/useFocusManagement.js'
+import { validationPatterns } from '../utils/codeDuplication.jsx'
 import '../profile.css'
 import { getEmailVerificationStatus, sendEmailVerification, verifyEmailCode } from '../api/auth.js'
 
-export default function ProfilePage() {
+function ProfilePage() {
   const { user, updateProfile, changePassword, token } = useAuth()
   const [showChangePassword, setShowChangePassword] = useState(false)
   const [showEditProfile, setShowEditProfile] = useState(false)
@@ -21,14 +24,32 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState({
     name: user?.name || ''
   })
-  const [passwordError, setPasswordError] = useState('')
-  const [passwordSuccess, setPasswordSuccess] = useState('')
-  const [profileError, setProfileError] = useState('')
-  const [profileSuccess, setProfileSuccess] = useState('')
   const [verStatus, setVerStatus] = useState({ emailVerified: !!user?.emailVerified, emailVerifiedAt: user?.emailVerifiedAt || null })
   const [verCodeDigits, setVerCodeDigits] = useState(['', '', '', '', '', ''])
   const [verMsg, setVerMsg] = useState('')
   const [cooldown, setCooldown] = useState(0)
+  
+  // Enhanced error handling
+  const { 
+    fieldErrors, 
+    submissionError, 
+    handleValidationError,
+    handleSubmissionError, 
+    clearAllErrors 
+  } = useFormErrorHandler()
+  
+  // Focus management for modals
+  const { containerRef: changePasswordRef } = useFocusManagement({
+    isOpen: showChangePassword,
+    trapFocus: true,
+    restoreFocus: true
+  })
+  
+  const { containerRef: editProfileRef } = useFocusManagement({
+    isOpen: showEditProfile,
+    trapFocus: true,
+    restoreFocus: true
+  })
 
   useEffect(() => {
     if (!cooldown) return

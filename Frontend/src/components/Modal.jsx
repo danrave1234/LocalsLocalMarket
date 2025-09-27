@@ -1,7 +1,18 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useFocusManagement } from '../hooks/useFocusManagement.js'
 
 export default function Modal({ isOpen, onClose, title, children, size = 'medium' }) {
+  const modalRef = useRef(null)
+  
+  // Enhanced focus management
+  const { containerRef } = useFocusManagement({
+    isOpen,
+    trapFocus: true,
+    restoreFocus: true,
+    initialFocus: 'button, input, textarea, select, [tabindex]:not([tabindex="-1"])'
+  })
+
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape') {
@@ -12,11 +23,21 @@ export default function Modal({ isOpen, onClose, title, children, size = 'medium
     if (isOpen) {
       document.addEventListener('keydown', handleEscape)
       document.body.style.overflow = 'hidden'
+      
+      // Set ARIA attributes for accessibility
+      document.body.setAttribute('aria-hidden', 'true')
+      if (modalRef.current) {
+        modalRef.current.setAttribute('aria-hidden', 'false')
+      }
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscape)
       document.body.style.overflow = 'unset'
+      document.body.removeAttribute('aria-hidden')
+      if (modalRef.current) {
+        modalRef.current.removeAttribute('aria-hidden')
+      }
     }
   }, [isOpen, onClose])
 
@@ -61,13 +82,18 @@ export default function Modal({ isOpen, onClose, title, children, size = 'medium
   const modalContent = (
     <div className="modal-overlay" onClick={handleOverlayClick}>
       <div 
+        ref={containerRef}
         className={`modal-content ${sizeClasses[size]}`} 
         onMouseDown={handleContentMouseDown}
         onMouseUp={handleContentMouseUp}
         onClick={handleContentClick}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? "modal-title" : undefined}
+        tabIndex={-1}
       >
         <div className="modal-header">
-          <h3 className="modal-title">{title}</h3>
+          <h3 id="modal-title" className="modal-title">{title}</h3>
           <button 
             className="modal-close" 
             onClick={(e) => {
