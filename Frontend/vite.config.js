@@ -37,7 +37,7 @@ export default defineConfig({
     'import.meta.env.VITE_API_BASE': JSON.stringify(
       process.env.VITE_API_BASE || (
         process.env.NODE_ENV === 'production' 
-          ? 'https://localslocalmarket.com/api'
+          ? 'https://api.localslocalmarket.com/api'
           : '/api'
       )
     ),
