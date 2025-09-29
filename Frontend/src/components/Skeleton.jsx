@@ -5,10 +5,10 @@ const SkeletonBase = ({ className = '', style = {}, children, ...props }) => (
   <div
     className={`skeleton ${className}`}
     style={{
-      background: 'linear-gradient(90deg, var(--border) 25%, var(--card-2) 50%, var(--border) 75%)',
-      backgroundSize: '200% 100%',
-      animation: 'skeleton-loading 1.5s infinite',
+      background: 'var(--border)',
       borderRadius: '4px',
+      position: 'relative',
+      overflow: 'hidden',
       ...style
     }}
     {...props}
@@ -331,10 +331,10 @@ export const SkeletonShopManagement = ({ className = '', style = {} }) => (
       {/* Header Section */}
       <div className="management-header">
         <div className="header-info">
-          <SkeletonBase style={{ height: '2rem', width: '200px', marginBottom: '0.5rem' }} />
-          <SkeletonBase style={{ height: '1rem', width: '300px' }} />
+          <SkeletonBase style={{ height: '2.25rem', width: '200px', marginBottom: '0.5rem', borderRadius: '8px' }} />
+          <SkeletonBase style={{ height: '1.1rem', width: '300px', borderRadius: '6px' }} />
         </div>
-        <div className="header-actions" style={{ display: 'flex', gap: '0.75rem' }}>
+        <div className="header-actions" style={{ display: 'flex', gap: '1rem' }}>
           <SkeletonButton width="100px" height="2.5rem" />
           <SkeletonButton width="140px" height="2.5rem" />
         </div>
@@ -356,15 +356,15 @@ export const SkeletonShopManagement = ({ className = '', style = {} }) => (
         
         <div className="filters-container" style={{ display: 'flex', gap: '1rem' }}>
           <div className="filter-group">
-            <SkeletonBase style={{ height: '1rem', width: '80px', marginBottom: '0.5rem' }} />
+            <SkeletonBase style={{ height: '1rem', width: '80px', marginBottom: '0.5rem', borderRadius: '4px' }} />
             <SkeletonBase style={{ height: '2.5rem', width: '150px', borderRadius: '6px' }} />
           </div>
           <div className="filter-group">
-            <SkeletonBase style={{ height: '1rem', width: '60px', marginBottom: '0.5rem' }} />
+            <SkeletonBase style={{ height: '1rem', width: '60px', marginBottom: '0.5rem', borderRadius: '4px' }} />
             <SkeletonBase style={{ height: '2.5rem', width: '120px', borderRadius: '6px' }} />
           </div>
           <div className="filter-group">
-            <SkeletonBase style={{ height: '1rem', width: '70px', marginBottom: '0.5rem' }} />
+            <SkeletonBase style={{ height: '1rem', width: '70px', marginBottom: '0.5rem', borderRadius: '4px' }} />
             <SkeletonBase style={{ height: '2.5rem', width: '140px', borderRadius: '6px' }} />
           </div>
         </div>
@@ -375,67 +375,76 @@ export const SkeletonShopManagement = ({ className = '', style = {} }) => (
         {/* Items Header */}
         <div className="items-header">
           <div className="items-count" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <SkeletonBase style={{ height: '1.5rem', width: '100px' }} />
+            <SkeletonBase style={{ height: '1.5rem', width: '100px', borderRadius: '6px' }} />
             <SkeletonBase style={{ height: '1.5rem', width: '60px', borderRadius: '12px' }} />
           </div>
         </div>
 
-        {/* Items Grid */}
+        {/* Items Grid - Match actual grid structure */}
         <div className="items-grid" style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
           gap: '1.5rem',
-          marginTop: '1.5rem'
+          marginBottom: '2rem'
         }}>
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="card" style={{ padding: 0, overflow: 'hidden', borderRadius: '12px' }}>
-              {/* Item Image */}
-              <SkeletonBase style={{ height: '200px' }} />
-              
-              {/* Item Details */}
-              <div style={{ padding: '1rem' }}>
-                {/* Item Type Badge */}
+            <div key={index} className="item-card" style={{ 
+              background: 'var(--card)', 
+              border: '1px solid var(--border)', 
+              borderRadius: '12px', 
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              height: '100%'
+            }}>
+              {/* Item Image Container */}
+              <div style={{ 
+                position: 'relative', 
+                width: '100%', 
+                height: '200px', 
+                overflow: 'hidden', 
+                background: 'var(--surface)' 
+              }}>
+                <SkeletonBase style={{ height: '200px', width: '100%' }} />
+                
+                {/* Type Badge */}
                 <SkeletonBase style={{ 
+                  position: 'absolute',
+                  top: '8px',
+                  left: '8px',
                   height: '1.5rem', 
                   width: '80px', 
-                  borderRadius: '12px', 
-                  marginBottom: '0.75rem' 
+                  borderRadius: '6px'
                 }} />
-                
-                {/* Title */}
-                <SkeletonBase style={{ 
-                  height: '1.25rem', 
-                  width: '80%', 
-                  marginBottom: '0.5rem' 
-                }} />
+              </div>
+              
+              {/* Item Content */}
+              <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', flex: 1, gap: '0.75rem' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                  <SkeletonBase style={{ height: '1.25rem', width: '70%', borderRadius: '6px' }} />
+                  <SkeletonBase style={{ height: '1.5rem', width: '25%', borderRadius: '6px' }} />
+                </div>
                 
                 {/* Description */}
-                <SkeletonText lines={2} height="0.875rem" style={{ marginBottom: '0.75rem' }} />
+                <SkeletonText lines={2} height="0.875rem" style={{ marginBottom: '0.5rem' }} />
                 
-                {/* Price */}
-                <SkeletonBase style={{ 
-                  height: '1.5rem', 
-                  width: '40%', 
-                  marginBottom: '0.75rem' 
-                }} />
-                
-                {/* Category */}
-                <SkeletonBase style={{ 
-                  height: '1rem', 
-                  width: '60%', 
-                  marginBottom: '0.75rem' 
-                }} />
+                {/* Meta Information */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <SkeletonBase style={{ height: '1rem', width: '60%', borderRadius: '4px' }} />
+                  <SkeletonBase style={{ height: '1rem', width: '40%', borderRadius: '4px' }} />
+                </div>
                 
                 {/* Status */}
                 <SkeletonBase style={{ 
                   height: '1.5rem', 
                   width: '100px', 
                   borderRadius: '12px', 
-                  marginBottom: '1rem' 
+                  marginTop: 'auto'
                 }} />
                 
                 {/* Action Buttons */}
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
                   <SkeletonButton width="80px" height="2rem" />
                   <SkeletonButton width="80px" height="2rem" />
                 </div>
@@ -451,15 +460,6 @@ export const SkeletonShopManagement = ({ className = '', style = {} }) => (
 // Add CSS animation
 const style = document.createElement('style')
 style.textContent = `
-  @keyframes skeleton-loading {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
-  }
-  
   .skeleton {
     position: relative;
     overflow: hidden;
@@ -472,7 +472,7 @@ style.textContent = `
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
     animation: skeleton-shimmer 1.5s infinite;
   }
   

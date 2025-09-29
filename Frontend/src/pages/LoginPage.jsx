@@ -149,8 +149,13 @@ export default function LoginPage() {
                                 data-form-type="other"
                                 placeholder="Enter your email address"
                                 aria-describedby="email-help"
-                                aria-invalid={error ? "true" : "false"}
+                                aria-invalid={fieldErrors.email ? "true" : "false"}
                             />
+                            {fieldErrors.email && (
+                                <div className="field-error" role="alert">
+                                    {fieldErrors.email}
+                                </div>
+                            )}
                             <div id="email-help" className="sr-only">Enter your email address to log in</div>
                         </div>
                         
@@ -175,6 +180,11 @@ export default function LoginPage() {
                                     data-form-type="other"
                                     placeholder="Enter your password"
                                 />
+                                {fieldErrors.password && (
+                                    <div className="field-error" role="alert">
+                                        {fieldErrors.password}
+                                    </div>
+                                )}
                                 <button
                                     type="button"
                                     className="password-toggle-btn"

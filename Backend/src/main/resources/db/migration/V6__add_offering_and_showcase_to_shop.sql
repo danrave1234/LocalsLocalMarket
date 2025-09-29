@@ -13,3 +13,4 @@ UPDATE shop SET showcase_priority = COALESCE(showcase_priority, 'products');
 
 
 
+

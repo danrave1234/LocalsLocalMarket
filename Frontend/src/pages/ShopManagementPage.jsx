@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { 
   Package, 
@@ -44,7 +44,7 @@ import './ShopManagementPage.css'
 export default function ShopManagementPage() {
   const { shopId: shopSlug } = useParams()
   const navigate = useNavigate()
-  const { token, user } = useAuth()
+  const { token, user, isLoading: authLoading } = useAuth()
   const { setTutorialSteps } = useTutorial()
   
   // Extract shop ID from slug
@@ -77,6 +77,9 @@ export default function ShopManagementPage() {
   
   // Stock management
   const [savingStock, setSavingStock] = useState({})
+  
+  // Loading ref to prevent multiple simultaneous calls
+  const loadingRef = useRef(false)
 
   // Load data when component mounts or dependencies change
   useEffect(() => {
@@ -130,7 +133,11 @@ export default function ShopManagementPage() {
 
   // Load data function
   const loadData = async () => {
+    // Prevent multiple simultaneous calls
+    if (loadingRef.current) return
+    
     try {
+      loadingRef.current = true
       setLoading(true)
       setError('')
 
@@ -193,6 +200,7 @@ export default function ShopManagementPage() {
       setError('Failed to load shop data: ' + error.message)
     } finally {
       setLoading(false)
+      loadingRef.current = false
     }
   }
 
@@ -367,7 +375,10 @@ export default function ShopManagementPage() {
       console.error('Failed to update stock:', error)
       setError('Failed to update stock: ' + error.message)
     } finally {
-      setSavingStock(prev => ({ ...prev, [itemId]: false }))
+      // Add a small delay to show the loading state
+      setTimeout(() => {
+        setSavingStock(prev => ({ ...prev, [itemId]: false }))
+      }, 500)
     }
   }
 
@@ -410,7 +421,7 @@ export default function ShopManagementPage() {
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage)
   const paginatedItems = getPaginatedItems()
 
-  if (loading) {
+  if (authLoading || loading) {
     return <SkeletonShopManagement />
   }
 
@@ -641,6 +652,12 @@ export default function ShopManagementPage() {
         title={`Add ${activeTab === 'products' ? 'Product' : 'Service'}`}
         size="large"
       >
+        {modalLoading && (
+          <div className="modal-loading-overlay">
+            <div className="modal-loading-spinner"></div>
+            <span>Processing...</span>
+          </div>
+        )}
         <ItemForm
           type={activeTab.slice(0, -1)}
           onSubmit={handleCreateItem}
@@ -661,6 +678,12 @@ export default function ShopManagementPage() {
         title={`Edit ${activeTab === 'products' ? 'Product' : 'Service'}`}
         size="large"
       >
+        {modalLoading && (
+          <div className="modal-loading-overlay">
+            <div className="modal-loading-spinner"></div>
+            <span>Processing...</span>
+          </div>
+        )}
         <ItemForm
           item={editingItem}
           type={activeTab.slice(0, -1)}

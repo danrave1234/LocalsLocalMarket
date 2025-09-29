@@ -28,6 +28,7 @@ import { handleApiError } from '../utils/errorHandler.js'
 import { SkeletonProductCard, SkeletonText, SkeletonAvatar, SkeletonButton, SkeletonMap } from '../components/Skeleton.jsx'
 import ErrorDisplay from '../components/ErrorDisplay.jsx'
 import { LoadingSpinner, LoadingOverlay } from '../components/Loading.jsx'
+import ProductDetailsModal from '../components/ProductDetailsModal.jsx'
 import { useDebounce } from '../hooks/useDebounce.js'
 import { useScroll } from '../hooks/useEvents.js'
 import { useClipboard } from '../hooks/useStorage.js'
@@ -64,6 +65,8 @@ export default function ShopPage() {
   const [activeTab, setActiveTab] = useState('products') // 'products' or 'services'
   const [shareOpen, setShareOpen] = useState(false)
   const [contactsOpen, setContactsOpen] = useState(false)
+  const [showProductDetails, setShowProductDetails] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState(null)
   const hoursRef = useRef(null)
   const [showMapModal, setShowMapModal] = useState(false)
   const mobileMapRef = useRef(null)
@@ -858,6 +861,45 @@ export default function ShopPage() {
       stockCount: product.stockCount || ''
     })
     setShowEditProduct(true)
+  }
+
+  // --- Product Details helpers ---
+  const hasProductVariants = (product) => {
+    try {
+      // Check for sizes or variants in various possible fields
+      if (product.sizesJson) {
+        const sizes = JSON.parse(product.sizesJson)
+        return Array.isArray(sizes) && sizes.length > 0
+      }
+      if (product.variantsJson) {
+        const variants = JSON.parse(product.variantsJson)
+        return Array.isArray(variants) && variants.length > 0
+      }
+      if (product.sizes && Array.isArray(product.sizes) && product.sizes.length > 0) {
+        return true
+      }
+      if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+        return true
+      }
+      // Check if description mentions sizes or variants
+      if (product.description) {
+        const desc = product.description.toLowerCase()
+        return desc.includes('size') || desc.includes('variant') || desc.includes('option')
+      }
+      return false
+    } catch (e) {
+      return false
+    }
+  }
+
+  const handleViewProductDetails = (product) => {
+    setSelectedProduct(product)
+    setShowProductDetails(true)
+  }
+
+  const handleCloseProductDetails = () => {
+    setShowProductDetails(false)
+    setSelectedProduct(null)
   }
 
   // --- Cart & Order helpers ---
@@ -2322,6 +2364,16 @@ export default function ShopPage() {
                       </>
                     ) : (
                       <>
+                        {hasProductVariants(product) && (
+                          <button 
+                            className="btn btn-outline btn-sm view-details-btn"
+                            onClick={() => handleViewProductDetails(product)}
+                            title="View sizes and options"
+                          >
+                            <Info size={16} />
+                            View Details
+                          </button>
+                        )}
                         <button 
                           className="btn btn-primary btn-sm order-now-btn"
                           onClick={() => handleOrderNow(product)}
@@ -3140,6 +3192,16 @@ export default function ShopPage() {
         shopId={shop?.id}
         shopName={shop?.name}
         onReviewSubmitted={handleReviewSubmitted}
+      />
+
+      {/* Product Details Modal */}
+      <ProductDetailsModal
+        product={selectedProduct}
+        isOpen={showProductDetails}
+        onClose={handleCloseProductDetails}
+        onAddToCart={handleAddToCart}
+        onOrderNow={handleOrderNow}
+        isOwner={isOwner}
       />
 
       </main>
